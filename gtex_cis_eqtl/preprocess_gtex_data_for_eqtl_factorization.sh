@@ -68,10 +68,22 @@ done
 fi
 
 
+# merge parallel runs
+if false; then
+python merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_re_eqtl_results_" $num_jobs
+fi
 
 
 
-
+#############################################
+# Prepare data for eQTL factorization 
+#############################################
+num_genes="2000"
+random_seed="1"
+nominal_pvalue_thresh=".01"
+if false; then
+python preprocess_gtex_data_for_eqtl_factorization.py $output_dir $num_genes $random_seed $nominal_pvalue_thresh
+fi
 
 
 
