@@ -81,9 +81,8 @@ fi
 num_genes="2000"
 random_seed="1"
 nominal_pvalue_thresh=".01"
-if false; then
 python preprocess_gtex_data_for_eqtl_factorization.py $output_dir $num_genes $random_seed $nominal_pvalue_thresh
-fi
+
 
 
 

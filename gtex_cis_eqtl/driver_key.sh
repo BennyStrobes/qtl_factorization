@@ -37,6 +37,23 @@ european_ancestry_gtex_eqtl_dir="/work-zfs/abattle4/surya/worksets/for_ben/GTEx_
 ## 10 tissues case
 tissues_file=$input_data_dir"tissues_subset_10.txt"
 output_dir=$processed_data_dir"tissues_subset_10_"
-
+if false; then
 sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_eqtl_dir $output_dir
+fi
+
+
+
+
+## Run eqtl factorization!
+sample_overlap_file=$processed_data_dir"tissues_subset_10_individual_id.txt"
+expression_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_p_thresh_0.01_input_expression.npy"
+genotype_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_p_thresh_0.01_input_genotype.npy"
+covariate_file=$processed_data_dir"tissues_subset_10_cross_tissue_eqtl_covariate_w_intercept_input.txt"
+num_latent_factors="10"
+lambda_v="1"
+model_name="eqtl_factorization_vi"
+
+
+output_stem=$eqtl_results_dir"tissues_subset_10_gene_thresh_0.01_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_"
+sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $output_stem
 

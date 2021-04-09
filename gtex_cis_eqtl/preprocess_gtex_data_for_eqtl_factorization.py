@@ -115,6 +115,12 @@ def save_as_npy_file(file_name):
 	npy_file_name = file_name.split('.tx')[0] + '.npy'
 	np.save(npy_file_name, aa)
 
+def add_intercept_to_covariate_file(input_file, output_file):
+	cov = np.loadtxt(input_file)
+	num_samples = cov.shape[0]
+	cov_plus_intercept = np.hstack((np.ones((num_samples, 1)), cov))
+	np.savetxt(output_file, cov_plus_intercept, fmt="%s", delimiter='\t')
+
 
 ######################
 # Command line args
@@ -151,9 +157,13 @@ save_as_npy_file(eqtl_factorization_expression_file)
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'cross_tissue_eqtl_genotype_input.txt'
-eqtl_factorization_genotype_file = working_dir + 'eqtl_factorization_' + str(nominal_pvalue_thresh) + '_input_genotype.txt'
+eqtl_factorization_genotype_file = working_dir + 'eqtl_factorization_p_thresh_' + str(nominal_pvalue_thresh) + '_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
 
+# Add intercept to covariate file
+covariate_file = working_dir + 'cross_tissue_eqtl_covariate_input.txt'
+covariate_with_intercept_file = working_dir + 'cross_tissue_eqtl_covariate_w_intercept_input.txt'
+add_intercept_to_covariate_file(covariate_file, covariate_with_intercept_file)
 
