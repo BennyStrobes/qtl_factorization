@@ -339,7 +339,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print('F')
 			self.update_F()
 			print('thetaU')
-			if vi_iter > 4:
+			if vi_iter > 8:
 				self.update_theta_U()
 			print('psi')
 			#self.update_psi()
@@ -796,9 +796,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Initialize C and F
 		F_betas, C_betas = run_linear_model_for_initialization(self.Y, self.G, self.cov)
-		self.F_mu = F_betas
+		#self.F_mu = F_betas
+		self.F_mu = np.zeros(self.T)
 		self.F_var = np.ones(self.T)
 		self.C_mu = np.transpose(C_betas)
+		self.C_mu = np.zeros(self.C_mu.shape)
 		self.C_var = np.ones(self.C_mu.shape)
 
 		self.cov_squared = np.square(self.cov)
@@ -808,7 +810,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
 		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*10.0
+		self.theta_U_a = np.ones(self.K)*self.a_prior*50.0
 		self.theta_U_b = np.ones(self.K)*self.b_prior
 
 

@@ -28,6 +28,7 @@ gtex_egene_dir="/work-zfs/abattle4/lab_data/GTEx_v8/ciseQTL/GTEx_Analysis_v8_eQT
 gtex_eqtl_dir="/work-zfs/abattle4/lab_data/GTEx_v8/ciseQTL/GTEx_Analysis_v8_eQTL_all_associations/"
 gtex_tissue_colors_file="/work-zfs/abattle4/bstrober/single_cell_eqtl_factorization/gtex_cis_eqtl/input_data/gtex_colors.txt"
 gtex_individual_information_file="/work-zfs/abattle4/lab_data/GTEx_v8/sample_annotations/GTEx_Analysis_2017-06-05_v8_Annotations_SubjectPhenotypesDS.txt"
+gtex_sample_information_file="/work-zfs/abattle4/lab_data/GTEx_v8/sample_annotations/GTEx_Analysis_2017-06-05_v8_Annotations_SampleAttributesDS.txt"
 cell_type_decomposition_hlv_file="/work-zfs/abattle4/marios/GTEx_v8/coloc/scRNA_decon/CIBERSORT_GTEx_LV.csv"
 african_ancestry_gtex_eqtl_dir="/work-zfs/abattle4/surya/worksets/for_ben/GTEx_Analysis_v8_AFR_eQTL/"
 european_ancestry_gtex_eqtl_dir="/work-zfs/abattle4/surya/worksets/for_ben/GTEx_Analysis_v8_EUR_eQTL/"
@@ -44,15 +45,15 @@ sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression
 
 ## Run eqtl factorization!
 sample_overlap_file=$processed_data_dir"tissues_subset_10_individual_id.txt"
-expression_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_p_thresh_1e-09_input_expression.npy"
-genotype_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_p_thresh_1e-09_input_genotype.npy"
+expression_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_tissue_egenes_input_expression.npy"
+genotype_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_tissue_egenes_input_genotype.npy"
 covariate_file=$processed_data_dir"tissues_subset_10_cross_tissue_eqtl_covariate_w_intercept_input.txt"
-num_latent_factors="10"
+num_latent_factors="20"
 lambda_v="1"
 model_name="eqtl_factorization_vi"
 
 
-output_stem=$eqtl_results_dir"tissues_subset_10_gene_thresh_1e-09_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_"
+output_stem=$eqtl_results_dir"tissues_subset_10_tissue_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_"
 if false; then
 sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $output_stem
 fi

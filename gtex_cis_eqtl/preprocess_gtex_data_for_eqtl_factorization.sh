@@ -88,8 +88,14 @@ fi
 num_genes="2000"
 random_seed="1"
 nominal_pvalue_thresh=".000000001"
+if false; then
 python preprocess_gtex_data_for_eqtl_factorization.py $output_dir $num_genes $random_seed $nominal_pvalue_thresh
+fi
 
+
+num_genes="2000"
+random_seed="1"
+python preprocess_gtex_data_based_on_tissue_egenes_for_eqtl_factorization.py $output_dir $num_genes $random_seed $tissues_file $gtex_egene_dir
 
 
 
