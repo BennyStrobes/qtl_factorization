@@ -9,12 +9,14 @@ import sklearn.decomposition
 from joblib import Parallel, delayed
 import multiprocessing
 import time
+import pandas as pd 
+from pymer4.models import Lmer
 
 def sigmoid_function(x):
 	return 1.0/(1.0 + np.exp(-x))
 
 
-def run_linear_model_for_initialization(Y, G, cov):
+def run_linear_model_for_initialization(Y, G, cov, z):
 	num_tests = Y.shape[1]
 	F_betas = []
 	C_betas = []
@@ -22,6 +24,10 @@ def run_linear_model_for_initialization(Y, G, cov):
 		y_vec = Y[:,test_number]
 		g_vec = G[:,test_number]
 		X = np.hstack((np.transpose(np.asmatrix(g_vec)), cov))
+		#dd = {'y':y_vec, 'g':g_vec, 'z':z}
+		#df = pd.DataFrame(dd)
+		#model = Lmer('y ~ g  + (1|z)', data=df)
+		#pdb.set_trace()
 		reg = LinearRegression(fit_intercept=False).fit(X, np.transpose(np.asmatrix(y_vec)))
 		F_betas.append(reg.coef_[0][0])
 		C_betas.append(reg.coef_[0][1:])
@@ -298,7 +304,7 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, U_S, V_S_t, F
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-3, beta=1e-3, a=1, b=1, gamma_v=1.0, max_iter=1000, delta_elbo_threshold=.01, output_root=''):
+	def __init__(self, K=25, alpha=1e-16, beta=1e-16, a=1, b=1, gamma_v=1.0, max_iter=1000, delta_elbo_threshold=.01, output_root=''):
 		self.alpha_prior = alpha
 		self.beta_prior = beta
 		self.a_prior = a 
@@ -323,7 +329,8 @@ class EQTL_FACTORIZATION_VI(object):
 		self.cov = cov
 		self.initialize_variables()
 
-		#self.update_elbo()
+		self.update_elbo()
+		print(self.output_root)
 		# Loop through VI iterations
 		for vi_iter in range(self.max_iter):
 			start_time = time.time()
@@ -333,42 +340,49 @@ class EQTL_FACTORIZATION_VI(object):
 			print('V')
 			self.update_V()
 			print('alpha')
-			# self.update_alpha()
+			self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
 			self.update_F()
 			print('thetaU')
-			if vi_iter > 8:
+			if vi_iter > 4:
 				self.update_theta_U()
 			print('psi')
-			#self.update_psi()
+			self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
+
+			# Compute ELBO after update
+			print('Variational Inference iteration: ' + str(vi_iter))
+			self.update_elbo()
+			current_elbo = self.elbo[len(self.elbo)-1]
+			delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
+			print('delta ELBO: ' + str(delta_elbo))
+
 			# Remove irrelevent factors
 			if np.mod(vi_iter, 10) == 0 and vi_iter > 0:
 				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
 				#self.remove_irrelevent_factors()
-				np.save(self.output_root + '_temper_U_S.npy', self.U_mu*self.S_U)
-				np.save(self.output_root + '_temper_S.npy', self.S_U)
-				np.save(self.output_root + '_temper_theta_U.npy', self.theta_U_a/(self.theta_U_a + self.theta_U_b))
-				np.save(self.output_root + '_temper_V.npy', (self.V_mu))
-				np.save(self.output_root + '_temper_F.npy', (self.F_mu))
-				np.save(self.output_root + '_temper_alpha.npy', self.alpha_mu)
-				np.save(self.output_root + '_temper_tau.npy', (self.tau_alpha/self.tau_beta))
-				np.save(self.output_root + '_temper_C.npy', (self.C_mu))
-				np.savetxt(self.output_root + '_temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
+				# Order and Filter Factors
+				theta_U = self.theta_U_a/(self.theta_U_b + self.theta_U_a)
+				ordered_indices = np.argsort(-theta_U)
+				num_indices = sum(theta_U > .01)
+				ordered_filtered_indices = ordered_indices[:num_indices]
+				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu*self.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
+				np.save(self.output_root + 'temper_U_S.npy', self.U_mu*self.S_U)
+				np.save(self.output_root + 'temper_S.npy', self.S_U)
+				np.save(self.output_root + 'temper_theta_U.npy', self.theta_U_a/(self.theta_U_a + self.theta_U_b))
+				np.save(self.output_root + 'temper_V.npy', (self.V_mu))
+				np.save(self.output_root + 'temper_F.npy', (self.F_mu))
+				np.save(self.output_root + 'temper_alpha.npy', self.alpha_mu)
+				np.save(self.output_root + 'temper_tau.npy', (self.tau_alpha/self.tau_beta))
+				np.save(self.output_root + 'temper_psi.npy', (self.psi_alpha/self.psi_beta))
+				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
+				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
+				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
 
-			# Compute ELBO after update
-			print('Variational Inference iteration: ' + str(vi_iter))
-			'''
-			if np.mod(vi_iter, 20) == 0:
-				self.update_elbo()
-				current_elbo = self.elbo[len(self.elbo)-1]
-				delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
-				print('delta ELBO: ' + str(delta_elbo))
-			'''
 			####################
 			print(self.theta_U_a/(self.theta_U_a + self.theta_U_b))
 			end_time = time.time()
@@ -519,45 +533,6 @@ class EQTL_FACTORIZATION_VI(object):
 		self.C_mu = C_update_data[(self.num_cov*0):(1*self.num_cov), :]
 		self.C_var = C_update_data[(self.num_cov*1):(2*self.num_cov), :]
 
-	def update_intercept(self):
-		U_S_expected_val = self.U_mu*self.S_U
-		tau_expected_val = self.tau_alpha/self.tau_beta
-		intercept_mu_copy = np.copy(self.intercept_mu)
-		intercept_var_copy = np.copy(self.intercept_var)
-
-		intercept_update_data = []
-		if self.parrallel_boolean == False:
-			for test_index in range(self.T):
-				intercept_update_data.append(outside_update_intercept_t(intercept_mu_copy[test_index], intercept_var_copy[test_index], self.G[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index], self.alpha_big_mu[:, test_index], self.sample_batch_fraction, self.step_size, self.SVI))
-		if self.parrallel_boolean == True:
-				intercept_update_data = Parallel(n_jobs=self.num_test_cores)(delayed(outside_update_intercept_t)(intercept_mu_copy[test_index], intercept_var_copy[test_index], self.G[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index], self.alpha_big_mu[:, test_index], self.sample_batch_fraction, self.step_size, self.SVI) for test_index in range(self.T))
-
-		intercept_update_data = np.asarray(intercept_update_data)
-		self.intercept_mu = intercept_update_data[:,0]
-		self.intercept_var = intercept_update_data[:,1]
-		'''
-		for test_index in range(self.T):
-			self.update_intercept_t(test_index, U_S_expected_val)
-		'''
-	'''
-	def update_intercept_t(self, test_index, U_S_expected_val):
-		# Compute relevent expectations
-		tau_t_expected_val = self.tau_alpha[test_index]/self.tau_beta[test_index]
-		F_S_t_expected_val = self.F_mu[test_index]
-		#U_S_expected_val = self.U_mu*self.S_U
-		V_S_t_expected_val = self.V_mu[:,test_index]
-		# Compute expectations on other components
-		other_components_expected = U_S_expected_val@V_S_t_expected_val
-		resid = self.Y[:, test_index] - self.G[:, test_index]*(F_S_t_expected_val + other_components_expected)
-		new_var = 1.0/((1.0/self.sample_batch_fraction)*self.N*tau_t_expected_val)
-		new_mu = new_var*tau_t_expected_val*np.sum(resid)*(1.0/self.sample_batch_fraction)
-		if self.SVI == False:
-			self.intercept_var[test_index] = new_var
-			self.intercept_mu[test_index] = new_mu
-		elif self.SVI == True:
-			self.intercept_var[test_index] = weighted_SVI_updated(self.intercept_var[test_index], new_var, self.step_size)
-			self.intercept_mu[test_index] = weighted_SVI_updated(self.intercept_mu[test_index], new_mu, self.step_size)
-	'''
 	def update_gamma_U(self):
 		# Loop through factors
 		for k in range(self.K):
@@ -603,13 +578,13 @@ class EQTL_FACTORIZATION_VI(object):
 		kl_V_S = self.compute_kl_divergence_of_V_S()
 		kl_U_S = self.compute_kl_divergence_of_U_S()
 		kl_F_S = self.compute_kl_divergence_of_F_S()
-		# kl_gamma_u = self.compute_kl_divergence_of_gamma_u()
 		kl_tau = self.compute_kl_divergence_of_tau()
-		#kl_theta_v = self.compute_kl_divergence_of_theta_v()
+		kl_psi = self.compute_kl_divergence_of_psi()
 		kl_theta_u = self.compute_kl_divergence_of_theta_u()
-		#kl_theta_f = self.compute_kl_divergence_of_theta_f()
+		kl_C = self.compute_kl_divergence_of_C()
+		kl_alpha = self.compute_kl_divergence_of_alpha()
 
-		kl_divergence = kl_V_S + kl_U_S + kl_F_S + kl_tau + kl_theta_u 
+		kl_divergence = kl_V_S + kl_U_S + kl_F_S + kl_tau + kl_theta_u + kl_C + kl_psi + kl_alpha
 
 		elbo = data_likelihood_term - kl_divergence
 		self.elbo.append(elbo)
@@ -628,6 +603,14 @@ class EQTL_FACTORIZATION_VI(object):
 		gamma_beta = self.tau_beta
 		kl_divergence = compute_kl_divergence_of_gamma(alpha_prior, beta_prior, gamma_alpha, gamma_beta)
 		return kl_divergence
+	def compute_kl_divergence_of_psi(self):
+		alpha_prior = self.alpha_prior
+		beta_prior = self.beta_prior
+		gamma_alpha = self.psi_alpha
+		gamma_beta = self.psi_beta
+		kl_divergence = compute_kl_divergence_of_gamma(alpha_prior, beta_prior, gamma_alpha, gamma_beta)
+		return kl_divergence
+
 	def compute_kl_divergence_of_gamma_u(self):
 		alpha_prior = self.alpha_prior
 		beta_prior = self.beta_prior
@@ -635,11 +618,21 @@ class EQTL_FACTORIZATION_VI(object):
 		gamma_beta = self.gamma_U_beta
 		kl_divergence = compute_kl_divergence_of_gamma(alpha_prior, beta_prior, gamma_alpha, gamma_beta)
 		return kl_divergence
+	def compute_kl_divergence_of_C(self):
+		W_mu = self.C_mu
+		W_var = self.C_var
+		expected_gamma = 0.0
+		kl_divergence = compute_kl_divergence_of_gaussian_fixed_variance(W_mu, W_var, expected_gamma, self.C_mu.shape[0])
+		return kl_divergence
+
 	def compute_kl_divergence_of_F_S(self):
 		W_mu = np.asarray([self.F_mu])
 		W_var = np.asarray([self.F_var])
-		expected_gamma = 1.0
+		expected_gamma = 0.001
 		kl_divergence = compute_kl_divergence_of_gaussian_fixed_variance(W_mu, W_var, expected_gamma, 1)
+		return kl_divergence
+	def compute_kl_divergence_of_alpha(self):
+		kl_divergence = compute_kl_divergence_of_gaussian(np.transpose(self.alpha_mu), np.transpose(self.alpha_var), self.psi_alpha, self.psi_beta, self.T)
 		return kl_divergence
 	def compute_kl_divergence_of_V_S(self):
 		W_mu = self.V_mu
@@ -648,16 +641,10 @@ class EQTL_FACTORIZATION_VI(object):
 		kl_divergence = compute_kl_divergence_of_gaussian_fixed_variance(W_mu, W_var, expected_gamma_v, self.K)
 		return kl_divergence
 	def compute_kl_divergence_of_U_S(self):
-		if self.SVI == True:
-			S = np.transpose(self.S_U_full)
-			W_mu = np.transpose(self.U_mu_full)
-			W_var = np.transpose(self.U_var_full)
-			W_var_s_0 = np.transpose(self.U_var_s_0_full)
-		elif self.SVI == False:
-			S = np.transpose(self.S_U)
-			W_mu = np.transpose(self.U_mu)
-			W_var = np.transpose(self.U_var)
-			W_var_s_0 = np.transpose(self.U_var_s_0)
+		S = np.transpose(self.S_U)
+		W_mu = np.transpose(self.U_mu)
+		W_var = np.transpose(self.U_var)
+		W_var_s_0 = np.transpose(np.ones(self.U_var.shape))*(1.0/self.gamma_v)
 		gamma_expected = self.gamma_v
 		theta_a = self.theta_U_a
 		theta_b = self.theta_U_b
@@ -669,43 +656,38 @@ class EQTL_FACTORIZATION_VI(object):
 		# Compute expectation of gamma variable
 		tau_expected = self.tau_alpha/self.tau_beta
 		# Other relevent expectations
-		if self.SVI == True:
-			U_S = (self.U_mu_full)*(self.S_U_full)
-		elif self.SVI == False:
-			U_S = (self.U_mu)*(self.S_U)
+		U_S = (self.U_mu)*(self.S_U)
 		V_S = (self.V_mu)
 		F_S = (self.F_mu)
+
 		# alpha_squared = np.square(self.alpha_big_mu) + self.alpha_big_var
 		# alpha = self.alpha_big_mu
 		F_S_squared = ((np.square(self.F_mu) + self.F_var))
 		V_S_squared = ((np.square(self.V_mu) + self.V_var))
-		if self.SVI == True:
-			U_S_squared = ((np.square(self.U_mu_full) + self.U_var_full)*self.S_U_full)
-		else:
-			U_S_squared = ((np.square(self.U_mu) + self.U_var)*self.S_U)
-		intercept_squared = np.square(self.intercept_mu) + self.intercept_var
-		intercept = self.intercept_mu
+		U_S_squared = ((np.square(self.U_mu) + self.U_var)*self.S_U)
+		C_squared = np.square(self.C_mu) + self.C_var
 
-		componenent_squared_terms = np.dot(U_S_squared, V_S_squared) + np.dot(np.ones((self.N_full,1)),[F_S_squared])
-		componenent_terms = np.dot(U_S, V_S)
-		F_terms = np.dot(np.ones((self.N_full,1)),[F_S])
-		intercept_terms = np.dot(np.ones((self.N_full,1)),[intercept])
-		intercept_squared_terms = np.dot(np.ones((self.N_full,1)),[intercept_squared])
+		component_squared_terms = np.dot(U_S_squared, V_S_squared) + np.dot(np.ones((self.N,1)),[F_S_squared])
+		component_terms = np.dot(U_S, V_S)
+		F_terms = np.dot(np.ones((self.N,1)),[F_S])
+		covariate_terms = np.dot(self.cov, self.C_mu)
+		squared_covariate_terms = np.dot(np.square(self.cov), C_squared)
+		alpha_squared_terms = np.square(self.alpha_big_mu) + self.alpha_big_var
 
 
 		# Terms of interest in likelihood
-		term_a = -np.log(2.0*np.pi)*(self.N_full*self.T_full/2.0)
-		term_b = (self.N_full/2.0)*np.sum(log_tau_expected)
+		term_a = -np.log(2.0*np.pi)*(self.N*self.T/2.0)
+		term_b = (self.N/2.0)*np.sum(log_tau_expected)
 		# Compute residual matrix
 		#residual_mat = self.Y - self.G*(np.dot(U_S, V_S) + np.dot(np.ones((self.N,1)),[F_S])) - self.alpha_big_mu
-		squared_residual_mat = np.square(self.Y_full) + intercept_squared_terms + np.square(self.G_full)*componenent_squared_terms
-		squared_residual_mat = squared_residual_mat - 2.0*self.Y_full*(intercept_terms + self.G_full*(componenent_terms+ F_terms))
-		squared_residual_mat = squared_residual_mat + 2.0*intercept_terms*(self.G_full*(componenent_terms + F_terms))
-		squared_residual_mat = squared_residual_mat + 2.0*np.square(self.G_full)*componenent_terms*F_terms
-		#squared_residual_mat = squared_residual_mat + 2.0*np.square(self.G)*componenent_terms*componenent_terms
-		squared_residual_mat = squared_residual_mat + np.square(self.G_full)*(componenent_terms*componenent_terms)
-		for k in range(self.K):
-			squared_residual_mat = squared_residual_mat - np.square(self.G_full)*np.square(np.dot(np.transpose([U_S[:,k]]), [V_S[k,:]]))
+		squared_residual_mat = np.square(self.Y) + alpha_squared_terms + squared_covariate_terms + np.square(self.G)*component_squared_terms
+		squared_residual_mat = squared_residual_mat - 2.0*self.Y*(self.alpha_big_mu + covariate_terms + self.G*(component_terms+ F_terms))
+		squared_residual_mat = squared_residual_mat + 2.0*self.alpha_big_mu*(covariate_terms + self.G*(component_terms + F_terms))
+		squared_residual_mat = squared_residual_mat + 2.0*covariate_terms*(self.G*(component_terms + F_terms))
+		squared_residual_mat = squared_residual_mat + 2.0*np.square(self.G)*component_terms*F_terms
+
+		squared_residual_mat = squared_residual_mat + (covariate_terms*covariate_terms - np.dot(np.square(self.cov), np.square(self.C_mu)))
+		squared_residual_mat = squared_residual_mat + np.square(self.G)*(component_terms*component_terms - np.dot(np.square(U_S), np.square(V_S)))
 
 		term_c = np.sum(squared_residual_mat*tau_expected)/2.0
 		data_likelihood_term = term_a + term_b - term_c
@@ -749,7 +731,6 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v) 
 		self.S_U = np.ones((self.N,self.K))
 
-
 		# Random effects
 		self.z_mapping = {}
 		self.z_inverse_mapping = {}
@@ -773,11 +754,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects variances
 		self.psi_alpha = np.ones(self.T)*self.alpha_prior
-		self.psi_beta = np.ones(self.T)*self.beta_prior
+		self.psi_beta = np.ones(self.T)*self.beta_prior*.1  # Initialize random effects variance to be samller than residual variance (tau)
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 0.0)
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
@@ -795,12 +776,12 @@ class EQTL_FACTORIZATION_VI(object):
 
 
 		# Initialize C and F
-		F_betas, C_betas = run_linear_model_for_initialization(self.Y, self.G, self.cov)
-		#self.F_mu = F_betas
-		self.F_mu = np.zeros(self.T)
+		F_betas, C_betas = run_linear_model_for_initialization(self.Y, self.G, self.cov, self.z)
+		self.F_mu = F_betas
+		#self.F_mu = np.zeros(self.T)
 		self.F_var = np.ones(self.T)
 		self.C_mu = np.transpose(C_betas)
-		self.C_mu = np.zeros(self.C_mu.shape)
+		#self.C_mu = np.zeros(self.C_mu.shape)
 		self.C_var = np.ones(self.C_mu.shape)
 
 		self.cov_squared = np.square(self.cov)
@@ -810,7 +791,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
 		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*50.0
+		self.theta_U_a = np.ones(self.K)*self.a_prior*10
 		self.theta_U_b = np.ones(self.K)*self.b_prior
 
 

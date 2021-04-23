@@ -7,7 +7,8 @@ import gzip
 import random
 import pandas as pd
 import rnaseqnorm
-
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import r2_score
 
 def get_tissues(file_name):
 	f = open(file_name)
@@ -170,6 +171,10 @@ def get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_indivi
 				continue
 			break
 		f.close()
+	indis = {}
+	for sample in samples:
+		indi = sample.split(':')[0]
+		indis[indi] = 1
 	# Get mapping from sample_name to index
 	sample_to_index = {}
 	# Print to output file
@@ -185,7 +190,9 @@ def get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_indivi
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
+		# header
 		if head_count == 0:
+			header = np.copy(data)
 			head_count = head_count +1
 			continue
 		indi_id = data[0]
@@ -194,11 +201,24 @@ def get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_indivi
 		age = data[3]
 		race = data[4]
 		ethnicity = data[5]
-		dicti[indi_id] = [cohort, sex, age, race]
+		height = data[6]
+		weight = data[8]
+		bmi = data[10]
+		# Extract ischemic time in minutes
+		ischemic_time_string = data[12]
+		ischemic_time_data = ischemic_time_string.split(',')
+		ischemic_hours = float(ischemic_time_string.split(' hour')[0])
+		ischemic_minutes = float(ischemic_time_string.split(',')[1].split(' minute')[0])
+		total_ischemic_minutes = ischemic_hours*60.0 + ischemic_minutes		
+		# error checking
+		if data[7] != 'in' or data[9] != 'lb':
+			print('assumptino erorror')
+			pdb.set_trace()
+		dicti[indi_id] = [cohort, sex, age, race, height, weight, bmi, str(total_ischemic_minutes)]
 	f.close()
 	# Some quick error checking
 	for indi_id in dicti.keys():
-		if len(dicti[indi_id]) != 4:
+		if len(dicti[indi_id]) != 8:
 			print('assumption erorr')
 			pdb.set_trace()
 	return samples, sample_to_index, dicti
@@ -665,12 +685,13 @@ def get_genes_we_have_expression_data_for(file_name):
 	return genes
 
 
-def print_sample_covariates(sample_names, individual_covariates, output_file):
+def print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, output_file):
 	t = open(output_file, 'w')
-	t.write('sample_id\tcohort\tsex\tage\trace\n')
+	t.write('sample_id\ttissue_type\tcohort\tsex\tage\trace\theight\tweight\tbmi\tischemic_time\t' + '\t'.join(xcell_covariate_names) + '\n')
 	for sample_name in sample_names:
 		individual_id = sample_name.split(':')[0]
-		t.write(sample_name + '\t' + '\t'.join(individual_covariates[individual_id]) + '\n')
+		tissue_type = sample_name.split(':')[1]
+		t.write(sample_name + '\t' + tissue_type + '\t' + '\t'.join(individual_covariates[individual_id]) + '\t' + '\t'.join(xcell_covariates[sample_name]) + '\n')
 	t.close()
 
 
@@ -756,6 +777,306 @@ def extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, 
 	t.close()
 
 
+def print_sample_surveyed_covariates(sample_names, gtex_individual_information_file, output_file):
+	f = open(gtex_individual_information_file)
+	column_values = []
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if len(data) != 175:
+			continue
+		if head_count == 0:
+			head_count = head_count + 1
+			for i, ele in enumerate(data):
+				column_values.append({})
+			continue
+		for i, ele in enumerate(data):
+			if ele not in column_values[i]:
+				column_values[i][ele] = 0
+			column_values[i][ele] = column_values[i][ele] + 1
+	f.close()
+	valid_columns = {}
+	for itera in range(len(column_values)):
+		valid = True
+		values = column_values[itera]
+		if len(values) == 1 or len(values) > 5:
+			valid = False
+		for value in values.keys():
+			if value != '1' and value != '0' and value != '96' and value != '97' and value != '98' and value != '99':
+				valid = False
+		if valid == True:
+			# Limit to at least 5 positive examples
+			if '1' in values and values['1'] > 4:
+				valid_columns[itera] = 1
+	dicti = {}
+	head_count = 0
+	f = open(gtex_individual_information_file)
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			if len(data) != 175: 
+				print('assumption error')
+			header = []
+			for i, ele in enumerate(data):
+				if i in valid_columns:
+					header.append(ele)
+			header = np.asarray(header)
+			continue
+		indi_id = data[0]
+		if len(data) != 175:
+			vec = np.asarray(['99']*len(header))
+			dicti[indi_id] = vec
+			continue
+		vec = []
+		for i, ele in enumerate(data):
+			if i in valid_columns:
+				vec.append(ele)
+		vec = np.asarray(vec)
+		if len(vec) != len(header):
+			print('assumptino eroror')
+			pdb.set_trace()
+		dicti[indi_id] = vec
+	f.close()
+	t = open(output_file,'w')
+	t.write('sample_id\t' + '\t'.join(header) + '\n')
+	for sample_id in sample_names:
+		indi = sample_id.split(':')[0]
+		t.write(sample_id + '\t' + '\t'.join(dicti[indi]) + '\n')
+	t.close()
+
+def create_sample_name_mapping(sample_names, tissues, tissues_alt, gtex_tpm_dir):
+	mapping = {}
+	reverse_mapping = {}
+	for sample_name in sample_names:
+		mapping[sample_name] = 'Null'
+	# Loop through each tissue and fill in the tpm matrix
+	for tissue_index, tissue in enumerate(tissues):
+		tissue_alt = tissues_alt[tissue_index]
+		# Stream tpm file in this tissue
+		tpm_file = gtex_tpm_dir + tissue_alt + '.txt'
+		head_count = 0
+		f = open(tpm_file)
+		for line in f:
+			line = line.rstrip()
+			data = line.split()
+			# Header
+			if head_count == 0:
+				head_count = head_count + 1
+				# Get ordered list of sample names
+				sample_names = []
+				for sample_name_temp in data[2:]:
+					our_sample_name = sample_name_temp.split('-')[0] + '-' + sample_name_temp.split('-')[1] + ':' + tissue
+					if our_sample_name in mapping:
+						if mapping[our_sample_name] != 'Null':
+							print('assumption erorro')
+							pdb.set_trace()
+						mapping[our_sample_name] = sample_name_temp
+						reverse_mapping[sample_name_temp] = our_sample_name
+					#sample_names.append(sample_name)
+				continue
+			break
+		f.close()
+	if len(mapping) != len(reverse_mapping):
+		print('assumption erororr')
+		pdb.set_trace()
+	for sample_name in sample_names:
+		if mapping[sample_name] == 'Null':
+			print('assumption erororroororororo')
+			pdb.set_trace()
+	return reverse_mapping
+
+
+def print_sample_technical_covariates(tissues, tissues_alt, sample_names, gtex_tpm_dir, gtex_sample_information_file, output_file):
+	sample_name_mapping = create_sample_name_mapping(sample_names, tissues, tissues_alt, gtex_tpm_dir)
+	sample_dicti = {}
+	for sample in sample_names:
+		sample_dicti[sample] = 0
+	f = open(gtex_sample_information_file)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count =head_count + 1
+			header = np.copy(data)
+			continue
+		sample_id = data[0]
+		if len(data) != len(header):
+			continue
+		if sample_id not in sample_name_mapping:
+			continue
+		our_sample_id = sample_name_mapping[sample_id]
+		sample_dicti[our_sample_id] = 1
+	f.close()
+	for key_name in sample_dicti.keys():
+		if sample_dicti[key_name] != 1:
+			print('assumption error')
+			pdb.set_trace()
+
+	covariate_names = ['SMNABTCH', 'SMRIN', 'SMGEBTCH', 'SMNTERRT', 'SMGNSDTC', 'SMSPLTRD', 'SMRRNART', 'SMEXNCRT', 'SMMPPD']
+	num_cov = len(covariate_names)
+	sample_to_cov = {}
+	for sample in sample_names:
+		sample_to_cov[sample] = np.zeros(num_cov)
+	f = open(gtex_sample_information_file)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = np.asarray(line.split('\t'))
+		if head_count == 0:
+			head_count = head_count + 1
+			header = np.copy(data)
+			cov_indices = []
+			for covariate_name in covariate_names:
+				temp = np.where(header==covariate_name)[0]
+				if len(temp) != 1:
+					print('assumption eroror')
+				cov_indices.append(temp[0])
+			cov_indices = np.asarray(cov_indices)
+			if len(cov_indices) != num_cov:
+				print('assumption error')
+				pdb.set_trace()
+			continue
+		sample_id = data[0]
+		if sample_id not in sample_name_mapping:
+			continue
+		our_sample_id = sample_name_mapping[sample_id]
+		sample_to_cov[our_sample_id] = data[cov_indices]
+	f.close()
+	t = open(output_file, 'w')
+	t.write('sample_id\t' + '\t'.join(covariate_names) + '\n')
+	for sample in sample_names:
+		t.write(sample + '\t' + '\t'.join(sample_to_cov[sample]) + '\n')
+	t.close()
+
+
+def extract_categorical_feature(raw_feature_cov):
+	all_features = []
+	for raw_feature_str in raw_feature_cov:
+		for raw_feature in raw_feature_str.split(','):
+			all_features.append(raw_feature)
+	unique_categories = np.unique(np.asarray(all_features))
+	mapping = {}
+	for i, category in enumerate(unique_categories):
+		mapping[category] = i
+
+	cat_feature = np.zeros((len(raw_feature_cov), len(unique_categories) -1))
+
+	for i, raw_feature_string in enumerate(raw_feature_cov):
+		for raw_feature in raw_feature_string.split(','):
+			column_num = mapping[raw_feature]
+			if column_num == (len(unique_categories) -1):
+				continue
+			cat_feature[i, column_num] = 1.0
+	return(cat_feature)
+
+
+def extract_technical_covariates(technical_covariate_file):
+	raw_cov = np.loadtxt(technical_covariate_file, dtype=str, delimiter='\t')
+	header = raw_cov[0,1:]
+	raw_cov = raw_cov[1:, 1:]
+	# a bit manual here
+	feature_types = ['skip', 'real', 'cat', 'skip', 'skip', 'skip', 'skip', 'skip', 'real']
+	# error checking
+	if len(feature_types) != raw_cov.shape[1]:
+		print('assumption error')
+	feature_arr = []
+	for feature_iter in range(len(feature_types)):
+		feature_type = feature_types[feature_iter]
+		raw_feature_cov = raw_cov[:, feature_iter]
+		if feature_type == 'cat':
+			cat_feature = extract_categorical_feature(raw_feature_cov)
+			feature_arr.append(cat_feature)
+		elif feature_type == 'real':
+			feature_arr.append(raw_feature_cov[:, np.newaxis].astype(float))
+		elif feature_type == 'skip':
+			continue
+		else:
+			print('Error: shouldnt be here')
+			pdb.set_trace()
+	return np.hstack(feature_arr)
+
+
+
+def extract_sample_covariates(covariate_file):
+	raw_cov = np.loadtxt(covariate_file, dtype=str, delimiter='\t')
+	header = raw_cov[0,1:]
+	raw_cov = raw_cov[1:, 1:]
+	# a bit manual here
+	feature_types = ['skip', 'cat', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'real', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip']
+	# error checking
+	if len(feature_types) != raw_cov.shape[1]:
+		print('assumption error')
+	feature_arr = []
+	for feature_iter in range(len(feature_types)):
+		feature_type = feature_types[feature_iter]
+		raw_feature_cov = raw_cov[:, feature_iter]
+		if feature_type == 'cat':
+			cat_feature = extract_categorical_feature(raw_feature_cov)
+			feature_arr.append(cat_feature)
+		elif feature_type == 'real':
+			feature_arr.append(raw_feature_cov[:, np.newaxis].astype(float))
+		elif feature_type == 'skip':
+			continue
+		else:
+			print('Error: shouldnt be here')
+			pdb.set_trace()
+	return np.hstack(feature_arr)
+
+def regress_out_technical_covariates_from_gene_expression(input_expression_file, output_residual_expression_file, sample_covariate_file, technical_covariate_file):
+	# A bit of manual covariate extraction.. sue me
+	technical_covariates = extract_technical_covariates(technical_covariate_file)
+	donor_covariates = extract_sample_covariates(sample_covariate_file)
+	covariates = np.hstack((donor_covariates, technical_covariates))
+
+	expr_raw = np.loadtxt(input_expression_file, dtype=str, delimiter='\t')
+	expr = expr_raw[1:,1:].astype(float)
+	reg = LinearRegression().fit(covariates,np.transpose(expr))
+	prediction = np.transpose(reg.predict(covariates))
+	residual = expr - prediction
+
+	f = open(input_expression_file)
+	t = open(output_residual_expression_file,'w')
+	counter = 0
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			t.write(line + '\n')
+			continue
+		ensamble_id = data[0]
+		t.write(ensamble_id + '\t' + '\t'.join(residual[counter, :].astype(str)) + '\n')
+		counter = counter + 1
+	f.close()
+	t.close()
+
+def get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file):
+	sample_name_mapping = create_sample_name_mapping(sample_names, tissues, tissues_alt, gtex_tpm_dir)
+	xcell_covariate_dicti = {}
+	xcell_data = np.loadtxt(gtex_xcell_enrichment_file, dtype=str,delimiter='\t')
+	xcell_cell_types = xcell_data[1:,0]
+	xcell_sample_names = xcell_data[0,1:]
+	xcell_enrichments = xcell_data[1:, 1:]
+	num_samples = len(xcell_sample_names)
+	for sample_num in range(num_samples):
+		xcell_sample_name = xcell_sample_names[sample_num]
+		if xcell_sample_name not in sample_name_mapping:
+			continue
+		our_sample_name = sample_name_mapping[xcell_sample_name]
+		if our_sample_name in xcell_covariate_dicti:
+			print('assumption erroror')
+			pdb.set_trace()
+		xcell_covariate_dicti[our_sample_name] = xcell_enrichments[:, sample_num]
+	if len(sample_to_index) != len(xcell_covariate_dicti):
+		print('assumption erororo!')
+		pdb.set_trace()
+	return xcell_covariate_dicti, xcell_cell_types
+
 tissues_file = sys.argv[1]
 gtex_expression_dir = sys.argv[2]
 gtex_tpm_dir = sys.argv[3]
@@ -763,8 +1084,10 @@ gtex_covariate_dir = sys.argv[4]
 gtex_genotype_dir = sys.argv[5]
 gtex_egene_dir = sys.argv[6]
 gtex_individual_information_file = sys.argv[7]
-gtex_eqtl_dir = sys.argv[8]
-processed_data_dir = sys.argv[9]
+gtex_sample_information_file = sys.argv[8]
+gtex_eqtl_dir = sys.argv[9]
+gtex_xcell_enrichment_file = sys.argv[10]
+processed_data_dir = sys.argv[11]
 tissues, tissues_alt = get_tissues(tissues_file)
 
 
@@ -772,48 +1095,61 @@ tissues, tissues_alt = get_tissues(tissues_file)
 sample_name_file = processed_data_dir + 'sample_names.txt'
 sample_names, sample_to_index, individual_covariates = get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_individual_information_file)
 
-print_individual_id_file_and_tissue_file(sample_names, processed_data_dir + 'individual_id.txt', processed_data_dir + 'sample_tissue_names.txt')
+#print_individual_id_file_and_tissue_file(sample_names, processed_data_dir + 'individual_id.txt', processed_data_dir + 'sample_tissue_names.txt')
 
-print_sample_covariates(sample_names, individual_covariates, processed_data_dir + 'sample_covariates.txt')
+xcell_covariates, xcell_covariate_names = get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file)
+
+sample_covariate_file = processed_data_dir + 'sample_covariates.txt'
+print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, sample_covariate_file)
+
+#print_sample_surveyed_covariates(sample_names, gtex_individual_information_file, processed_data_dir + 'sample_surveyed_covariates.txt')
+
+technical_covariate_file = processed_data_dir + 'sample_technical_covariates.txt'
+#print_sample_technical_covariates(tissues, tissues_alt, sample_names, gtex_tpm_dir, gtex_sample_information_file, technical_covariate_file)
 
 # We are going to limit analysis to genes tested in all tissues
-genes_tested_in_all_tissues = get_genes_tested_in_all_tissues(tissues, gtex_expression_dir)
+#genes_tested_in_all_tissues = get_genes_tested_in_all_tissues(tissues, gtex_expression_dir)
 
 
 # Generate TPM expression matrix
 tpm_expression_matrix_file = processed_data_dir + 'cross_tissue_tpm.txt'
-generate_tpm_expression_matrix(tissues, tissues_alt, sample_names, genes_tested_in_all_tissues, gtex_tpm_dir, tpm_expression_matrix_file)
+#generate_tpm_expression_matrix(tissues, tissues_alt, sample_names, genes_tested_in_all_tissues, gtex_tpm_dir, tpm_expression_matrix_file)
 
 # Quantile normalize and standardize TPM expression matrix
 standardized_tpm_expression_matrix_file = processed_data_dir + 'cross_tissue_tpm_standardized.txt'
-standardize_expression(tpm_expression_matrix_file, standardized_tpm_expression_matrix_file)
-
+#standardize_expression(tpm_expression_matrix_file, standardized_tpm_expression_matrix_file)
 
 
 # Extract covariates (expression pcs)
 num_expression_pcs = 50
 covariate_file = processed_data_dir + 'covariates.txt'
-extract_covariates(standardized_tpm_expression_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
+#extract_covariates(standardized_tpm_expression_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
+
 
 
 # Limit to genes in our analysis
-valid_genes = get_genes_we_have_expression_data_for(standardized_tpm_expression_matrix_file)
+#valid_genes = get_genes_we_have_expression_data_for(standardized_tpm_expression_matrix_file)
 
 # Limit to variants we have genoytpe data for
-valid_variants = get_variants_we_have_genotype_data_for(gtex_genotype_dir)
+#valid_variants = get_variants_we_have_genotype_data_for(gtex_genotype_dir)
 
 tss_distance_thresh=50000.0
 all_tests_file = processed_data_dir + 'all_tests_unordered.txt'
-extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, valid_genes, valid_variants, all_tests_file)
+#extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, valid_genes, valid_variants, all_tests_file)
 
 
 
 
+# Regress out technical covariates from gene expression
+standardized_tpm_expression_technical_cov_residual_matrix_file = processed_data_dir + 'cross_tissue_tpm_technical_covariate_residuals.txt'
+#regress_out_technical_covariates_from_gene_expression(standardized_tpm_expression_matrix_file, standardized_tpm_expression_technical_cov_residual_matrix_file, sample_covariate_file, technical_covariate_file)
 
 
 
-
-
+# Extract covariates (expression pcs)
+num_expression_pcs = 80
+covariate_file = processed_data_dir + 'residual_expression_covariates.txt'
+#extract_covariates(standardized_tpm_expression_technical_cov_residual_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
 
 
 

@@ -34,11 +34,21 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# Run model
 	#####################################
 	if model_name == 'eqtl_factorization_vi':
-		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=1e-16, beta=1e-16, a=1, b=1, gamma_v=lambda_v, output_root=output_root)
+		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=1e-3, beta=1e-3, a=1, b=1, max_iter=2000, gamma_v=lambda_v, output_root=output_root)
 		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-	pdb.set_trace()
-
-
+		# Order and Filter Factors
+		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
+		ordered_indices = np.argsort(-theta_U)
+		num_indices = sum(theta_U > .01)
+		ordered_filtered_indices = ordered_indices[:num_indices]
+		# Save to output file
+		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
 
 
 
@@ -59,11 +69,13 @@ sample_overlap_file = sys.argv[4]
 num_latent_factors = int(sys.argv[5])
 lambda_v = float(sys.argv[6])
 model_name = sys.argv[7]
-output_root = sys.argv[8]
+seed = int(sys.argv[8])
+output_root = sys.argv[9]
 
 
-
-np.random.seed(1)
+print(seed)
+print(output_root)
+np.random.seed(seed)
 
 
 train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v)

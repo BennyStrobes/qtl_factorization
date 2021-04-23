@@ -17,8 +17,42 @@ run_eqtl_lmm <- function(expr, geno, covariates, groups) {
 	return(list(eqtl_pvalue=pvalue, eqtl_beta=beta, eqtl_std_err=std_err))
 }
 
+run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
+	fit_full <- lm(expr ~ geno + covariates + lfs:geno)
+	fit_null <- lm(expr ~ geno + covariates)
+	obj <- lrtest(fit_null, fit_full)
+	aggregate_pvalue <- obj[[5]][2]
+	num_cov = dim(covariates)[2]
+	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
+	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
+	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
+}
 
 
+pass_genotype_filter <- function(geno, thresh) {
+	rounded_geno <- round(geno)
+	booly = TRUE
+	num_samples = length(rounded_geno)
+
+	num_zero = sum(rounded_geno == 0)
+	num_one = sum(rounded_geno == 1)
+	num_two = sum(rounded_geno == 2)
+
+	fraction_zero = num_zero/num_samples
+	fraction_one = num_one/num_samples
+	fraction_two = num_two/num_samples
+
+	if (fraction_zero < thresh) {
+		booly = FALSE
+	}
+	if (fraction_one < thresh) {
+		booly = FALSE
+	}
+	if (fraction_two < thresh) {
+		booly = FALSE
+	}
+	return(booly)
+}
 
 #####################
 # Command line args
@@ -27,11 +61,12 @@ expression_file = args[1]
 genotype_file = args[2]
 test_names_file = args[3]
 covariate_file = args[4]
-sample_overlap_file = args[5]
-output_root = args[6]
-job_number = as.numeric(args[7])
-num_jobs = as.numeric(args[8])
-total_lines = as.numeric(args[9])
+interaction_factor_file = args[5]
+sample_overlap_file = args[6]
+output_root = args[7]
+job_number = as.numeric(args[8])
+num_jobs = as.numeric(args[9])
+total_lines = as.numeric(args[10])
 
 print(total_lines)
 
@@ -44,8 +79,10 @@ end_num = (job_number + 1)*lines_per_job
 
 
 covariates <- as.matrix(read.table(covariate_file, header=FALSE))
+lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1
 
+num_lfs <- dim(lfs)[2]
 
 output_file <- paste0(output_root, "results.txt")
 sink(output_file)
@@ -69,22 +106,29 @@ while(!stop) {
 	# Unpack data
 		expr = as.numeric(strsplit(line_expr,'\t')[[1]])
 		geno = as.numeric(strsplit(line_geno,'\t')[[1]])
+
+
 		# Run eqtl analysis
 		line_info <- strsplit(line_test,'\t')[[1]]
 		ensamble_id = line_info[1]
 		rs_id = line_info[2]
-		
-		tryCatch(
-		{
-			lmm_results = run_eqtl_lmm(expr, geno, covariates, groups)
-			new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lmm_results$eqtl_beta, "\t", lmm_results$eqtl_std_err,"\t", lmm_results$eqtl_pvalue,"\n")
-        	cat(new_line)
-        },
-        error = function(e) {
-        	new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",0.0, "\t", 1.0,"\t", 1.0,"\n")
-        	cat(new_line)
-        }
-        )
+		if (pass_genotype_filter(geno, .05)) {
+			tryCatch(
+			{
+				lm_results = run_lf_interaction_eqtl_lm(expr, geno, covariates, lfs)
+				new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lm_results$eqtl_pvalue, "\t", paste0(lm_results$coefficient_pvalues, collapse=","), "\n")
+        		cat(new_line)
+        	},
+        	error = function(e) {
+        		new_line <- paste0(rs_id, "\t", ensamble_id ,"\t", 1.0, "\t", paste0(rep(1.0, num_lfs), collapse=","), "\n")
+        		cat(new_line)
+        	}
+        	)
+			}
+		else {
+			new_line <- paste0(rs_id, "\t", ensamble_id, "\t", "NA", "\t", paste0(rep("NA", num_lfs), collapse=","), "\n")
+			cat(new_line)
+		}
 	}
 	# Get info for next line
 	count = count + 1

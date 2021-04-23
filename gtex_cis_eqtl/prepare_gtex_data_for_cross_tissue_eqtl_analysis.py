@@ -110,6 +110,7 @@ def generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_sam
 	t = open(eqtl_expression_file, 'w')
 	# Do this one chromosome at a time (for memory purposes)
 	for chrom_num in range(1, 23):
+		print(chrom_num)
 		# Extract ordered list of genes of this chromosome and dictionary list of genes on this chromosomes
 		ordered_genes_arr, genes_dicti = extract_genes_on_chromosome_for_testing(all_variant_gene_pairs_file, chrom_num)
 
@@ -201,6 +202,63 @@ def generate_eqtl_covariate_input_data(covariate_file, eqtl_covariate_file):
 	data = np.loadtxt(covariate_file, dtype=str, delimiter='\t')
 	np.savetxt(eqtl_covariate_file, data[1:,1:], fmt="%s", delimiter='\t')
 
+def generate_eqtl_interaction_factor_input_data(covariate_file, eqtl_interaction_factor_file):
+	data = np.loadtxt(covariate_file, dtype=str, delimiter='\t')
+	header = data[0,:]
+	# get expression pc column indices
+	indices = []
+	for i, ele in enumerate(header):
+		if ele.startswith('PC'):
+			indices.append(i)
+	indices = np.asarray(indices)
+	# Save to output file
+	np.savetxt(eqtl_interaction_factor_file, data[1:, indices], fmt="%s", delimiter='\t')
+
+
+def extract_categorical_feature_matrix(raw_feature_cov):
+	all_features = []
+	for raw_feature_str in raw_feature_cov:
+		all_features.append(raw_feature_str)
+	unique_categories = np.unique(np.asarray(all_features))
+	mapping = {}
+	for i, category in enumerate(unique_categories):
+		mapping[category] = i
+
+	cat_feature = np.zeros((len(raw_feature_cov), len(unique_categories) -1))
+
+	for i, raw_feature_string in enumerate(raw_feature_cov):
+		column_num = mapping[raw_feature_string]
+		if column_num == (len(unique_categories) -1):
+			continue
+		cat_feature[i, column_num] = 1.0
+	return(cat_feature)
+
+def generate_eqtl_covariate_includinging_tissue_identity_input_data(residual_expression_covariate_file, eqtl_residual_covariate_file):
+	data = np.loadtxt(residual_expression_covariate_file, dtype=str, delimiter='\t')
+	standard_cov = data[1:,1:]
+	# Extract sample tissue names
+	sample_ids = data[1:,0]
+	sample_tissue_names = []
+	for sample_id in sample_ids:
+		sample_tissue_names.append(sample_id.split(':')[1])
+	sample_tissue_names = np.asarray(sample_tissue_names)
+	# Convert sample tissue names vector to one-hot encoding binary matrix
+	tissue_mat = extract_categorical_feature_matrix(sample_tissue_names)
+	# create concatenated covariate matrix
+	full_cov = np.hstack((standard_cov, tissue_mat.astype(str)))
+	np.savetxt(eqtl_residual_covariate_file, full_cov, fmt="%s", delimiter='\t')
+
+def generate_eqtl_interaction_factors_from_tissue_identity(residual_expression_covariate_file, eqtl_known_tissue_interaction_file):
+	data = np.loadtxt(residual_expression_covariate_file, dtype=str, delimiter='\t')
+	# Extract sample tissue names
+	sample_ids = data[1:,0]
+	sample_tissue_names = []
+	for sample_id in sample_ids:
+		sample_tissue_names.append(sample_id.split(':')[1])
+	sample_tissue_names = np.asarray(sample_tissue_names)
+	# Convert sample tissue names vector to one-hot encoding binary matrix
+	tissue_mat = extract_categorical_feature_matrix(sample_tissue_names)
+	np.savetxt(eqtl_known_tissue_interaction_file, tissue_mat.astype(str), fmt="%s", delimiter='\t')
 
 #####################
 # Command Line args
@@ -220,29 +278,55 @@ covariate_file = output_dir + 'covariates.txt'
 
 # Re-order variant gene pairs file
 all_variant_gene_pairs_file = output_dir + 'all_tests.txt'
-order_variant_gene_pairs_file_by_chromosome(all_unordered_variant_gene_pairs_file, all_variant_gene_pairs_file)
+#order_variant_gene_pairs_file_by_chromosome(all_unordered_variant_gene_pairs_file, all_variant_gene_pairs_file)
 
 
 
 # Extract array of ordered samples (according to already generated covariate file)
-ordered_samples = extract_ordered_samples_according_to_covariate_file(covariate_file)
+#ordered_samples = extract_ordered_samples_according_to_covariate_file(covariate_file)
 
 # Save matrix of covariates of dimension num_samplesXnum_covariates
 eqtl_covariate_file = output_dir + 'cross_tissue_eqtl_covariate_input.txt'
-generate_eqtl_covariate_input_data(covariate_file, eqtl_covariate_file)
+#generate_eqtl_covariate_input_data(covariate_file, eqtl_covariate_file)
 
 
 # Extract expression data for eqtl analysis
 eqtl_expression_file = output_dir + 'cross_tissue_eqtl_expression_input.txt'
-generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_samples, expression_file, eqtl_expression_file)
+#generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_samples, expression_file, eqtl_expression_file)
 
 
 # Extract genotype data for eqtl analysis
 eqtl_genotype_file = output_dir + 'cross_tissue_eqtl_genotype_input.txt'
-generate_eqtl_genotype_input_data(all_variant_gene_pairs_file, ordered_samples, gtex_genotype_dir, eqtl_genotype_file)
+#generate_eqtl_genotype_input_data(all_variant_gene_pairs_file, ordered_samples, gtex_genotype_dir, eqtl_genotype_file)
 
 
+# Already generated data
+residual_expression_file = output_dir + 'cross_tissue_tpm_technical_covariate_residuals.txt'
+residual_expression_covariate_file = output_dir + 'residual_expression_covariates.txt'
+
+# Extract array of ordered samples (according to already generated covariate file)
+#ordered_samples = extract_ordered_samples_according_to_covariate_file(residual_expression_covariate_file)
 
 
+# Extract expression data for eqtl analysis
+eqtl_residual_expression_file = output_dir + 'cross_tissue_eqtl_residual_expression_input.txt'
+#generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_samples, residual_expression_file, eqtl_residual_expression_file)
+
+# Save matrix of covariates of dimension num_samplesXnum_covariates
+eqtl_residual_covariate_file = output_dir + 'cross_tissue_eqtl_residual_covariate_input.txt'
+#generate_eqtl_covariate_input_data(residual_expression_covariate_file, eqtl_residual_covariate_file)
+
+# Save matrix of covariates of dimension num_samplesXnum_covariates
+eqtl_residual_interaction_factor_file = output_dir + 'cross_tissue_eqtl_residual_interaction_factor_input.txt'
+#generate_eqtl_interaction_factor_input_data(residual_expression_covariate_file, eqtl_residual_interaction_factor_file)
+
+
+# Save matrix of covariates of dimension num_samplesXnum_covariates
+eqtl_residual_covariate_file = output_dir + 'cross_tissue_eqtl_residual_covariate_known_tissue_input.txt'
+# generate_eqtl_covariate_includinging_tissue_identity_input_data(residual_expression_covariate_file, eqtl_residual_covariate_file)
+
+# Save matrix of covariates of dimension num_samplesXnum_covariates
+eqtl_known_tissue_interaction_file = output_dir + 'cross_tissue_eqtl_residual_known_tissue_interaction_input.txt'
+#generate_eqtl_interaction_factors_from_tissue_identity(residual_expression_covariate_file, eqtl_known_tissue_interaction_file)
 
 
