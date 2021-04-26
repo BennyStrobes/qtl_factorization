@@ -76,10 +76,12 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		# To identify header
 		head_count = 0
 		# Stream file from one job
+		counter = 0
 		for line in f:
 			line = line.rstrip()
 			data = line.split('\t')
 			t2.write(line + '\n')
+			counter = counter +1
 			if data[2] == 'NA':
 				continue
 			# HEADER
@@ -94,6 +96,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		f.close()
 		# Delete file from single job
 		#os.system ('rm ' + file_name)
+	t2.close()
 	t.close()
 
 def get_number_of_latent_factors(fdr_file):
@@ -205,12 +208,12 @@ merge_parallelized_results(output_root, '.txt', total_jobs)
 
 fdr = .05
 fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-#bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
 
 nominal_coefficient_pvalue_thresholds = [1e-4, 1e-6, 1e-8]
 num_hits_per_lf_file = output_root + 'number_of_hits_per_latent_factor.txt'
-#number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds)
+number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds)
 
 
 num_quantiles = 5

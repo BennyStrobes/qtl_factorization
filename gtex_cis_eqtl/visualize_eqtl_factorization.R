@@ -923,11 +923,31 @@ tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.tx
 
 
 ############################
+# Load in files
+############################
+tissue_10_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_names.txt")
+tissue_10_sample_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_covariates.txt")
+tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_surveyed_covariates.txt")
+tissue_10_technical_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_technical_covariates.txt")
+
+tissue_10_names <- get_tissue_names(tissue_10_file)
+tissue_10_indi_names <- get_indi_names(tissue_10_file)
+
+
+############################
+# Model Specification
+############################
+tissue_10_model_stem <- paste0("tissues_subset_whole_blood_lf_interaction_egenes_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_no_RE_temper_")
+tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
+
+
+
+############################
 # Start making plots!!
 ############################
 
 #explore_relationship_between_surveyed_covariates_and_eqtl_factors(tissue_10_surveyed_covariate_file, tissue_10_loading_file)
-explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, tissue_10_loading_file, tissue_10_indi_names)
+#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, tissue_10_loading_file, tissue_10_indi_names)
 
 ######################
 # Make box plot for each Race, showing loading distributions
@@ -962,7 +982,6 @@ covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
 
 
-if (FALSE) {
 # Epithelial cells
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "epiethelial_cells_loadings_scatter.pdf")
 ct_loading_scatter <- make_cell_type_loadings_scatters(loadings, covariates$Epithelial_cells, "Epithelial", tissue_10_names, tissue_colors)
@@ -979,12 +998,48 @@ ggsave(ct_loading_scatter, file=output_file, width=7.2, height=11, units="in")
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "myocyte_loadings_scatter.pdf")
 ct_loading_scatter <- make_cell_type_loadings_scatters(loadings, covariates$Myocytes, "Myocytes", tissue_10_names, tissue_colors)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=11, units="in")
-}
+
+# Myocyte cells
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "myocyte_loadings_scatter.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatters(loadings, covariates$Myocytes, "Myocytes", tissue_10_names, tissue_colors)
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=11, units="in")
+
+# Neutrophils
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "neutrophil_loadings_scatter.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatters(loadings, covariates$Neutrophils, "Neutrophil", tissue_10_names, tissue_colors)
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=11, units="in")
+
+
+temp_cov_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl/processed_data/tissues_subset_whole_blood_residual_expression_covariates.txt"
+temp_cov <- read.table(temp_cov_file, header=TRUE, sep="\t")
+
+valid_tissues <- c("Whole_Blood")
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_for_blood_tissues_colored_by_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+valid_tissues <- c("Whole_Blood")
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_neutrophil_scatter_for_blood_tissues_colored_by_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], covariates$Neutrophils, "Neutrophils", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+valid_tissues <- c("Whole_Blood")
+loading_num <- 2
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_2_genotype_PC1_scatter_for_blood_tissues_colored_by_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+valid_tissues <- c("Whole_Blood")
+loading_num <- 2
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_2_neutrophil_scatter_for_blood_tissues_colored_by_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], covariates$Neutrophils, "Neutrophils", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
 
 if (FALSE) {
-
-temp_cov_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl/processed_data/tissues_subset_10_residual_expression_covariates.txt"
-temp_cov <- read.table(temp_cov_file, header=TRUE, sep="\t")
 
 
 valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")

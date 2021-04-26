@@ -340,16 +340,16 @@ class EQTL_FACTORIZATION_VI(object):
 			print('V')
 			self.update_V()
 			print('alpha')
-			self.update_alpha()
+			#self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
 			self.update_F()
 			print('thetaU')
-			if vi_iter > 4:
+			if vi_iter > 2:
 				self.update_theta_U()
 			print('psi')
-			self.update_psi()
+			#self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
@@ -579,10 +579,12 @@ class EQTL_FACTORIZATION_VI(object):
 		kl_U_S = self.compute_kl_divergence_of_U_S()
 		kl_F_S = self.compute_kl_divergence_of_F_S()
 		kl_tau = self.compute_kl_divergence_of_tau()
-		kl_psi = self.compute_kl_divergence_of_psi()
+		#kl_psi = self.compute_kl_divergence_of_psi()
 		kl_theta_u = self.compute_kl_divergence_of_theta_u()
 		kl_C = self.compute_kl_divergence_of_C()
-		kl_alpha = self.compute_kl_divergence_of_alpha()
+		#kl_alpha = self.compute_kl_divergence_of_alpha()
+		kl_psi = 0.0
+		kl_alpha = 0.0
 
 		kl_divergence = kl_V_S + kl_U_S + kl_F_S + kl_tau + kl_theta_u + kl_C + kl_psi + kl_alpha
 
@@ -759,6 +761,7 @@ class EQTL_FACTORIZATION_VI(object):
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
 		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*0.0
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
@@ -791,7 +794,8 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
 		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*10
+		self.theta_U_a = np.ones(self.K)*self.a_prior*50
 		self.theta_U_b = np.ones(self.K)*self.b_prior
+
 
 

@@ -16,6 +16,24 @@ make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
 	loadings <- as.matrix(loadings)
 	covs <- covariates
     
+    # Filter out covs that only contain 1 factor
+    num_covs_init <- dim(covs)[2]
+    cov_boolean <- c()
+    for (num_cov in 1:num_covs_init) {
+        cov_vec <- covs[, num_cov]
+        if (is.factor(cov_vec) == TRUE) {
+            if (nlevels(cov_vec) <= 1) {
+                cov_boolean <- c(cov_boolean, FALSE)
+            } else {
+                cov_boolean <- c(cov_boolean, TRUE)
+            }
+        } else {
+            cov_boolean <- c(cov_boolean, TRUE)
+        }
+    }
+    covs <- covs[,cov_boolean]
+
+    
     # Initialize PVE heatmap
     factor_colnames <- paste0("Factor", 1:(dim(loadings)[2]))
     factor_rownames <- colnames(covs)
@@ -102,13 +120,13 @@ visualization_dir <- args[3]
 
 # Load in Expression File
 expr_file <- paste0(data_dir, "cross_tissue_tpm_standardized.txt")
-#expr <- read.table(expr_file, header=TRUE, sep="\t")
-#expr <- as.matrix(expr[,2:(dim(expr)[2])])
+expr <- read.table(expr_file, header=TRUE, sep="\t")
+expr <- as.matrix(expr[,2:(dim(expr)[2])])
 # Generate Expression PCs
-#svd1 <- svd(expr)
-#saveRDS(svd1, paste0(visualization_dir, "svd1.rds"))
+svd1 <- svd(expr)
+saveRDS(svd1, paste0(visualization_dir, "svd1.rds"))
 # If already run (to save time)
-svd1 <- readRDS(paste0(visualization_dir, "svd1.rds"))
+#svd1 <- readRDS(paste0(visualization_dir, "svd1.rds"))
 
 
 # Load in Expression File
@@ -168,13 +186,13 @@ ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
 #######################################
 num_pcs <- 100
 output_file <- paste0(visualization_dir, "expr_", num_pcs, "_pc_individual_per_tissue_covariates_correlation_heatmap.pdf")
-heatmap <- make_covariate_loading_correlation_heatmap(individual_per_tissue_covariates, svd1$v[,1:num_pcs])
-ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
+#heatmap <- make_covariate_loading_correlation_heatmap(individual_per_tissue_covariates, svd1$v[,1:num_pcs])
+#ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
 
 num_pcs <- 100
 output_file <- paste0(visualization_dir, "resid_expr_", num_pcs, "_pc_individual_per_tissue_covariates_correlation_heatmap.pdf")
-heatmap <- make_covariate_loading_correlation_heatmap(individual_per_tissue_covariates, svd2$v[,1:num_pcs])
-ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
+#heatmap <- make_covariate_loading_correlation_heatmap(individual_per_tissue_covariates, svd2$v[,1:num_pcs])
+#ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
 
 ######################################
 # Make correlation heatmap correlating covariates with loadings

@@ -980,6 +980,7 @@ def extract_technical_covariates(technical_covariate_file):
 	raw_cov = raw_cov[1:, 1:]
 	# a bit manual here
 	feature_types = ['skip', 'real', 'cat', 'skip', 'skip', 'skip', 'skip', 'skip', 'real']
+	#feature_types = ['skip', 'real', 'skip', 'skip', 'skip', 'skip', 'skip', 'skip', 'real']
 	# error checking
 	if len(feature_types) != raw_cov.shape[1]:
 		print('assumption error')
@@ -1097,10 +1098,10 @@ sample_names, sample_to_index, individual_covariates = get_sample_names(tissues,
 
 #print_individual_id_file_and_tissue_file(sample_names, processed_data_dir + 'individual_id.txt', processed_data_dir + 'sample_tissue_names.txt')
 
-xcell_covariates, xcell_covariate_names = get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file)
+#xcell_covariates, xcell_covariate_names = get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file)
 
 sample_covariate_file = processed_data_dir + 'sample_covariates.txt'
-print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, sample_covariate_file)
+#print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, sample_covariate_file)
 
 #print_sample_surveyed_covariates(sample_names, gtex_individual_information_file, processed_data_dir + 'sample_surveyed_covariates.txt')
 
@@ -1142,14 +1143,14 @@ all_tests_file = processed_data_dir + 'all_tests_unordered.txt'
 
 # Regress out technical covariates from gene expression
 standardized_tpm_expression_technical_cov_residual_matrix_file = processed_data_dir + 'cross_tissue_tpm_technical_covariate_residuals.txt'
-#regress_out_technical_covariates_from_gene_expression(standardized_tpm_expression_matrix_file, standardized_tpm_expression_technical_cov_residual_matrix_file, sample_covariate_file, technical_covariate_file)
+regress_out_technical_covariates_from_gene_expression(standardized_tpm_expression_matrix_file, standardized_tpm_expression_technical_cov_residual_matrix_file, sample_covariate_file, technical_covariate_file)
 
 
 
 # Extract covariates (expression pcs)
-num_expression_pcs = 80
+num_expression_pcs = 60
 covariate_file = processed_data_dir + 'residual_expression_covariates.txt'
-#extract_covariates(standardized_tpm_expression_technical_cov_residual_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
+extract_covariates(standardized_tpm_expression_technical_cov_residual_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
 
 
 
