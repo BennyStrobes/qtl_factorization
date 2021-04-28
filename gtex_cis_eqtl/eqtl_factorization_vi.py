@@ -346,7 +346,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print('F')
 			self.update_F()
 			print('thetaU')
-			if vi_iter > 2:
+			if vi_iter > 4:
 				self.update_theta_U()
 			print('psi')
 			#self.update_psi()
@@ -361,12 +361,38 @@ class EQTL_FACTORIZATION_VI(object):
 			delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
 			print('delta ELBO: ' + str(delta_elbo))
 
+			####################
+			print(self.theta_U_a/(self.theta_U_a + self.theta_U_b))
+			shared_pve, factor_pve = self.compute_variance_explained_of_factors()
+			print(factor_pve)
+			print(shared_pve)
+			end_time = time.time()
+			print(end_time-start_time)
+			print('##############')
+			print('##############')
+
 			# Remove irrelevent factors
-			if np.mod(vi_iter, 10) == 0 and vi_iter > 0:
+			if np.mod(vi_iter, 20) == 0 and vi_iter > 0:
 				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
-				#self.remove_irrelevent_factors()
+				self.remove_irrelevent_factors()
 				# Order and Filter Factors
 				theta_U = self.theta_U_a/(self.theta_U_b + self.theta_U_a)
+
+				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu*self.S_U), fmt="%s", delimiter='\t')
+				np.savetxt(self.output_root + 'temper_factor_pve.txt', (factor_pve), fmt="%s", delimiter='\t')
+				np.save(self.output_root + 'temper_U_S.npy', self.U_mu*self.S_U)
+				np.save(self.output_root + 'temper_S.npy', self.S_U)
+				np.save(self.output_root + 'temper_theta_U.npy', self.theta_U_a/(self.theta_U_a + self.theta_U_b))
+				np.save(self.output_root + 'temper_V.npy', (self.V_mu))
+				np.save(self.output_root + 'temper_F.npy', (self.F_mu))
+				np.save(self.output_root + 'temper_alpha.npy', self.alpha_mu)
+				np.save(self.output_root + 'temper_tau.npy', (self.tau_alpha/self.tau_beta))
+				np.save(self.output_root + 'temper_psi.npy', (self.psi_alpha/self.psi_beta))
+				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
+				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
+				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+				
+				'''
 				ordered_indices = np.argsort(-theta_U)
 				num_indices = sum(theta_U > .01)
 				ordered_filtered_indices = ordered_indices[:num_indices]
@@ -382,33 +408,24 @@ class EQTL_FACTORIZATION_VI(object):
 				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
 				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
 				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
-
-			####################
-			print(self.theta_U_a/(self.theta_U_a + self.theta_U_b))
-			end_time = time.time()
-			print(end_time-start_time)
-			print('##############')
-			print('##############')
+				'''
 	def update_step_size(self):
 		# Only needs to be done for SVI
 		if self.SVI == True:
 			self.step_size = self.learning_rate/(np.power((1.0 + (self.forgetting_rate*self.iter)), .75))
 	def remove_irrelevent_factors(self):
 		#shared_pve, factor_pve = self.compute_variance_explained_of_factors()
-		factor_sparsity = self.theta_U_a/(self.theta_U_a + self.theta_U_b)
-		#num_factors = len(np.where(factor_sparsity > 0.01)[0])
-		#factor_ordering = np.flip(np.argsort(factor_sparsity))[:num_factors]
-		factor_ordering = np.where(factor_sparsity > 0.025)[0]
+		theta_U = self.theta_U_a/(self.theta_U_a + self.theta_U_b)
+
+		#ordered_indices = np.argsort(-theta_U)
+		#num_indices = sum(theta_U > .01)
+		#factor_ordering = ordered_indices[:num_indices]
+
+		factor_ordering = np.where(theta_U > 0.01)[0]
 		print(factor_ordering)
 		self.U_mu = self.U_mu[:, factor_ordering]
 		self.U_var = self.U_var[:, factor_ordering]
-		self.U_var_s_0 = self.U_var_s_0[:, factor_ordering]
 		self.S_U = self.S_U[:, factor_ordering]
-		if self.SVI == True:
-			self.U_mu_full = self.U_mu_full[:, factor_ordering]
-			self.U_var_full = self.U_var_full[:, factor_ordering]
-			self.U_var_s_0_full = self.U_var_s_0_full[:, factor_ordering]
-			self.S_U_full = self.S_U_full[:, factor_ordering]
 
 		self.V_mu = self.V_mu[factor_ordering, :]
 		self.V_var = self.V_var[factor_ordering, :]
@@ -417,23 +434,23 @@ class EQTL_FACTORIZATION_VI(object):
 		self.K = len(factor_ordering)
 	def compute_variance_explained_of_factors(self):
 		# Based on bottom of P21 of https://arxiv.org/pdf/1802.06931.pdf
-
 		variance_effect = self.N*np.sum(self.tau_beta/self.tau_alpha)
 	
 
 		F_terms = self.G*np.dot(np.ones((self.N,1)),[self.F_mu])
-		shared_effect = np.sum(np.square(F_terms))
+		shared_genetic_effect = np.sum(np.square(F_terms))
 
 		# Initailize array to keep track of variance explained from each factor
 		U_S = self.U_mu*self.S_U
 		V_S = self.V_mu
-		factor_effects = []
+		factor_genetic_effects = []
 		for k in range(self.K):
 			componenent_effects = np.sum(np.square(self.G*(np.dot(np.transpose([U_S[:,k]]), [V_S[k,:]]))))
-			factor_effects.append(componenent_effects)
-		denominator = np.sum(factor_effects) + shared_effect + variance_effect
-		shared_pve = shared_effect/denominator
-		factor_pve = factor_effects/denominator
+			factor_genetic_effects.append(componenent_effects)
+		#denominator = np.sum(factor_genetic_effects) + shared_genetic_effect + variance_effect
+		denominator = np.sum(factor_genetic_effects) + shared_genetic_effect
+		shared_pve = shared_genetic_effect/denominator
+		factor_pve = factor_genetic_effects/denominator
 		return shared_pve, factor_pve
 	def update_V(self):
 		###################
@@ -794,7 +811,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
 		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*50
+		self.theta_U_a = np.ones(self.K)*self.a_prior*10
 		self.theta_U_b = np.ones(self.K)*self.b_prior
 
 

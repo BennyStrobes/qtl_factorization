@@ -100,15 +100,15 @@ fi
 sample_overlap_file=$processed_data_dir"tissues_subset_10_individual_id.txt"
 expression_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_lf_interaction_eqtl_input_expression.npy"
 genotype_training_file=$processed_data_dir"tissues_subset_10_eqtl_factorization_lf_interaction_eqtl_input_genotype.npy"
-covariate_file=$processed_data_dir"tissues_subset_10_cross_tissue_eqtl_residual_covariate_w_intercept_input.txt"
+covariate_file=$processed_data_dir"tissues_subset_10_cross_tissue_eqtl_covariate_w_intercept_input.txt"
 num_latent_factors="20"
 lambda_v="1"
 model_name="eqtl_factorization_vi"
-seed="6"
+seed="1"
 
-output_stem=$eqtl_results_dir"tissues_subset_10_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_RE_init2_"
+output_stem=$eqtl_results_dir"tissues_subset_10_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_non_resid_"
 if false; then
-sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
 fi
 
 if false; then

@@ -34,7 +34,7 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# Run model
 	#####################################
 	if model_name == 'eqtl_factorization_vi':
-		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=1e-16, beta=1e-16, a=1, b=1, max_iter=2000, gamma_v=lambda_v, output_root=output_root)
+		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=1e-3, beta=1e-3, a=1, b=1, max_iter=200, gamma_v=lambda_v, output_root=output_root)
 		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
 		# Order and Filter Factors
 		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
