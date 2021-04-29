@@ -861,6 +861,38 @@ def generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_b
 	generate_pca_scores_and_variance_explained(standardized_knn_boosted_expression_file, num_pcs, knn_boosted_pca_file, knn_boosted_pca_ve_file)
 
 
+
+def convert_from_old_donor_ids_to_new_donor_ids(old_donor_ids, donor_id_mapping):
+	new_donor_ids = []
+	f = open(donor_id_mapping)
+	mapping = {}
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		if data[1] in mapping:
+			if data[0] != mapping[data[1]]:
+				print('assumption error')
+				pdb.set_trace()
+		if len(data) != 2:
+			print('assumption errror')
+			pdb.set_trace()
+		mapping[data[1]] = data[0]
+	f.close()
+	for old_donor_id in old_donor_ids:
+		new_donor_ids.append(mapping[old_donor_id])
+	new_donor_ids = np.asarray(new_donor_ids)
+	if len(np.unique(old_donor_ids)) != len(np.unique(new_donor_ids)):
+		print('assumption error')
+		pdb.set_trace()
+	if len(new_donor_ids) != len(old_donor_ids):
+		print('assumption erororo')
+		pdb.set_trace()
+	return new_donor_ids
+
 #####################
 # Command line args
 ######################
@@ -870,6 +902,7 @@ gene_annotation_file = sys.argv[3]
 min_fraction_of_cells = float(sys.argv[4])
 min_genes = int(sys.argv[5])
 transformation_type = sys.argv[6]  # Either deviance_residual or log_transform
+genotype_id_mapping_file = sys.argv[7]
 
 
 ######################
@@ -891,6 +924,15 @@ np.random.seed(0)
 # Load in ScanPy data
 #######################
 adata = sc.read_h5ad(input_h5py_file)
+
+######################
+# Convert from old donor ids to new donors ids
+######################
+new_donor_ids = convert_from_old_donor_ids_to_new_donor_ids(np.asarray(adata.obs['ind_cov']), genotype_id_mapping_file)
+adata.obs['ind_cov'] = new_donor_ids
+# Filter out two samples we don't have genotype data for (I know.. a bit hacky)
+adata = adata[adata.obs.ind_cov != 'IGTB1540_IGTB1540', :]
+adata = adata[adata.obs.ind_cov != '1251_1251', :]
 
 ######################
 # Filter data

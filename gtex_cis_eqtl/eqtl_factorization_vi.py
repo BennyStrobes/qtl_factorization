@@ -476,6 +476,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_mu = V_update_data[(self.K*0):(1*self.K), :]
 		self.V_var = V_update_data[(self.K*1):(2*self.K), :]
 
+
 	def update_U(self):
 		###################
 		# UPDATE U
