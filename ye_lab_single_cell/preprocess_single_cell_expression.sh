@@ -18,8 +18,9 @@ module load python/3.7.4-anaconda
 min_fraction_cells=".05"
 min_genes="400"
 transformation_type="log_transform"
+if false; then
 python preprocess_single_cell_expression.py $input_h5py_file $processed_expression_dir $gene_annotation_file $min_fraction_cells $min_genes $transformation_type $genotype_id_mapping_file
-
+fi
 
 
 if false; then

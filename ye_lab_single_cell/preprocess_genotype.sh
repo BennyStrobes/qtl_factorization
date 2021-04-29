@@ -1,8 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=40:00:00
-#SBATCH --mem=4GB
+#SBATCH --time=10:00:00
 #SBATCH --partition=lrgmem
 #SBATCH --nodes=1
 
@@ -31,13 +30,23 @@ fi
 # Filter vcf file to individuals we have sc-rna-seq for
 ########################
 donor_filtered_merged_vcf=$processed_genotype_dir"clues_immvar_donor_filter_merged.vcf.gz"
+if false; then
 vcftools --gzvcf $merged_vcf --keep $sc_rna_seq_individual_file --recode --stdout | gzip -c > $donor_filtered_merged_vcf
-
+fi
 
 #########################
-# Filter vcf file to sites with maf and no missing
+# Filter vcf file to sites with maf .1 and no missing
 ########################
 donor_site_filtered_merged_vcf=$processed_genotype_dir"clues_immvar_donor_site_filter_merged.vcf.gz"
+if false; then
 vcftools --gzvcf $donor_filtered_merged_vcf --remove-filtered-all --max-missing 1 --maf .1 --recode --stdout | gzip -c > $donor_site_filtered_merged_vcf
+fi
 
+#########################
+# Output dosage matrix for each chromosome
+########################
+for chrom_num in $(seq 1 22); do 
+	chromosome_dosage_prefix=$processed_genotype_dir"clues_immvar_chrom_"$chrom_num
+	vcftools --gzvcf $donor_site_filtered_merged_vcf --chr $chrom_num --extract-FORMAT-info DS --out $chromosome_dosage_prefix
+done
 
