@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 import scanpy as sc
 from anndata import AnnData
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.linear_model import LinearRegression
 
 
 
@@ -74,14 +75,19 @@ def generate_pca_scores_and_variance_explained(filtered_standardized_sc_expressi
 	X = np.loadtxt(filtered_standardized_sc_expression_file)
 
 	# Run PCA (via SVD)
-	uuu, sss, vh = np.linalg.svd(np.transpose(X), full_matrices=False)
-	svd_loadings = np.transpose(vh)[:,:num_pcs]
+	#uuu, sss, vh = np.linalg.svd(np.transpose(X), full_matrices=False)
+	#svd_loadings = np.transpose(vh)[:,:num_pcs]
+	#ve = (np.square(sss)/np.sum(np.square(sss)))[:num_pcs]
+
+	# Faster in sklearn
+	_pca = PCA(n_components=num_pcs, svd_solver='arpack')
+	svd_loadings = _pca.fit_transform(X)
+	ve = _pca.explained_variance_ratio_
 
 	# Save to output file
 	np.savetxt(filtered_cells_pca_file, svd_loadings, fmt="%s", delimiter='\t')
 
 	# Compute variance explained
-	ve = (np.square(sss)/np.sum(np.square(sss)))[:num_pcs]
 	np.savetxt(filtered_cells_pca_ve_file, ve, fmt="%s", delimiter='\n')
 
 # Generate pseudobulk covariate file (along with ordered list of pseudobulk samples)
@@ -834,30 +840,18 @@ def generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_b
 		knn_mapping_to_indices, knn_mapping_to_cell_ids, ordered_cell_ids = create_knn_mapping(adata, k, knn_method)
 		print_knn_mapping(knn_mapping_to_indices, knn_mapping_to_cell_ids, ordered_cell_ids, knn_mapping_file)
 		print_knn_mapping_cell_type_summary(adata, knn_mapping_file, knn_mapping_ct_summary_file)
-		#print_knn_mapping_batch_summary(adata, knn_mapping_file, knn_mapping_batch_summary_file)
-		'''
-		# Temp (for speed of writing code)
-		#knn_mapping_to_indices, knn_mapping_to_cell_ids, ordered_cell_ids = temp_load_knn_mapping(knn_mapping_file)
-		'''
+		print_knn_mapping_batch_summary(adata, knn_mapping_file, knn_mapping_batch_summary_file)
 		# Generate summed knn-boosted counts
-		#generate_knn_boosted_counts(adata, knn_mapping_to_indices, ordered_cell_ids, raw_knn_boosted_expression_file)
+		generate_knn_boosted_counts(adata, knn_mapping_to_indices, ordered_cell_ids, raw_knn_boosted_expression_file)
 	elif knn_method == 'euclidean_pca_adaptive_gaussian_kernel' or knn_method == 'euclidean_pca_median_gaussian_kernel':
 		knn_mapping_to_indices, knn_mapping_to_cell_ids, knn_mapping_to_weights, ordered_cell_ids, cell_id_to_kernel_width = create_distance_weighted_knn_mapping(adata, k, knn_method)
 		print_distance_weighted_knn_mapping(knn_mapping_to_indices, knn_mapping_to_cell_ids, knn_mapping_to_weights, ordered_cell_ids, cell_id_to_kernel_width, knn_mapping_file)
-
-		'''
-		# Temp (for speed of writing code)
-		knn_mapping_to_indices, knn_mapping_to_cell_ids, knn_mapping_to_weights, ordered_cell_ids, cell_id_to_kernel_width = temp_load_distance_weighted_knn_mapping(knn_mapping_file)
-		'''
 		print_distance_weighted_knn_mapping_cell_type_summary(adata, knn_mapping_file, knn_mapping_ct_summary_file)
 
 		# Generate summed knn-boosted counts
 		generate_distance_weighted_knn_boosted_counts(adata, knn_mapping_to_indices, ordered_cell_ids, knn_mapping_to_weights, raw_knn_boosted_expression_file)
-
-
 	# Standardize summed pseudobulk counts (samples X genes)
 	standardize_pseudobulk_counts(raw_knn_boosted_expression_file, standardized_knn_boosted_expression_file)
-
 	generate_pca_scores_and_variance_explained(standardized_knn_boosted_expression_file, num_pcs, knn_boosted_pca_file, knn_boosted_pca_ve_file)
 
 
@@ -892,6 +886,37 @@ def convert_from_old_donor_ids_to_new_donor_ids(old_donor_ids, donor_id_mapping)
 		print('assumption erororo')
 		pdb.set_trace()
 	return new_donor_ids
+
+def extract_categorical_feature(raw_feature_cov):
+	all_features = []
+	for raw_feature in raw_feature_cov:
+		all_features.append(raw_feature)
+	unique_categories = np.unique(np.asarray(all_features))
+	mapping = {}
+	for i, category in enumerate(unique_categories):
+		mapping[category] = i
+
+	cat_feature = np.zeros((len(raw_feature_cov), len(unique_categories) -1))
+
+	for i, raw_feature in enumerate(raw_feature_cov):
+		column_num = mapping[raw_feature]
+		if column_num == (len(unique_categories) -1):
+			continue
+		cat_feature[i, column_num] = 1.0
+	return(cat_feature)
+
+def regress_out_batch_effects(adata, expression_file, residual_expression_file, pca_file, pca_ve_file, num_pcs):
+	expr = np.loadtxt(expression_file)
+	#np.save('temp.npy', expr)
+	batch_cov = extract_categorical_feature(adata.obs.batch_cov)
+	cov = np.hstack((np.asmatrix(adata.obs['n_counts']).T, batch_cov))
+	#expr = np.load('temp.npy')
+	reg = LinearRegression().fit(cov, expr)
+	print('model fit')
+	prediction = reg.predict(cov)
+	residual = expr - prediction
+	np.savetxt(residual_expression_file, residual, fmt="%s", delimiter='\t')
+	generate_pca_scores_and_variance_explained(residual_expression_file, num_pcs, pca_file, pca_ve_file)
 
 #####################
 # Command line args
@@ -1047,9 +1072,6 @@ adata.write(h5_output_file)
 
 
 
-
-
-
 #######################
 # Make kNN-boosted expression
 #######################
@@ -1078,6 +1100,22 @@ adata = sc.read_h5ad(processed_single_cell_h5_file)
 num_pcs=200
 print('start')
 generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_boosted_expression_file, standardized_knn_boosted_expression_file, knn_mapping_file, knn_mapping_ct_summary_file, knn_boosted_pca_file, knn_boosted_pca_ve_file, num_pcs)
+
+
+# Regress out batch
+# Currently assumes no random subsetting
+standardized_knn_boosted_residaul_expression_file = processed_expression_dir + 'knn_boosted_k_' + str(k) + '_' + knn_method + '_regress_out_batch_' + regress_out_batch_string + '_residual_expression_sle_individuals_standardized.txt'
+knn_boosted_residual_expression_pca_file = processed_expression_dir + 'pca_scores_knn_boosted_residual_expression_k_' + str(k) + '_' + knn_method + '_regress_out_batch_' + regress_out_batch_string + '_sle_individuals.txt'
+knn_boosted_residual_expression_pca_ve_file = processed_expression_dir + 'pca_variance_knn_boosted_residual_expression_k_' + str(k) + '_' + knn_method + '_regress_out_batch_' + regress_out_batch_string + '_explained_sle_individuals.txt'
+num_pcs = 200
+regress_out_batch_effects(adata, standardized_knn_boosted_expression_file, standardized_knn_boosted_residaul_expression_file, knn_boosted_residual_expression_pca_file, knn_boosted_residual_expression_pca_ve_file, num_pcs)
+
+
+
+
+
+
+
 
 
 

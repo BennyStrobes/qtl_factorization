@@ -9,6 +9,7 @@
 genotype_data_dir="$1"
 processed_genotype_dir="$2"
 cell_covariates_file="$3"
+visualize_processed_genotype_dir="$4"
 
 #########################
 # Merge genotype vcfs from two different studies into 1
@@ -45,8 +46,52 @@ fi
 #########################
 # Output dosage matrix for each chromosome
 ########################
+if false; then
 for chrom_num in $(seq 1 22); do 
 	chromosome_dosage_prefix=$processed_genotype_dir"clues_immvar_chrom_"$chrom_num
 	vcftools --gzvcf $donor_site_filtered_merged_vcf --chr $chrom_num --extract-FORMAT-info DS --out $chromosome_dosage_prefix
 done
+fi
+
+
+
+#########################
+# Compute genotype PCs with PLINK
+# Referenced here: https://choishingwan.github.io/PRS-Tutorial/plink/
+########################
+echo "GENOTYPE PCS"
+module load plink/1.90b6.4
+donor_site_filtered_merged_plink_stem=$processed_genotype_dir"clues_immvar_donor_site_filter_merged_plink"
+
+# Convert from to plink format
+if false; then
+plink --vcf $donor_site_filtered_merged_vcf --out $donor_site_filtered_merged_plink_stem
+fi
+
+# Filter to independent sites
+donor_site_filtered_merged_independent_plink_stem=$processed_genotype_dir"clues_immvar_donor_site_filter_merged_independent_plink"
+if false; then
+plink --bfile $donor_site_filtered_merged_plink_stem --indep-pairwise 200 50 0.25 --out $donor_site_filtered_merged_independent_plink_stem
+fi
+
+# Compute Genotype PCs
+if false; then
+plink --bfile $donor_site_filtered_merged_plink_stem --extract $donor_site_filtered_merged_independent_plink_stem".prune.in" --pca 6 --out $donor_site_filtered_merged_independent_plink_stem
+fi
+
+# Tidy up genotype PCs (at indiviudal level and cell level)
+genotype_pcs_file=$donor_site_filtered_merged_independent_plink_stem".eigenvec"
+if false; then
+python add_genotype_pcs_to_cell_covariates_file.py $cell_covariates_file $sc_rna_seq_individual_file $genotype_pcs_file $processed_genotype_dir
+fi
+
+
+
+
+#########################
+# Visualize processed genotypes
+########################
+module load R/3.5.1
+Rscript visualize_processed_genotypes.R $processed_genotype_dir $visualize_processed_genotype_dir
+
 
