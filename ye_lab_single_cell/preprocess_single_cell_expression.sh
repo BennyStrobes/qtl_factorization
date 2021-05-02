@@ -20,7 +20,6 @@ min_genes="400"
 transformation_type="log_transform"
 python preprocess_single_cell_expression.py $input_h5py_file $processed_expression_dir $gene_annotation_file $min_fraction_cells $min_genes $transformation_type $genotype_id_mapping_file
 
-
 module load R/3.5.1
 Rscript visualize_processed_single_cell_expression.R $processed_expression_dir $visualize_processed_expression_dir
 

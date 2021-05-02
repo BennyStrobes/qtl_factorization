@@ -263,7 +263,7 @@ def standardize_pseudobulk_counts(raw_pseudobulk_expression_file, standardized_p
 	for gene_num in range(num_genes):
 		standardized_pseudobulk_expression[:, gene_num] = (normalized_pseudobulk_expression[:, gene_num] - np.mean(normalized_pseudobulk_expression[:, gene_num]))/np.std(normalized_pseudobulk_expression[:, gene_num])
 
-	np.savetxt(standardized_pseudobulk_expression_file, standardized_pseudobulk_expression, fmt="%s", delimiter='\t')
+	np.savetxt(standardized_pseudobulk_expression_file, np.round(standardized_pseudobulk_expression, decimals=5), fmt="%s", delimiter='\t')
 
 
 def generate_pseudobulk_expression_data_wrapper(adata, raw_pseudobulk_expression_file, standardized_pseudobulk_expression_file, pseudobulk_covariate_file):
@@ -847,9 +847,9 @@ def generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_b
 		knn_mapping_to_indices, knn_mapping_to_cell_ids, knn_mapping_to_weights, ordered_cell_ids, cell_id_to_kernel_width = create_distance_weighted_knn_mapping(adata, k, knn_method)
 		print_distance_weighted_knn_mapping(knn_mapping_to_indices, knn_mapping_to_cell_ids, knn_mapping_to_weights, ordered_cell_ids, cell_id_to_kernel_width, knn_mapping_file)
 		print_distance_weighted_knn_mapping_cell_type_summary(adata, knn_mapping_file, knn_mapping_ct_summary_file)
-
 		# Generate summed knn-boosted counts
 		generate_distance_weighted_knn_boosted_counts(adata, knn_mapping_to_indices, ordered_cell_ids, knn_mapping_to_weights, raw_knn_boosted_expression_file)
+		
 	# Standardize summed pseudobulk counts (samples X genes)
 	standardize_pseudobulk_counts(raw_knn_boosted_expression_file, standardized_knn_boosted_expression_file)
 	generate_pca_scores_and_variance_explained(standardized_knn_boosted_expression_file, num_pcs, knn_boosted_pca_file, knn_boosted_pca_ve_file)
@@ -915,7 +915,7 @@ def regress_out_batch_effects(adata, expression_file, residual_expression_file, 
 	print('model fit')
 	prediction = reg.predict(cov)
 	residual = expr - prediction
-	np.savetxt(residual_expression_file, residual, fmt="%s", delimiter='\t')
+	np.savetxt(residual_expression_file, np.round(residual, decimals=5), fmt="%s", delimiter='\t')
 	generate_pca_scores_and_variance_explained(residual_expression_file, num_pcs, pca_file, pca_ve_file)
 
 #####################
@@ -1069,7 +1069,6 @@ if random_subset == True:
 else:
 	h5_output_file = processed_expression_dir + 'scanpy_processed_single_cell_data_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '.h5ad'
 adata.write(h5_output_file)
-
 
 
 #######################

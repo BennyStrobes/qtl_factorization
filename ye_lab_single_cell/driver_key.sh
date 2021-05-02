@@ -41,6 +41,9 @@ visualize_processed_genotype_dir=$output_root"visualize_processed_genotype/"
 # Directory containing standard eqtl dir
 standard_eqtl_dir=$output_root"standard_eqtl/"
 
+# Directory containing latent factor interaction eqtls
+latent_factor_interaction_eqtl_dir=$output_root"latent_factor_interaction_eqtl/"
+
 # Directory containing visualizations of standard eqtls
 visualize_standard_eqtl_dir=$output_root"visualize_standard_eqtl/"
 
@@ -58,9 +61,8 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 # Preprocess single cell expression
 ######################
-if false; then
-sbatch preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotype_id_mapping_file
-fi
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotype_id_mapping_file
+
 
 
 ######################
@@ -71,5 +73,16 @@ cell_covariates_file=$processed_expression_dir"cell_covariates_sle_individuals_m
 if false; then
 sh preprocess_genotype.sh $genotype_data_dir $processed_genotype_dir $cell_covariates_file $visualize_processed_genotype_dir
 fi
+
+
+
+######################
+# Call latent-factor (PCA) interaction-eqtls
+######################
+if false; then
+sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
+fi
+
+
 
 
