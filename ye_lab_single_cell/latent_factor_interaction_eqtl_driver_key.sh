@@ -1,8 +1,8 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=20:00:00
-#SBATCH --mem=4GB
+#SBATCH --time=10:00:00
+#SBATCH --mem=250GB
 #SBATCH --partition=lrgmem
 #SBATCH --nodes=1
 
@@ -11,6 +11,9 @@ processed_expression_dir="$1"
 processed_genotype_dir="$2"
 gene_annotation_file="$3"
 latent_factor_interaction_eqtl_dir="$4"
+
+
+
 
 
 
@@ -23,12 +26,13 @@ python prepare_latent_factor_interaction_eqtl_data.py $processed_expression_dir 
 fi
 
 
+
 #############################################
 # Run latent-factor interaction QTL Analysis
 #############################################
 # Input data
 qtl_expression_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_residual_expression.txt"
-qtl_genotype_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_genotype.txt"
+qtl_genotype_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_genotype.txt"
 qtl_covariate_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_covariates.txt"
 qtl_interaction_factor_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_latent_factors.txt"
 qtl_test_names_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_variant_gene_pairs.txt"
@@ -37,12 +41,12 @@ qtl_sample_overlap_file=$latent_factor_interaction_eqtl_dir"latent_factor_intera
 
 
 #In parallel
-num_jobs="30"
+num_jobs="100"
 job_number="0"
 qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_results_"$job_number"_"$num_jobs"_"
-sh run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
-
-
+if false; then
+sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
+fi
 
 if false; then
 for job_number in $(seq 1 $(($num_jobs-1))); do 
@@ -50,3 +54,43 @@ for job_number in $(seq 1 $(($num_jobs-1))); do
 	sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
 done
 fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#############################################
+# Run latent-factor interaction QTL Analysis
+#############################################
+# Input data
+qtl_expression_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_expression.txt"
+qtl_genotype_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_genotype.txt"
+qtl_covariate_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_covariates.txt"
+qtl_interaction_factor_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_latent_factors.txt"
+qtl_test_names_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_variant_gene_pairs.txt"
+qtl_sample_overlap_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_input_knn_boosted_sample_overlap.txt"
+
+
+
+#In parallel
+num_jobs="100"
+job_number="1"
+qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_knn_boosted_eqtl_results_"$job_number"_"$num_jobs"_"
+if false; then
+sh run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
+fi
+

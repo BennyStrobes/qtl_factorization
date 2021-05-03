@@ -29,8 +29,8 @@ run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
 }
 
 run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups) {
-	fit_full <- lm(expr ~ geno + covariates + lfs:geno + (1+lfs|groups), REML=FALSE)
-	fit_null <- lm(expr ~ geno + covariates + (1+lfs|groups), REML=FALSE)
+	fit_full <- lmer(expr ~ geno + covariates + lfs:geno + (1 | groups) + (0+lfs|groups), REML=FALSE)
+	fit_null <- lmer(expr ~ geno + covariates + (1 | groups) + (0+lfs|groups), REML=FALSE)
 
 	lrt <- anova(fit_null,fit_full)
 
@@ -101,7 +101,7 @@ print("Data loaded in.. starting")
 num_lfs <- dim(lfs)[2]
 
 output_file <- paste0(output_root, "results.txt")
-#sink(output_file)
+sink(output_file)
 
 # Stream files
 stop = FALSE
@@ -131,7 +131,8 @@ while(!stop) {
 		if (pass_genotype_filter(geno, .05)) {
 			tryCatch(
 			{
-				lm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
+				lm_results = run_lf_interaction_eqtl_lm(expr, geno, covariates, lfs)
+				#lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
 				new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lm_results$eqtl_pvalue, "\t", paste0(lm_results$coefficient_pvalues, collapse=","), "\n")
         		cat(new_line)
         	},
@@ -158,4 +159,4 @@ while(!stop) {
 		close(f_geno)
 	}
 }
-#sink()
+sink()

@@ -61,8 +61,9 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 # Preprocess single cell expression
 ######################
-sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotype_id_mapping_file
-
+if false; then
+sbatch preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotype_id_mapping_file
+fi
 
 
 ######################

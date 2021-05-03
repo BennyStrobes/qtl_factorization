@@ -1,8 +1,7 @@
-
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=20:00:00
+#SBATCH --time=40:00:00
 #SBATCH --mem=20GB
 #SBATCH --partition=lrgmem
 #SBATCH --nodes=1

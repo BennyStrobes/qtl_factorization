@@ -238,7 +238,7 @@ make_batch_proportion_per_individual_bar_plot <- function(filtered_covariate_dat
 # Make correlation heatmap correlating covariates with loadings
 #######################################
 make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
-  loadings <- as.matrix(loadings)[,1:60]
+  loadings <- as.matrix(loadings)[,1:100]
   #print(summary(covariates))
   covariates$cd4_t_cells = 1.0*(as.character(covariates$ct_cov) == "CD4 T cells")
   covariates$cd14_monocytes = 1.0*(as.character(covariates$ct_cov) == "CD14+ Monocytes")
@@ -380,12 +380,23 @@ output_file <- paste0(visualize_processed_expression_dir, "batch_proportions_per
 
 # VERSION FILES
 # PCA
-pca_files <- c("pca_scores_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_scores_knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt", "pca_scores_knn_boosted_residual_expression_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt")
-pca_pve_files <- c("pca_variance_explained_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_variance_knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_explained_sle_individuals.txt", "pca_variance_knn_boosted_residual_expression_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_explained_sle_individuals.txt")
+pca_files <- c("pca_scores_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_scores_residual_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_scores_knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt", "pca_scores_knn_boosted_residual_expression_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt")
+pca_pve_files <- c("pca_variance_explained_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_variance_residual_expression_explained_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_variance_knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_explained_sle_individuals.txt", "pca_variance_knn_boosted_residual_expression_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_explained_sle_individuals.txt")
 # Cell type summary files ("None" if not applicable)
-ct_summary_files <- c("None", "knn_mapping_cell_type_summary_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt", "None")
+ct_summary_files <- c("None", "None", "knn_mapping_cell_type_summary_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt", "None")
 # output stems
-output_stems <- c("uncorrected_expression_", "un_corrected_expression_knn_pooled_k_30_median_gaussian_kernel_", "residual_expression_knn_pooled_k_30_median_gaussian_kernel_")
+output_stems <- c("uncorrected_expression_", "residual_expression_", "un_corrected_expression_knn_pooled_k_30_median_gaussian_kernel_", "residual_expression_knn_pooled_k_30_median_gaussian_kernel_")
+
+
+pca_files <- c("pca_scores_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_scores_residual_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt")
+pca_pve_files <- c("pca_variance_explained_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt", "pca_variance_residual_expression_explained_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt")
+# Cell type summary files ("None" if not applicable)
+ct_summary_files <- c("None", "None")
+# output stems
+output_stems <- c("uncorrected_expression_", "residual_expression_")
+
+
+
 
 
 for (file_num in 1:length(pca_files)) {
@@ -414,7 +425,7 @@ for (file_num in 1:length(pca_files)) {
   ##########################
   heatmap <- make_covariate_loading_correlation_heatmap(filtered_covariate_data, filtered_pca_data)
   output_file <- paste0(output_stem, "covariate_pca_pve_heatmap.pdf")
-  ggsave(heatmap, file=output_file, width=7.2, height=5, units="in")
+  ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
 
   ##########################

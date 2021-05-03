@@ -944,7 +944,7 @@ if regress_out_batch == True:
 else:
 	regress_out_batch_string = 'False'
 np.random.seed(0)
-
+'''
 ######################
 # Load in ScanPy data
 #######################
@@ -1029,7 +1029,7 @@ if random_subset == True:
 else:
 	gene_id_output_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '_gene_ids.txt'
 np.savetxt(gene_id_output_file, np.vstack((adata.var.index, adata.var[adata.var.columns[0]])).T, fmt="%s", delimiter='\t')
-
+'''
 #######################
 # Save standardized expression data
 #######################
@@ -1037,8 +1037,8 @@ if random_subset == True:
 	expression_output_file = processed_expression_dir + 'single_cell_expression_sle_individuals_random_subset_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform'  + '_regress_out_batch_' + regress_out_batch_string + '_standardized.txt'
 else:
 	expression_output_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform'  + '_regress_out_batch_' + regress_out_batch_string + '_standardized.txt'
-np.savetxt(expression_output_file, adata.X, fmt="%s", delimiter='\t')
-
+#np.savetxt(expression_output_file, adata.X, fmt="%s", delimiter='\t')
+'''
 #######################
 # Save Covariate Info
 #######################
@@ -1069,7 +1069,7 @@ if random_subset == True:
 else:
 	h5_output_file = processed_expression_dir + 'scanpy_processed_single_cell_data_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '.h5ad'
 adata.write(h5_output_file)
-
+'''
 
 #######################
 # Make kNN-boosted expression
@@ -1098,7 +1098,7 @@ print(random_subset)
 adata = sc.read_h5ad(processed_single_cell_h5_file)
 num_pcs=200
 print('start')
-generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_boosted_expression_file, standardized_knn_boosted_expression_file, knn_mapping_file, knn_mapping_ct_summary_file, knn_boosted_pca_file, knn_boosted_pca_ve_file, num_pcs)
+#generate_knn_boosted_expression_data_wrapper(adata, k, knn_method, raw_knn_boosted_expression_file, standardized_knn_boosted_expression_file, knn_mapping_file, knn_mapping_ct_summary_file, knn_boosted_pca_file, knn_boosted_pca_ve_file, num_pcs)
 
 
 # Regress out batch
@@ -1107,9 +1107,15 @@ standardized_knn_boosted_residaul_expression_file = processed_expression_dir + '
 knn_boosted_residual_expression_pca_file = processed_expression_dir + 'pca_scores_knn_boosted_residual_expression_k_' + str(k) + '_' + knn_method + '_regress_out_batch_' + regress_out_batch_string + '_sle_individuals.txt'
 knn_boosted_residual_expression_pca_ve_file = processed_expression_dir + 'pca_variance_knn_boosted_residual_expression_k_' + str(k) + '_' + knn_method + '_regress_out_batch_' + regress_out_batch_string + '_explained_sle_individuals.txt'
 num_pcs = 200
-regress_out_batch_effects(adata, standardized_knn_boosted_expression_file, standardized_knn_boosted_residaul_expression_file, knn_boosted_residual_expression_pca_file, knn_boosted_residual_expression_pca_ve_file, num_pcs)
+#regress_out_batch_effects(adata, standardized_knn_boosted_expression_file, standardized_knn_boosted_residaul_expression_file, knn_boosted_residual_expression_pca_file, knn_boosted_residual_expression_pca_ve_file, num_pcs)
 
-
+# Regress out batch
+# Currently assumes no random subsetting
+standardized_residaul_expression_file = processed_expression_dir + 'single_cell_residual_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform'  + '_regress_out_batch_' + regress_out_batch_string + '_standardized.txt'
+residual_expression_pca_file = processed_expression_dir + 'pca_scores_residual_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '.txt'
+residual_expression_pca_ve_file = processed_expression_dir + 'pca_variance_residual_expression_explained_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '.txt'
+num_pcs = 200
+regress_out_batch_effects(adata, expression_output_file, standardized_residaul_expression_file, residual_expression_pca_file, residual_expression_pca_ve_file, num_pcs)
 
 
 
