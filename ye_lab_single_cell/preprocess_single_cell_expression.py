@@ -944,7 +944,7 @@ if regress_out_batch == True:
 else:
 	regress_out_batch_string = 'False'
 np.random.seed(0)
-'''
+
 ######################
 # Load in ScanPy data
 #######################
@@ -1069,7 +1069,6 @@ if random_subset == True:
 else:
 	h5_output_file = processed_expression_dir + 'scanpy_processed_single_cell_data_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '.h5ad'
 adata.write(h5_output_file)
-'''
 
 #######################
 # Make kNN-boosted expression
