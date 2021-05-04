@@ -107,7 +107,9 @@ model_name="eqtl_factorization_vi"
 seed="1"
 
 output_stem=$eqtl_results_dir"tissues_subset_10_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_non_resid_vectorized_"
+if false; then
 sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
+fi
 
 
 if false; then

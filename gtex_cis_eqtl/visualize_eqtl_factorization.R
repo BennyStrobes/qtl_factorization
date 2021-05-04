@@ -202,9 +202,23 @@ make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loading_fil
 
 	df <- data.frame(loading=loading_vec, race=factor(race_vec), latent_factor=factor(factor_vec, levels=as.character(1:num_factors)))
 
-	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=race)) + geom_boxplot(outlier.size = .1) +
+	df = df[(df$race==1) | (df$race==2),]
+
+	ancestry <- c()
+	num_samples = length(df$race)
+	for (sample_num in 1:num_samples) {
+		if (df$race[sample_num] == 1) {
+			ancestry <- c(ancestry, "European Ancestry")
+		} else {
+			ancestry <- c(ancestry, "African Ancestry")
+		}
+	}
+	df$ancestry = factor(ancestry)
+
+
+	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=ancestry)) + geom_boxplot(outlier.size = .1) +
 				gtex_v8_figure_theme() + 
-	        	labs(x="Latent factor", y = "Sample loading", fill="Known race") +
+	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
 	        	theme(legend.position="bottom")
 
 	return(boxplot)
@@ -360,9 +374,9 @@ make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loading_f
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
 				gtex_v8_figure_theme() + 
 				scale_fill_manual(values=colors) + 
-	        	labs(x="Latent factor", y = "Sample loading", fill="") +
+	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
 	        	theme(legend.position="bottom") +
-	           	guides(fill=guide_legend(nrow=5,byrow=TRUE, override.aes = list(size=.1))) + 
+	           	guides(fill=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=.1))) + 
 	           	theme(legend.text=element_text(size=9))
 
 	return(boxplot)
@@ -794,7 +808,8 @@ make_cell_type_loadings_scatter_for_samples_from_specified_tissue <- function(lo
 			   scale_color_manual(values=colors) +
 	           geom_point() +
 	           gtex_v8_figure_theme() + 
-	           labs(x=loading_name, y=cell_type_name, title=paste0(tissue_name, " / correlation pvalue: ", corry$p.value))
+	           labs(x=loading_name, y=cell_type_name, color="", title=paste0("Pearson correlation pvalue: ", signif(corry$p.value, digits=4))) + 
+	           guides(color=guide_legend(nrow=4,byrow=TRUE))
 
 	return(plotter)
 }
@@ -1078,7 +1093,7 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 # Model Specification
 ############################
 tissue_10_model_stem <- paste0("tissues_subset_10_lf_interaction_egenes_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_non_resid_temper_")
-tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
+tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S_subset.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
 
@@ -1120,8 +1135,8 @@ ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 ######################
 # Make box plot for each Race, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "race_colored_loading_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, tissue_10_loading_file)
-ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+boxplot_race <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, tissue_10_loading_file)
+ggsave(boxplot_race, file=output_file, width=7.2, height=5.5, units="in")
 
 
 ######################
@@ -1139,8 +1154,16 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 ######################
 # Make box plot for each tissue, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "tissue_colored_loading_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, tissue_10_loading_file)
-ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+boxplot_tissue <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, tissue_10_loading_file)
+ggsave(boxplot_tissue, file=output_file, width=7.2, height=5.5, units="in")
+
+######################
+# Make cowplot merged boxplot
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "tissue_and_ancestry_colored_loading_boxplot.pdf")
+tissue_legend <- get_legend(boxplot_tissue)
+race_legend <- get_legend(boxplot_race)
+merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race + theme(legend.position="none"), tissue_legend, race_legend, ncol=2, rel_heights=c(1,.5), rel_widths=c(1, .8), labels = c('a', 'b', '', ''))
+ggsave(merged, file=output_file, width=13.2, height=5.5, units="in")
 
 
 ######################
@@ -1163,104 +1186,97 @@ ggsave(boxplot, file=output_file, width=11.2, height=5.5, units="in")
 covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
 
-
 cell_type_name = "Neurons"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
-#scatters <- make_cell_type_loadings_scatters(loadings, covariates$Neurons, cell_type_name, tissue_10_names, tissue_colors)
-#ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Neurons, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "Myocytes"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Myocytes, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "Keratinocytes"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Keratinocytes, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "Epithelial_cells"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Epithelial, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "Adipocytes"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Adipocytes, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
 cell_type_name = "Age"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
-#scatters <- make_cell_type_loadings_scatters(loadings, covariates$age, cell_type_name, tissue_10_names, tissue_colors)
-#ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$age, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+
+cell_type_name = "ischemic_time"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$ischemic_time, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "bmi"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$bmi, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "weight"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$weight, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+
+cell_type_name = "height"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$height, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
 
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
 valid_tissues <- c("Pituitary")
-loading_num <- 9
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_9_Neurons_scatter_for_skin_samples.pdf")
-#ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Neurons, "Neurons", "Pituitary", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-#ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+loading_num <- 3
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_9_Neurons_scatter_for_pituitary.pdf")
+pituitary_3_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Neurons, "Neurons", "Pituitary", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(pituitary_3_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-
-
-##################
-# Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
-valid_tissues <- c("Muscle_Skeletal")
-loading_num <- 2
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_2_age_Muscle_Skeletal_scatter_for_muscle_skeletal.pdf")
-#ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$age, "Age", "Muscle_Skeletal", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-#ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
 valid_tissues <- c("Muscle_Skeletal")
 loading_num <- 2
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_2_sex_Muscle_Skeletal_scatter_for_muscle_skeletal.pdf")
-#ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$sex, "sex", "Muscle_Skeletal", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-#ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
-
-if (FALSE) {
-
-
-valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
-loading_num <- 1
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_colored_by_skin_tissues_and_race.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_colored_by_specified_tissues_and_categorical_variables(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race==2, levels=c(TRUE, FALSE)), "African Ancestry")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$sex, "sex", "Muscle_Skeletal", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-
-loading_num <- 1
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_colored_by_tissue_and_race.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_colored_by_tissues_and_categorical_variables(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", paste0("Loading ", loading_num), tissue_10_names, tissue_colors, valid_tissues, factor(covariates$race==2, levels=c(TRUE, FALSE)), "African Ancestry")
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
-
-
-valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
-loading_num <- 1
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_for_skin_tissues_colored_by_race.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
-}
-
-if (FALSE) {
-##################
-# Make scatter plot showing correlation between 2 loadings and color samples by cell type enrichments for samples from subset of tissues
-valid_tissues <- c("Thyroid")
-loading_num1 <- 3
-loading_num2 <- 6
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_3_loading_6_scatter_colored_by_Epithelial_for_thyroid_samples.pdf")
-ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_tissue(loadings[, loading_num1], loadings[, loading_num2],  covariates$Epithelial, "Epithelial", "Thyroid tissue", paste0("Loading ", loading_num1), paste0("Loading ", loading_num2), tissue_10_names, valid_tissues)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
-
-valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
-loading_num1 <- 4
-loading_num2 <- 7
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_4_loading_7_scatter_colored_by_Epithelial_for_digestive_samples.pdf")
-ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_tissue(loadings[, loading_num1], loadings[, loading_num2],  covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num1), paste0("Loading ", loading_num2), tissue_10_names, valid_tissues)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
-valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
-loading_num <- 1
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_Epithelial_scatter_for_skin_samples.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Skin tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
-
 valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
 loading_num <- 4
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_4_Epithelial_scatter_for_digestive_samples.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+intestine_4_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(intestine_4_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
-loading_num <- 7
+loading_num <- 8
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_7_Epithelial_scatter_for_digestive_samples.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+intestine_8_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(intestine_8_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "merged_factor_by_cell_type_composition_plot.pdf")
+merged_ct_scatter <- plot_grid(pituitary_3_ct_loading_scatter + theme(legend.position="bottom")+ labs(y="Neuron xCell enrichment", x = "Latent context 3 loading"), intestine_4_ct_loading_scatter + theme(legend.position="bottom") + labs(y="Epithelial xCell enrichment", x="Latent context 4 loading"), intestine_8_ct_loading_scatter + theme(legend.position="bottom")+ labs(y="Epithelial xCell enrichment", x="Latent context 8 loading"), ncol=3, labels = c('a', 'b', 'c'))
+ggsave(merged_ct_scatter, file=output_file, width=13.2, height=5, units="in")
+
 
 
 valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
@@ -1270,48 +1286,32 @@ ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 valid_tissues <- c("Esophagus_Mucosa")
-loading_num <- 5
+loading_num <- 7
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_5_Epithelial_scatter_for_esophagus_mucosa.pdf")
 ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Esophagus_Mucosa", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 valid_tissues <- c("Esophagus_Mucosa")
-loading_num <- 5
+loading_num <- 7
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_5_keratinocytes_scatter_for_esophagus_mucosa.pdf")
 ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Keratinocytes, "Keratinocytes", "Esophagus_Mucosa", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-valid_tissues <- c("Pituitary")
-loading_num <- 9
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_9_Epithelial_scatter_for_pituitary.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Pituitary", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-valid_tissues <- c("Thyroid")
-loading_num <- 3
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_3_Epithelial_scatter_for_thyroid.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Thyroid", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-valid_tissues <- c("Thyroid")
-loading_num <- 6
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_6_Epithelial_scatter_for_thyroid.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Thyroid", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
+loading_num1 <- 4
+loading_num2 <- 8
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_4_loading_7_scatter_colored_by_Epithelial_for_digestive_samples.pdf")
+ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_tissue(loadings[, loading_num1], loadings[, loading_num2],  covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num1), paste0("Loading ", loading_num2), tissue_10_names, valid_tissues)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 
-valid_tissues <- c("Thyroid")
-loading_num <- 3
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_3_Ischemic_time_scatter_for_thyroid.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$ischemic_time, "ischemic time", "Thyroid", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
-valid_tissues <- c("Thyroid")
-loading_num <- 6
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_6_Ischemic_time_scatter_for_thyroid.pdf")
-ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$ischemic_time, "ischemic time", "Thyroid", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
-ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
+
+
+if (FALSE) {
 
 
 
@@ -1363,6 +1363,30 @@ ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 }
 
 if (FALSE) {
+
+valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_colored_by_skin_tissues_and_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_colored_by_specified_tissues_and_categorical_variables(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race==2, levels=c(TRUE, FALSE)), "African Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_colored_by_tissue_and_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_colored_by_tissues_and_categorical_variables(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", paste0("Loading ", loading_num), tissue_10_names, tissue_colors, valid_tissues, factor(covariates$race==2, levels=c(TRUE, FALSE)), "African Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+valid_tissues <- c("Skin_Not_Sun_Exposed_Suprapubic", "Skin_Sun_Exposed_Lower_leg")
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_genotype_PC1_scatter_for_skin_tissues_colored_by_race.pdf")
+ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue_colored_by_categorical_variable(loadings[, loading_num], temp_cov$genotype_PC0, "Genotype PC1", "Skin Tissue", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, factor(covariates$race), "Ancestry")
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+
+
+
 #####################
 # Run Umap on loadings. Plot Umap loadings in scatter plot color by observed Xcell cell type enrichments
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
