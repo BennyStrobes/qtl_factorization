@@ -4,7 +4,7 @@
 # Input data
 ######################
 # Input single cell expression data (emailed by Meena Subramaniam on Nov. 18, 2019)
-input_h5py_file="/work-zfs/abattle4/bstrober/single_cell_eqtl_factorization/single_cell/input_data/CLUESImmVar_nonorm.V6.h5ad"
+input_h5py_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/expression/Lupus_study_adjusted.h5ad"
 
 # Gene annotation file (hg19)
 gene_annotation_file="/work-zfs/abattle4/lab_data/annotation/gencode.v19/gencode.v19.annotation.gene.txt"

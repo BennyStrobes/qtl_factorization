@@ -77,7 +77,7 @@ make_knn_cell_type_stacked_bar_chart <- function(knn_ct_summary_df) {
 }
 
 make_number_of_cells_per_individual_in_a_cell_type <- function(filtered_covariate_data, cell_type) {
-  ct_indices <- filtered_covariate_data$ct_cov==cell_type
+  ct_indices <- filtered_covariate_data$cg_cov==cell_type
   total_cells = sum(ct_indices)
   ct_covariate_data <- filtered_covariate_data[ct_indices, ] 
   unique_indis <- as.character(unique(ct_covariate_data$ind_cov))
@@ -102,15 +102,19 @@ make_number_of_cells_per_individual_in_a_cell_type <- function(filtered_covariat
 }
 
 make_number_of_cells_per_individual_per_cell_type_bar_plots <- function(filtered_covariate_data) {
-  cd4t_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "CD4 T cells")
-  cd14mono_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "CD14+ Monocytes")
-  cd8t_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "CD8 T cells")
-  b_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "B cells")
-  nk_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "NK cells")
-  fcgmono_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "FCGR3A+ Monocytes")
-  mega_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "Megakaryocytes")
-  dendritic_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "Dendritic cells")
-  combined <- plot_grid(cd4t_bar_plot, cd14mono_bar_plot, cd8t_bar_plot, b_bar_plot, nk_bar_plot, fcgmono_bar_plot, mega_bar_plot, dendritic_bar_plot , ncol = 2)
+ b_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "B")
+ nk_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "NK")
+ pb_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "PB")
+ progen_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "Progen")
+ prolif_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "Prolif")
+ t4_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "T4")
+ t8_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "T8")
+ cdc_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "cDC")
+ cm_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "cM")
+ ncm_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "ncM")
+ pdc_bar_plot <- make_number_of_cells_per_individual_in_a_cell_type(filtered_covariate_data, "pDC")
+
+  combined <- plot_grid(b_bar_plot, nk_bar_plot, pb_bar_plot, progen_bar_plot, prolif_bar_plot, t4_bar_plot, t8_bar_plot, cdc_bar_plot, cm_bar_plot, ncm_bar_plot, pdc_bar_plot, ncol = 2)
   return(combined)
 }
 
@@ -135,8 +139,8 @@ make_number_of_cells_per_individual_bar_plot <- function(filtered_covariate_data
 }
 
 make_ct_proportion_per_individual_bar_plot_stratefied_by_sle_status <- function(filtered_covariate_data) {
-  sle_cov_data = filtered_covariate_data[as.character(filtered_covariate_data$disease_cov)=="sle",]
-  control_cov_data = filtered_covariate_data[as.character(filtered_covariate_data$disease_cov)=="healthy",]
+  sle_cov_data = filtered_covariate_data[as.character(filtered_covariate_data$SLE_status)=="SLE",]
+  control_cov_data = filtered_covariate_data[as.character(filtered_covariate_data$SLE_status)=="Healthy",]
   sle_plot <- make_ct_proportion_per_individual_bar_plot(sle_cov_data, "SLE")
   control_plot <- make_ct_proportion_per_individual_bar_plot(sle_cov_data, "Control")
 
@@ -150,8 +154,8 @@ make_ct_proportion_per_individual_bar_plot_stratefied_by_sle_status <- function(
 
 make_ct_proportion_per_individual_bar_plot <- function(filtered_covariate_data, title) {
   unique_indis <- as.character(unique(filtered_covariate_data$ind_cov))
-  unique_cts <- as.character(unique(filtered_covariate_data$ct_cov))
-  ct_ordering <- c("CD4 T cells", "CD14+ Monocytes", "CD8 T cells", "B cells", "NK cells", "FCGR3A+ Monocytes", "Megakaryocytes", "Dendritic cells")
+  unique_cts <- as.character(unique(filtered_covariate_data$cg_cov))
+  ct_ordering <- c("B", "NK", "PB", "Progen", "Prolif", "T4", "T8", "cDC", "cM", "ncM", "pDC")
   cells_arr <- c()
   for (indi_index in 1:length(unique_indis)) {
     indi <- unique_indis[indi_index]
@@ -170,7 +174,7 @@ make_ct_proportion_per_individual_bar_plot <- function(filtered_covariate_data, 
     total_cells <- sum(filtered_covariate_data$ind_cov == indi)
     for (ct_index in 1:length(unique_cts)) {
       ct <- unique_cts[ct_index]
-      ct_cells <- sum((filtered_covariate_data$ind_cov==indi) & (filtered_covariate_data$ct_cov==ct))
+      ct_cells <- sum((filtered_covariate_data$ind_cov==indi) & (filtered_covariate_data$cg_cov==ct))
       frac <- ct_cells/total_cells
       indi_arr <- c(indi_arr, indi)
       ct_arr <- c(ct_arr, ct)
@@ -238,20 +242,25 @@ make_batch_proportion_per_individual_bar_plot <- function(filtered_covariate_dat
 # Make correlation heatmap correlating covariates with loadings
 #######################################
 make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
-  loadings <- as.matrix(loadings)[,1:100]
+  loadings <- as.matrix(loadings)[,1:20]
   #print(summary(covariates))
-  covariates$cd4_t_cells = 1.0*(as.character(covariates$ct_cov) == "CD4 T cells")
-  covariates$cd14_monocytes = 1.0*(as.character(covariates$ct_cov) == "CD14+ Monocytes")
-  covariates$cd8_t_cells = 1.0*(as.character(covariates$ct_cov) == "CD8 T cells")
-  covariates$b_cells = 1.0*(as.character(covariates$ct_cov) == "B cells")
-  covariates$nk_cells = 1.0*(as.character(covariates$ct_cov) == "NK cells")
-  covariates$fcgr3a_monocytes = 1.0*(as.character(covariates$ct_cov) == "FCGR3A+ Monocytes")
-  covariates$megakaryocytes = 1.0*(as.character(covariates$ct_cov) == "Megakaryocytes")
-  covariates$dendritic_cells = 1.0*(as.character(covariates$ct_cov) == "Dendritic cells")
+  covariates$B = 1.0*(as.character(covariates$cg_cov) == "B")
+  covariates$NK = 1.0*(as.character(covariates$cg_cov) == "NK")
+  covariates$PB = 1.0*(as.character(covariates$cg_cov) == "PB")
+  covariates$Progen = 1.0*(as.character(covariates$cg_cov) == "Progen")
+  covariates$Prolif = 1.0*(as.character(covariates$cg_cov) == "Prolif")
+  covariates$T4 = 1.0*(as.character(covariates$cg_cov) == "T4")
+  covariates$T8 = 1.0*(as.character(covariates$cg_cov) == "T8")
+  covariates$cDC = 1.0*(as.character(covariates$cg_cov) == "cDC")
+  covariates$cM = 1.0*(as.character(covariates$cg_cov) == "cM")
+  covariates$ncM = 1.0*(as.character(covariates$cg_cov) == "ncM")
+  covariates$pDC = 1.0*(as.character(covariates$cg_cov) == "pDC")
 
-  #print(summary(covariates))
-  valid_covariates <- c(1, 2, 3, 4, 5, 6, 8, 9, 10, 12, 13, 14, 15, 16, 17, 18, 19)
-  covariate_type <- c("cat","cat", "cat", "cat", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+
+  valid_covariates <- c(1, 2, 3, 5, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26)
+  covariate_type <- c("cat", "cat", "cat", "cat", "num", "cat", "cat", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+
+
   #print(length(valid_covariates))
   #print(length(covariate_type))
 
@@ -259,7 +268,7 @@ make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
 
   cov_names <- colnames(covariates)[valid_covariates]
   num <- length(cov_names)
-  #print(cov_names)
+  # print(cov_names)
 
 
 
@@ -330,46 +339,154 @@ visualize_processed_expression_dir <- args[2]  # Output Dir
 # Load in Covariate data
 ##########################
 # Load in Covariates
-filtered_covariate_file <- paste0(processed_expression_dir, "cell_covariates_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt")
-filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
+filtered_covariate_file <- paste0(processed_expression_dir, "cell_covariates.txt")
+#filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
+#saveRDS(filtered_covariate_data, "cov.rds")
+filtered_covariate_data <- readRDS("cov.rds")
 
+# Load in PCS
+pc_file <- paste0(processed_expression_dir, "cell_expression_pcs.txt")
+#pcs <- read.table(pc_file, header=FALSE, sep="\t")
+#saveRDS(pcs, "pcs.rds")
+pcs <- readRDS("pcs.rds")
+
+# Load in PC PVE
+pc_pve_file <- paste0(processed_expression_dir, "cell_expression_pc_percent_variance_explained.txt")
+pc_pve <- read.table(pc_pve_file, header=FALSE, sep="\t")
+
+# Load in umap_loadings
+umap_file <- paste0(processed_expression_dir, "cell_expression_umaps.txt")
+#umap_loadings <- read.table(umap_file, header=FALSE, sep="\t")
+#saveRDS(umap_loadings, "umap.rds")
+umap_loadings <- readRDS("umap.rds")
+
+
+
+
+if (FALSE) {
 ##########################
 # Make bar plot showing number of cells per individual per cell type
 ##########################
-#num_cells_bar_plot <- make_number_of_cells_per_individual_per_cell_type_bar_plots(filtered_covariate_data)
+num_cells_bar_plot <- make_number_of_cells_per_individual_per_cell_type_bar_plots(filtered_covariate_data)
 output_file <- paste0(visualize_processed_expression_dir, "number_of_cells_per_individual_per_cell_type_bar_plots.pdf")
-#ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=10, units="in")
+ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=10, units="in")
 
 ##########################
 # Make bar plot showing number of cells per individual
 ##########################
-#num_cells_bar_plot <- make_number_of_cells_per_individual_bar_plot(filtered_covariate_data)
+num_cells_bar_plot <- make_number_of_cells_per_individual_bar_plot(filtered_covariate_data)
 output_file <- paste0(visualize_processed_expression_dir, "number_of_cells_per_individual_bar_plot.pdf")
-#ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
+ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
 
 ##########################
 # Make stacked bar plot showing fraction of cell type per individual
 ##########################
-#ct_proportion_bar_plot <- make_ct_proportion_per_individual_bar_plot(filtered_covariate_data, "")
+ct_proportion_bar_plot <- make_ct_proportion_per_individual_bar_plot(filtered_covariate_data, "")
 output_file <- paste0(visualize_processed_expression_dir, "cell_type_proportions_per_individual_bar_plot.pdf")
-#ggsave(ct_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
+ggsave(ct_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
 
 ##########################
 # Make stacked bar plot showing fraction of cell type per individual (stratefied by SLE status)
 ##########################
-#ct_proportion_bar_plot <- make_ct_proportion_per_individual_bar_plot_stratefied_by_sle_status(filtered_covariate_data)
+ct_proportion_bar_plot <- make_ct_proportion_per_individual_bar_plot_stratefied_by_sle_status(filtered_covariate_data)
 output_file <- paste0(visualize_processed_expression_dir, "cell_type_proportions_per_individual_stratefied_by_sle_status_bar_plot.pdf")
-#ggsave(ct_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
+ggsave(ct_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
+
+}
+##########################
+# PCA-covariate heatmap
+##########################
+heatmap <- make_covariate_loading_correlation_heatmap(filtered_covariate_data, pcs)
+output_file <- paste0(visualize_processed_expression_dir, "covariate_pca_pve_heatmap.pdf")
+ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
+
 
 ##########################
-# Make stacked bar plot showing fraction of batch per individual
+# Make PCA PVE line plot
 ##########################
-#batch_proportion_bar_plot <- make_batch_proportion_per_individual_bar_plot(filtered_covariate_data)
-output_file <- paste0(visualize_processed_expression_dir, "batch_proportions_per_individual_bar_plot.pdf")
-#ggsave(batch_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
+if (FALSE) {
+num_pcs <- 50
+output_file <- paste0(visualize_processed_expression_dir, "pca_variance_explained_", num_pcs, "_pcs_line_plot.pdf")
+ve_line_plot <- make_pc_variance_explained_line_plot(pc_pve[,1], num_pcs)
+ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
+}
+
+if (FALSE) {
+##########################
+# Make PCA Plot colored by cell type
+##########################
+pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$cg_cov, pcs[,1], pcs[,2], "Cell Type", "PC1", "PC2")
+output_file <- paste0(visualize_processed_expression_dir, "pca_1_2_scatter_colored_by_cell_type.pdf")
+ggsave(pca_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
+
+
+##########################
+# Make PCA Plot colored by Lupus
+##########################
+pca_scatter_colored_by_lupus <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$SLE_status, pcs[,1], pcs[,2], "", "PC1", "PC2")
+output_file <- paste0(visualize_processed_expression_dir, "pca_1_2_scatter_colored_by_disease_cov.pdf")
+ggsave(pca_scatter_colored_by_lupus, file=output_file, width=7.2, height=5, units="in")
+
+##########################
+# Make PCA Plot colored by Lupus
+##########################
+pca_scatter_colored_by_lupus <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$Status, pcs[,1], pcs[,2], "", "PC1", "PC2")
+output_file <- paste0(visualize_processed_expression_dir, "pca_1_2_scatter_colored_by_status.pdf")
+ggsave(pca_scatter_colored_by_lupus, file=output_file, width=7.2, height=5, units="in")
 
 
 
+##########################
+# Make UMAP Plot colored by cell type
+##########################
+umap_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$cg_cov, umap_loadings[,1], umap_loadings[,2], "Cell Type", "umap1", "umap2")
+output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_cell_type.pdf")
+ggsave(umap_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
+
+##########################
+# Make UMAP Plot colored by status
+##########################
+umap_scatter_colored_by_batch <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$Status, umap_loadings[,1], umap_loadings[,2], "", "umap1", "umap2")
+output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_status.pdf")
+ggsave(umap_scatter_colored_by_batch, file=output_file, width=7.2, height=5, units="in")
+
+##########################
+# Make UMAP Plot colored by Lupus
+##########################
+umap_scatter_colored_by_lupus <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$SLE_status, umap_loadings[,1], umap_loadings[,2], "", "umap1", "umap2")
+output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_disease_cov.pdf")
+ggsave(umap_scatter_colored_by_lupus, file=output_file, width=7.2, height=5, units="in")
+
+
+##########################
+# Make UMAP Plot colored by cluster assignmnent in one individual
+##########################
+individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1760_1760"
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1760_1760_cluster_assignments.pdf")
+ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
+
+
+individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1811_1811"
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1811_1811_cluster_assignments.pdf")
+ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if (FALSE) {
 # Loop through 5 different versions of expression quantification
 # Versions
 # 1. Un-pooled expression w/o batch regression
@@ -500,5 +617,5 @@ for (file_num in 1:length(pca_files)) {
   ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
 
 }
-
+}
 

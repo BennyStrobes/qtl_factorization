@@ -8,6 +8,7 @@ import scanpy as sc
 from anndata import AnnData
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.linear_model import LinearRegression
+from sklearn.cluster import KMeans
 
 
 
@@ -918,38 +919,142 @@ def regress_out_batch_effects(adata, expression_file, residual_expression_file, 
 	np.savetxt(residual_expression_file, np.round(residual, decimals=5), fmt="%s", delimiter='\t')
 	generate_pca_scores_and_variance_explained(residual_expression_file, num_pcs, pca_file, pca_ve_file)
 
+def generate_raw_cluster_pseudobulk_expression(raw_x, ordered_pseudobulk_samples, cluster_assignments, ordered_genes, pseudobulk_raw_expression_file):
+	num_samples = len(ordered_pseudobulk_samples)
+	num_genes = ordered_genes.shape[0]
+	pseudobulk_expr = np.zeros((num_samples, num_genes))
+
+	for pseudobulk_sample_num, pseudobulk_sample_name in enumerate(ordered_pseudobulk_samples):
+		print(pseudobulk_sample_num)
+		# Get cell indices corresponding to this pseudobulk sample
+		indices = cluster_assignments == pseudobulk_sample_name
+		# Fill in pseudobulk expr
+		pseudobulk_expr[pseudobulk_sample_num, :] = np.asarray(np.sum(raw_x[indices,:], axis=0))[0,:]
+	pdb.set_trace()
+	# Save to output file
+	np.savetxt(pseudobulk_raw_expression_file, pseudobulk_expr, fmt="%s", delimiter='\t')
+
+def generate_cluster_pseudobulk_expression(adata, cluster_assignments, output_root):
+	# First generate list of ordered pseudobulk samples
+	ordered_pseudobulk_samples = sorted(np.unique(cluster_assignments))
+	# Then get ordred list of gene ids
+	ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
+	
+	# Generate raw cluster pseudobulk expression
+	pseudobulk_raw_expression_file = output_root + 'raw_expression.txt'
+	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, ordered_genes, pseudobulk_raw_expression_file)
+	pdb.set_trace()
+
 #####################
 # Command line args
 ######################
 input_h5py_file = sys.argv[1]
 processed_expression_dir = sys.argv[2]
 gene_annotation_file = sys.argv[3]
-min_fraction_of_cells = float(sys.argv[4])
-min_genes = int(sys.argv[5])
-transformation_type = sys.argv[6]  # Either deviance_residual or log_transform
-genotype_id_mapping_file = sys.argv[7]
+genotype_id_mapping_file = sys.argv[4]
 
 
 ######################
 # Filtering parameters
 #######################
-#min_genes = 400
-# Min fraction of expressed cells for a gene
-#min_fraction_of_cells = .1
-# Random subset
-random_subset = False
-regress_out_batch = False
-if regress_out_batch == True:
-	regress_out_batch_string = 'True'
-else:
-	regress_out_batch_string = 'False'
 np.random.seed(0)
+sc.settings.verbosity = 3 
+transformation_type = 'log_transform'
+regress_out_batch = True
+expected_cells_per_pseudobulk_sample = 10
+
+
 
 ######################
 # Load in ScanPy data
 #######################
+'''
 adata = sc.read_h5ad(input_h5py_file)
 
+##################
+# Perform cell clustering seperately in each individual
+##################
+unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
+num_cells = len(adata.obs['ind_cov'])
+#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
+cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
+
+counter = 0
+# Loop through individuals
+for individual in unique_individuals:
+	# Get cell indices corresponding to this individual
+	cell_indices = adata.obs['ind_cov'] == individual
+	# Number of cells in this indiviudal
+	num_cells_per_indi = sum(cell_indices)
+	# Make anndata object for just this individual
+	adata_indi = adata[cell_indices, :]
+	# Construct neighborhood graph for cells from this indivudal
+	sc.pp.neighbors(adata_indi)
+	# Perform leiden clustering
+	sc.tl.leiden(adata_indi, max_comm_size=30)
+	# Get leiden cluster assignemnts
+	leiden_cluster_assignments = adata_indi.obs['leiden']
+	# Add to global vector of assignments
+	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
+	# Delete adata_indi from memory
+	del adata_indi
+adata.obs['individual_leiden_clusters'] = cluster_assignments
+'''
+# Save in temporary adata object
+temp_h5_output_file = processed_expression_dir + 'scanpy_temp.h5ad'
+#adata.write(temp_h5_output_file)
+adata = sc.read_h5ad(temp_h5_output_file)
+
+
+
+
+#######################
+# Save Covariate Info
+#######################
+adata.obs['cell_id'] = adata.obs.index
+covariate_output_file = processed_expression_dir + 'cell_covariates.txt'
+np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
+
+#######################
+# Save Expression PCs
+#######################
+pc_output_file = processed_expression_dir + 'cell_expression_pcs.txt'
+np.savetxt(pc_output_file, adata.obsm['X_pca'], fmt="%s", delimiter='\t', comments='')
+
+
+#######################
+# Save Expression PCs variance
+#######################
+pc_pve_output_file = processed_expression_dir + 'cell_expression_pc_percent_variance_explained.txt'
+np.savetxt(pc_pve_output_file, adata.uns['pca']['variance_ratio'], fmt="%s", delimiter='\t', comments='')
+
+#######################
+# Save UMAP loadings
+#######################
+umap_output_file = processed_expression_dir + 'cell_expression_umaps.txt'
+np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', comments='')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
 ######################
 # Convert from old donor ids to new donors ids
 ######################
@@ -962,40 +1067,26 @@ adata = adata[adata.obs.ind_cov != '1251_1251', :]
 ######################
 # Filter data
 #######################
-# Allow option to randomly generate subset of the data
-if random_subset == True:
-	num_cells = adata.X.shape[0]
-	adata.obs['random_subset'] = np.random.uniform(size=num_cells) < (1/5)
-	adata = adata[adata.obs.random_subset == True, :]
 # Standard filtering
-sc.pp.filter_cells(adata, min_genes=200)
-sc.pp.filter_genes(adata, min_cells=3)
-# Extract percent mito-counts
-mito_genes = adata.var_names.str.startswith('MT-')
-adata.obs['percent_mito'] = np.sum(adata[:, mito_genes].X, axis=1).A1 / np.sum(adata.X, axis=1).A1
-adata.obs['n_counts'] = adata.X.sum(axis=1).A1
-# Standard filtering
-adata = adata[adata.obs.n_genes < 2500, :]
-adata = adata[adata.obs.percent_mito < 0.05, :]
-# Limit to protein-coding, known, autosomal genes
+sc.pp.filter_cells(adata, min_genes=300)
+sc.pp.filter_genes(adata, min_cells=200)
+
+#######################
+# Calculate qc metrics
+#######################
+adata.var['mt'] = adata.var_names.str.startswith('MT-')  # annotate the group of mitochondrial genes as 'mt'
+sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], percent_top=None, inplace=True)
+# More Standard filtering
+adata = adata[adata.obs.n_genes_by_counts < 2500, :]
+adata = adata[adata.obs.pct_counts_mt < 5, :]
+# Extract which genes are protein-coding, known, autosomal genes
 gene_indices = extract_protein_coding_known_autosomal_genes(adata.var, gene_annotation_file)
 adata.var['protein_coding_known_autosomal'] = gene_indices
-adata = adata[:, adata.var.protein_coding_known_autosomal==True]
-# Filter rows and columns
-print(adata.X.shape)
-sc.pp.filter_cells(adata, min_genes=min_genes)
-print(adata.X.shape)
-sc.pp.filter_genes(adata, min_cells=(adata.X.shape[0])*min_fraction_of_cells)
-print(adata.X.shape)
+#adata = adata[:, adata.var.protein_coding_known_autosomal==True]
 
 #######################
 # Save un-normalized (raw) expression data
 #######################
-if random_subset == True:
-	expression_output_file = processed_expression_dir + 'single_cell_raw_expression_sle_individuals_random_subset_min_expressed_cells_' + str(min_fraction_of_cells) + '.txt'
-else:
-	expression_output_file = processed_expression_dir + 'single_cell_raw_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '.txt'
-np.savetxt(expression_output_file, adata.X.toarray(), fmt="%s", delimiter='\t')
 adata.raw = adata
 
 ######################
@@ -1004,17 +1095,137 @@ adata.raw = adata
 if transformation_type == 'log_transform':
 	sc.pp.normalize_total(adata, target_sum=1e4)
 	sc.pp.log1p(adata)
+	sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
+	# Filter out highly variable genes
+	adata = adata[:, adata.var.highly_variable]
+	# If we want to regress things out
 	if regress_out_batch == True:
 		#sc.pp.regress_out(adata, ['batch_cov'])
 		print('start combat')
 		sc.pp.combat(adata, key='batch_cov')
 		print('end combat')
+		print('start regress out total counts and pct counts')
+		sc.pp.regress_out(adata, ['total_counts', 'pct_counts_mt'])
+		print('end regress out total counts and pct counts')
 	sc.pp.scale(adata, max_value=10)
 elif transformation_type == 'pearson_residual':
 	adata = calculate_deviance_residuals(adata)
 else:
 	print('transformation type: ' + transformation_type + 'currently not implemented')
 	pdb.set_trace()
+
+
+##################
+# Run PCA
+##################
+sc.tl.pca(adata, svd_solver='arpack')
+
+
+##################
+# Run UMAP on full data
+##################
+sc.pp.neighbors(adata)
+sc.tl.umap(adata)
+
+##################
+# Perform cell clustering seperately in each individual
+##################
+unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
+num_cells = len(adata.obs['ind_cov'])
+#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
+kmeans10_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
+total_num_clusters = 0
+
+# Loop through individuals
+for individual in unique_individuals:
+	# Get cell indices corresponding to this individual
+	cell_indices = adata.obs['ind_cov'] == individual
+	num_cells_per_indi = sum(cell_indices)
+	# Get number of clusters in this individual assuming we want a specified number of cells per sample
+	num_clusters = int(np.floor(num_cells_per_indi/expected_cells_per_pseudobulk_sample))
+	total_num_clusters = total_num_clusters + num_clusters
+	# Do KMeans clustering
+	kmeans = KMeans(n_clusters=num_clusters, random_state=0).fit(adata.obsm['X_pca'][cell_indices,:])
+	# Save kmeans clustering assignments for this individual
+	kmeans10_assignments[cell_indices] = np.char.add(individual + ':', kmeans.labels_.astype(str))
+# Put in adata object
+adata.obs['kmeans10'] = kmeans10_assignments
+print(total_num_clusters)
+print(len(np.unique(kmeans10_assignments)))
+
+
+'''
+
+'''
+##################
+# Load in intermediate data
+##################
+temp_h5_output_file = processed_expression_dir + 'scanpy_temp4.h5ad'
+#adata.write(temp_h5_output_file)
+adata = sc.read_h5ad(temp_h5_output_file)
+
+
+
+##################
+# Generate cluster-pseudobulk expression
+##################
+output_root = processed_expression_dir + 'cluster_pseudobulk_kmeans10_'
+generate_cluster_pseudobulk_expression(adata, adata.obs['kmeans10'], output_root)
+
+
+
+
+
+#######################
+# Save Covariate Info
+#######################
+adata.obs['cell_id'] = adata.obs.index
+covariate_output_file = processed_expression_dir + 'cell_covariates.txt'
+np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
+
+#######################
+# Save Expression PCs
+#######################
+pc_output_file = processed_expression_dir + 'cell_expression_pcs.txt'
+np.savetxt(pc_output_file, adata.obsm['X_pca'], fmt="%s", delimiter='\t', comments='')
+
+
+#######################
+# Save Expression PCs variance
+#######################
+pc_pve_output_file = processed_expression_dir + 'cell_expression_pc_percent_variance_explained.txt'
+np.savetxt(pc_pve_output_file, adata.uns['pca']['variance_ratio'], fmt="%s", delimiter='\t', comments='')
+
+#######################
+# Save UMAP loadings
+#######################
+umap_output_file = processed_expression_dir + 'cell_expression_umaps.txt'
+np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', comments='')
+
+'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+'''
+
+###########################
+# Identify highly variable genes
+###########################
+sc.pp.highly_variable_genes(adata, min_mean=0.0125, max_mean=3, min_disp=0.5)
 
 ######################
 # Run PCA on data
@@ -1029,7 +1240,7 @@ if random_subset == True:
 else:
 	gene_id_output_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform' + '_regress_out_batch_' + regress_out_batch_string  + '_gene_ids.txt'
 np.savetxt(gene_id_output_file, np.vstack((adata.var.index, adata.var[adata.var.columns[0]])).T, fmt="%s", delimiter='\t')
-'''
+
 #######################
 # Save standardized expression data
 #######################
@@ -1038,7 +1249,7 @@ if random_subset == True:
 else:
 	expression_output_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_' + str(min_fraction_of_cells) + '_' + transformation_type + '_transform'  + '_regress_out_batch_' + regress_out_batch_string + '_standardized.txt'
 #np.savetxt(expression_output_file, adata.X, fmt="%s", delimiter='\t')
-'''
+
 #######################
 # Save Covariate Info
 #######################
@@ -1118,7 +1329,7 @@ regress_out_batch_effects(adata, expression_output_file, standardized_residaul_e
 
 
 
-
+'''
 
 
 
