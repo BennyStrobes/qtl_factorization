@@ -22,7 +22,10 @@ f = open(genotype_pcs_file)
 for line in f:
 	line = line.rstrip()
 	data = line.split()
-	line_id = data[0] + '_' + data[1]
+	if data[0].startswith('HC'):
+		line_id = data[0]
+	else:
+		line_id = data[0] + '_' + data[1]
 	if line_id not in ordered_indis:
 		print('assumption erroror')
 		pdb.set_trace()
@@ -39,14 +42,11 @@ head_count = 0
 for line in f:
 	line = line.rstrip()
 	data = line.split('\t')
-	if len(data) != 11:
-		print('assumption eroror')
-		pdb.set_trace()
 	if head_count == 0:
 		head_count = head_count + 1
 		continue
-	pop_cov = data[2]
-	ind_cov = data[3]
+	pop_cov = data[4]
+	ind_cov = data[1]
 	indi_to_ancestry[ind_cov] = pop_cov
 f.close()
 
@@ -65,7 +65,7 @@ t.close()
 ####################
 # Print genotype pcs to output file (cell level)
 ####################
-cell_level_genotype_pcs = processed_genotype_dir + 'cell_level_covariates_with_genotype_pcs.txt'
+cell_level_genotype_pcs = processed_genotype_dir + 'pseudobulk_sample_covariates_with_genotype_pcs.txt'
 t = open(cell_level_genotype_pcs,'w')
 
 
@@ -74,14 +74,11 @@ head_count = 0
 for line in f:
 	line = line.rstrip()
 	data = line.split('\t')
-	if len(data) != 11:
-		print('assumption eroror')
-		pdb.set_trace()
 	if head_count == 0:
 		head_count = head_count + 1
 		t.write(line + '\tgenotype_pc1\tgenotype_pc2\n')
 		continue
-	indi_id = data[3]
+	indi_id = data[1]
 	genotype_pcs = indi_to_genotype_pc[indi_id]
 	t.write(line + '\t' + genotype_pcs[0] + '\t' + genotype_pcs[1] + '\n')
 f.close()

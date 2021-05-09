@@ -19,13 +19,10 @@ head_count = 0
 for line in f:
 	line = line.rstrip()
 	data = line.split('\t')
-	if len(data) != 11:
-		print('assumption erroror')
-		pdb.set_trace()
 	if head_count == 0:
 		head_count = head_count + 1
 		continue
-	indis[data[3]] = 1
+	indis[data[1]] = 1
 f.close()
 
 # Print individuals to output file

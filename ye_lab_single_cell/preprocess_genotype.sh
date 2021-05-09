@@ -81,10 +81,7 @@ fi
 
 # Tidy up genotype PCs (at indiviudal level and cell level)
 genotype_pcs_file=$donor_site_filtered_merged_independent_plink_stem".eigenvec"
-if false; then
 python add_genotype_pcs_to_cell_covariates_file.py $cell_covariates_file $sc_rna_seq_individual_file $genotype_pcs_file $processed_genotype_dir
-fi
-
 
 
 
@@ -93,5 +90,4 @@ fi
 ########################
 module load R/3.5.1
 Rscript visualize_processed_genotypes.R $processed_genotype_dir $visualize_processed_genotype_dir
-
 

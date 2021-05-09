@@ -324,6 +324,78 @@ make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
     return(heatmap)
 }
 
+######################################
+# Make correlation heatmap correlating covariates with loadings
+#######################################
+make_pseudobulk_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
+  loadings <- as.matrix(loadings)[,1:50]
+
+
+  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+
+  #print(length(valid_covariates))
+  #print(length(covariate_type))
+
+  num_cov = length(valid_covariates)
+
+  cov_names <- colnames(covariates)[valid_covariates]
+  num <- length(cov_names)
+  # print(cov_names)
+
+
+
+  covs <- covariates[,valid_covariates]
+
+
+  # Initialize PVE heatmap
+  factor_colnames <- paste0("Factor", 1:(dim(loadings)[2]))
+  factor_rownames <- colnames(covs)
+  pve_map <- matrix(0, dim(covs)[2], dim(loadings)[2])
+  colnames(pve_map) <- factor_colnames
+  rownames(pve_map) <- colnames(covs)
+
+
+    # Loop through each PC, COV Pair and take correlation
+    num_pcs <- dim(loadings)[2]
+    num_covs <- dim(covs)[2]
+    for (num_pc in 1:num_pcs) {
+        for (num_cov in 1:num_covs) {
+            pc_vec <- loadings[,num_pc]
+            cov_vec <- covs[,num_cov]
+            #print(paste0(num_pc, " - ", num_cov))
+            if (covariate_type[num_cov] == "cat") {
+            #print(cov_vec[1:10])
+              lin_model <- lm(pc_vec ~ factor(cov_vec))
+          } else {
+            lin_model <- lm(pc_vec ~ cov_vec)
+          }
+            pve_map[num_cov, num_pc] <- summary(lin_model)$adj.r.squared
+        }
+    }
+    
+    ord <- hclust( dist(scale(pve_map), method = "euclidean"), method = "ward.D" )$order
+
+    melted_mat <- melt(pve_map)
+    colnames(melted_mat) <- c("Covariate", "Loading","PVE")
+
+    melted_mat$Covariate = factor(melted_mat$Covariate, levels=rownames(pve_map)[ord])
+    melted_mat$Loading = factor(melted_mat$Loading, levels=factor_colnames)
+   #  Use factors to represent covariate and pc name
+    # melted_mat$Covariate 
+    # melted_mat$Covariate <- factor(melted_mat$Covariate, levels = rownames(pve_map)[ord])
+    #melted_mat$PC <- substr(as.character(melted_mat$PC),3,5)
+    #melted_mat$PC <- factor(melted_mat$PC, levels=paste0("", 1:(length(unique(melted_mat$PC)))))
+
+    
+    #levels(melted_mat$PC) = paste0("PC", 1:(length(levels(melted_mat$PC))))
+    #  PLOT!
+    heatmap <- ggplot(data=melted_mat, aes(x=Covariate, y=Loading)) + geom_tile(aes(fill=PVE)) + scale_fill_gradient2(midpoint=-.05, guide="colorbar")
+    heatmap <- heatmap + labs(y="",fill="VE")
+    heatmap <- heatmap + theme(text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8),  axis.text.x = element_text(angle = 90,hjust=1, vjust=.5)) 
+    # Save File
+    return(heatmap)
+}
 
 #########################
 # Command line args
@@ -340,15 +412,15 @@ visualize_processed_expression_dir <- args[2]  # Output Dir
 ##########################
 # Load in Covariates
 filtered_covariate_file <- paste0(processed_expression_dir, "cell_covariates.txt")
-#filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
-#saveRDS(filtered_covariate_data, "cov.rds")
-filtered_covariate_data <- readRDS("cov.rds")
+filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
+saveRDS(filtered_covariate_data, "cov.rds")
+#filtered_covariate_data <- readRDS("cov.rds")
 
 # Load in PCS
 pc_file <- paste0(processed_expression_dir, "cell_expression_pcs.txt")
-#pcs <- read.table(pc_file, header=FALSE, sep="\t")
-#saveRDS(pcs, "pcs.rds")
-pcs <- readRDS("pcs.rds")
+pcs <- read.table(pc_file, header=FALSE, sep="\t")
+saveRDS(pcs, "pcs.rds")
+# pcs <- readRDS("pcs.rds")
 
 # Load in PC PVE
 pc_pve_file <- paste0(processed_expression_dir, "cell_expression_pc_percent_variance_explained.txt")
@@ -356,11 +428,30 @@ pc_pve <- read.table(pc_pve_file, header=FALSE, sep="\t")
 
 # Load in umap_loadings
 umap_file <- paste0(processed_expression_dir, "cell_expression_umaps.txt")
-#umap_loadings <- read.table(umap_file, header=FALSE, sep="\t")
-#saveRDS(umap_loadings, "umap.rds")
-umap_loadings <- readRDS("umap.rds")
+umap_loadings <- read.table(umap_file, header=FALSE, sep="\t")
+saveRDS(umap_loadings, "umap.rds")
+#umap_loadings <- readRDS("umap.rds")
+
+# Get cluster neighbor ct summary file
+neighbor_ct_summary_file <- paste0(processed_expression_dir, "clustering_resolution_3_cell_type_summary.txt")
+neighbor_ct_summary_df <- read.table(neighbor_ct_summary_file, header=TRUE, sep="\t")
 
 
+# Load in pseudobulk covariate data
+pseudobulk_covariate_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_3_sample_covariates.txt")
+pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
+saveRDS(pseudobulk_covariate_data, "pseudobulk_cov.rds")
+#pseudobulk_covariate_data <- readRDS("pseudobulk_cov.rds")
+
+# Load in pseudobulk expression_pcs
+pseudobulk_pcs_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_3_pca_scores.txt")
+pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
+saveRDS(pseudobulk_pcs, "pseudobulk_pcs.rds")
+#pseudobulk_pcs <- readRDS("pseudobulk_pcs.rds")
+
+# Load in pseudobulk PC PVE
+pseudobulk_pc_pve_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_3_pca_pve.txt")
+pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
 
 
 if (FALSE) {
@@ -393,12 +484,21 @@ output_file <- paste0(visualize_processed_expression_dir, "cell_type_proportions
 ggsave(ct_proportion_bar_plot, file=output_file, width=7.2, height=5, units="in")
 
 }
+if (FALSE) {
 ##########################
 # PCA-covariate heatmap
 ##########################
 heatmap <- make_covariate_loading_correlation_heatmap(filtered_covariate_data, pcs)
 output_file <- paste0(visualize_processed_expression_dir, "covariate_pca_pve_heatmap.pdf")
 ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
+}
+
+##########################
+# Clustering neighboring cell type summary
+##########################
+cluster_ct_stacked_bar <- make_knn_cell_type_stacked_bar_chart(neighbor_ct_summary_df)
+output_file <- paste0(visualize_processed_expression_dir, "cluster_neighbor_cell_type_stacked_bar_chart.pdf")
+ggsave(cluster_ct_stacked_bar, file=output_file, width=7.2, height=5, units="in")
 
 
 ##########################
@@ -456,22 +556,107 @@ ggsave(umap_scatter_colored_by_batch, file=output_file, width=7.2, height=5, uni
 umap_scatter_colored_by_lupus <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$SLE_status, umap_loadings[,1], umap_loadings[,2], "", "umap1", "umap2")
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_disease_cov.pdf")
 ggsave(umap_scatter_colored_by_lupus, file=output_file, width=7.2, height=5, units="in")
-
+}
 
 ##########################
 # Make UMAP Plot colored by cluster assignmnent in one individual
 ##########################
 individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1760_1760"
-umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters_3[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1760_1760_cluster_assignments.pdf")
 ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
 
 
 individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1811_1811"
-umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_clusters_3[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1811_1811_cluster_assignments.pdf")
 ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
-}
+
+
+
+
+
+
+
+##########################
+# PCA-covariate heatmap for pseudobulk data
+##########################
+heatmap <- make_pseudobulk_covariate_loading_correlation_heatmap(pseudobulk_covariate_data, pseudobulk_pcs)
+output_file <- paste0(visualize_processed_expression_dir, "pseudobulk_covariate_pca_pve_heatmap.pdf")
+ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
+
+
+
+##########################
+# Make PCA PVE line plot
+##########################
+num_pcs <- 50
+output_file <- paste0(visualize_processed_expression_dir, "pseudobulk_pca_variance_explained_", num_pcs, "_pcs_line_plot.pdf")
+ve_line_plot <- make_pc_variance_explained_line_plot(pseudobulk_pc_pve[,1], num_pcs)
+ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

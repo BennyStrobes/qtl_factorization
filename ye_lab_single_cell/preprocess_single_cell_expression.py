@@ -9,6 +9,8 @@ from anndata import AnnData
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
+import rnaseqnorm
+import pandas as pd
 
 
 
@@ -919,31 +921,242 @@ def regress_out_batch_effects(adata, expression_file, residual_expression_file, 
 	np.savetxt(residual_expression_file, np.round(residual, decimals=5), fmt="%s", delimiter='\t')
 	generate_pca_scores_and_variance_explained(residual_expression_file, num_pcs, pca_file, pca_ve_file)
 
-def generate_raw_cluster_pseudobulk_expression(raw_x, ordered_pseudobulk_samples, cluster_assignments, ordered_genes, pseudobulk_raw_expression_file):
+def generate_raw_cluster_pseudobulk_expression(raw_x, ordered_pseudobulk_samples, cluster_assignments, ordered_genes):
 	num_samples = len(ordered_pseudobulk_samples)
 	num_genes = ordered_genes.shape[0]
 	pseudobulk_expr = np.zeros((num_samples, num_genes))
 
 	for pseudobulk_sample_num, pseudobulk_sample_name in enumerate(ordered_pseudobulk_samples):
-		print(pseudobulk_sample_num)
 		# Get cell indices corresponding to this pseudobulk sample
 		indices = cluster_assignments == pseudobulk_sample_name
 		# Fill in pseudobulk expr
 		pseudobulk_expr[pseudobulk_sample_num, :] = np.asarray(np.sum(raw_x[indices,:], axis=0))[0,:]
-	pdb.set_trace()
-	# Save to output file
-	np.savetxt(pseudobulk_raw_expression_file, pseudobulk_expr, fmt="%s", delimiter='\t')
+	return pseudobulk_expr
 
-def generate_cluster_pseudobulk_expression(adata, cluster_assignments, output_root):
+def get_mode_of_string_list(arr):
+	unique,pos = np.unique(arr,return_inverse=True)
+	counts = np.bincount(pos)
+	maxpos = counts.argmax() 
+	mode_value = unique[maxpos]
+	return mode_value
+
+# Extract covariates of pseudobulk samples from cell level covariates file
+def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata_obs, cluster_assignments, pseudobulk_covariate_file):
+	# Create mapping from cell type to index position of those cell types
+	unique_cell_types = np.unique(adata_obs['cg_cov'])
+	num_cell_types = len(unique_cell_types)
+	cell_type_to_position_mapping = {}
+	for i, cell_type in enumerate(unique_cell_types):
+		cell_type_to_position_mapping[cell_type] = i
+
+	# Open output file handle
+	t = open(pseudobulk_covariate_file, 'w')
+	# Print header
+	t.write('pseudobulk_sample\tind_cov\tAge\tSex\tpop_cov\tStatus\tSLE_status\tnum_cells\tcg_cov_mode\tct_cov_mode')
+	for cell_type in unique_cell_types:
+		t.write('\t' + cell_type + '_fraction')
+	t.write('\n')
+
+	count = 0
+	for pseudobulk_sample in ordered_pseudobulk_samples:
+		t.write(pseudobulk_sample)
+		pseudobulk_sample_indices = cluster_assignments == pseudobulk_sample
+		# Donor Id
+		ind_covs = np.unique(adata_obs['ind_cov'][pseudobulk_sample_indices])
+		if len(ind_covs) != 1:
+			print('assumption error')
+			pdb.set_trace()
+		donor_id = ind_covs[0]
+		t.write('\t' + donor_id)
+
+		# Average age
+		age = np.mean(adata_obs['Age'][pseudobulk_sample_indices].astype(float))
+		t.write('\t' + str(age))
+
+		# Sex
+		sexs = np.unique(adata_obs['Sex'][pseudobulk_sample_indices])
+		if len(sexs) != 1:
+			print('assumption eroror')
+			pdb.set_trace()
+		sex = sexs[0]
+		t.write('\t' + sex)
+
+		# Pop cov
+		pop_covs = np.unique(adata_obs['pop_cov'][pseudobulk_sample_indices])
+		if len(pop_covs) != 1:
+			print('assumption erroror')
+			pdb.set_trace()
+		pop_cov = pop_covs[0]
+		t.write('\t' + pop_cov)
+
+		# Status
+		statuses = np.unique(adata_obs['Status'][pseudobulk_sample_indices])
+		if len(statuses) != 1:
+			status = get_mode_of_string_list(np.asarray(adata_obs['Status'][pseudobulk_sample_indices]))
+		else:
+			status = statuses[0]
+		t.write('\t' + status)
+
+		# SLE Status 
+		sle_statuses = np.unique(adata_obs['SLE_status'][pseudobulk_sample_indices])
+		if len(sle_statuses) != 1:
+			print('assumption erorororo')
+			pdb.set_trace()
+		sle_status = sle_statuses[0]
+		t.write('\t' + sle_status)
+
+		# Number of cells in cluster
+		num_cells_in_cluster = np.sum(pseudobulk_sample_indices)
+		t.write('\t' + str(num_cells_in_cluster))
+
+		# Mode cg_cov
+		cg_cov_mode = get_mode_of_string_list(np.asarray(adata_obs['cg_cov'][pseudobulk_sample_indices]))
+		t.write('\t' + cg_cov_mode)
+
+		# Mode ct_cov
+		ct_cov_mode = get_mode_of_string_list(np.asarray(adata_obs['ct_cov'][pseudobulk_sample_indices]).astype(str))
+		t.write('\t' + ct_cov_mode)
+
+		# cg_fraction
+		cg_fraction = np.zeros(num_cell_types)
+		for cg in np.asarray(adata_obs['cg_cov'][pseudobulk_sample_indices]):
+			cg_fraction[cell_type_to_position_mapping[cg]] = cg_fraction[cell_type_to_position_mapping[cg]] + 1
+		cg_fraction = cg_fraction/np.sum(cg_fraction)
+		t.write('\t' + '\t'.join(cg_fraction.astype(str)) + '\n')
+	t.close()
+
+def get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file):
+	aa = np.loadtxt(genotyped_individuals_file, dtype=str, delimiter='\t')
+	dicti = {}
+	for ele in aa:
+		dicti[ele] = 1
+	return dicti
+
+def generate_cluster_pseudobulk_expression(adata, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
+	# Get dictionary list of genotyped individuals
+	geno_indi_dicti = get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file)
+
 	# First generate list of ordered pseudobulk samples
-	ordered_pseudobulk_samples = sorted(np.unique(cluster_assignments))
+	ordered_pseudobulk_samples_raw = sorted(np.unique(cluster_assignments))
+	ordered_pseudobulk_samples = []
+	used_indis = {}
+	for pseudobulk_sample in ordered_pseudobulk_samples_raw:
+		indi = pseudobulk_sample.split(':')[0]
+		if indi in geno_indi_dicti:
+			ordered_pseudobulk_samples.append(pseudobulk_sample)
+			used_indis[indi] = 1
+	ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)
+	print(str(len(used_indis)) + ' individuals of ' + str(len(geno_indi_dicti)) + ' genotyped indiviudals used in analysis')
+
 	# Then get ordred list of gene ids
 	ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
-	
+
 	# Generate raw cluster pseudobulk expression
-	pseudobulk_raw_expression_file = output_root + 'raw_expression.txt'
-	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, ordered_genes, pseudobulk_raw_expression_file)
-	pdb.set_trace()
+	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, ordered_genes)
+
+	# Remove pseudobulk samples with fewer than 10K reads (following Josh's paper heree)
+	valid_pseudobulk_sample_indices = np.sum(raw_cluster_pseudobulk_expression, axis=1) >= min_depth_threshold
+	filtered_raw_cluster_pseudobulk_expression = raw_cluster_pseudobulk_expression[valid_pseudobulk_sample_indices, :]
+	filtered_ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)[valid_pseudobulk_sample_indices]
+	
+	# TMM normalize expression
+	counts_df = pd.DataFrame(np.transpose(filtered_raw_cluster_pseudobulk_expression))
+	tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=False)))
+	log_tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=True)))
+
+	# Filter to genes that pass our filters
+	valid_gene_indices = []
+	num_samples = tmm_counts.shape[0]
+	min_samples = num_samples*.1
+	# Require to pass both tmm filter and raw counts filter
+	tmm_pass_filter = np.sum(tmm_counts >= .1, axis=0) >= min_samples
+	counts_pass_filter = np.sum(filtered_raw_cluster_pseudobulk_expression >= 5, axis=0) >= min_samples
+	# Test for each gene
+	for gene_num in range(len(ordered_genes)):
+		if tmm_pass_filter[gene_num] == True and counts_pass_filter[gene_num] == True:
+			valid_gene_indices.append(True)
+		else:
+			valid_gene_indices.append(False)
+	# Array of length number of genes that determines whether gene passed filter
+	valid_gene_indices = np.asarray(valid_gene_indices)
+
+	# Remove genes that don't pass our filters
+	filtered_log_tmm_counts = log_tmm_counts[:, valid_gene_indices]
+	filtered_ordered_genes = ordered_genes[valid_gene_indices, :]
+
+	# THEN STANDARDIZE
+	num_filtered_genes = filtered_log_tmm_counts.shape[1]
+	for gene_num in range(num_filtered_genes):
+		filtered_log_tmm_counts[:, gene_num] = (filtered_log_tmm_counts[:, gene_num] - np.mean(filtered_log_tmm_counts[:, gene_num]))/np.std(filtered_log_tmm_counts[:, gene_num])
+
+	# Save processed gene expression to output file
+	# Pseudobulk expression
+	pseudobulk_expression_file = output_root + 'log_tmm_normalized_expression.txt'
+	np.savetxt(pseudobulk_expression_file, filtered_log_tmm_counts, fmt="%s", delimiter='\t')
+	# Gene names
+	gene_names_file = output_root + 'gene_names.txt'
+	np.savetxt(gene_names_file, filtered_ordered_genes, fmt="%s", delimiter='\t')
+	# Sample names
+	sample_names_file = output_root + 'sample_names.txt'
+	np.savetxt(sample_names_file, filtered_ordered_pseudobulk_samples, fmt="%s", delimiter='\t')
+	# Generate pseudobulk covaraite file
+	pseudobulk_covariate_file = output_root + 'sample_covariates.txt'
+	print_pseudobulk_covariate_file_from_cell_covariates(filtered_ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file)
+
+	# Run PCA on pseudobulk data
+	num_pcs = 100
+	pca_file = output_root + 'pca_scores.txt'
+	pca_ve_file = output_root + 'pca_pve.txt'
+	generate_pca_scores_and_variance_explained(pseudobulk_expression_file, num_pcs, pca_file, pca_ve_file)
+
+
+
+def print_pseudobulk_clustering_mapping_cell_type_summary(adata, ct_summary_file, resolution):
+	ordered_cell_types = np.asarray(adata.obs['cg_cov'])
+	ordered_cell_ids = np.asarray(adata.obs['cell_id'])
+	# create mapping from cell id to cell type
+	cell_id_to_cell_type = {}
+	for i, cell_id in enumerate(ordered_cell_ids):
+		cell_id_to_cell_type[cell_id] = ordered_cell_types[i]
+	# Get unique list of cell types
+	unique_cell_types = sorted(np.unique(ordered_cell_types))
+	num_cell_types = len(unique_cell_types)
+	cell_type_to_pos = {}
+	for i, cell_type in enumerate(unique_cell_types):
+		cell_type_to_pos[cell_type] = i
+	# Create dictionary to keep track of cell type knn counts
+	mapping = {}
+	for cell_type in unique_cell_types:
+		mapping[cell_type] = np.zeros(num_cell_types)
+
+	cluster_to_indices_mapping = {}
+	unique_clusters = np.unique(adata.obs['individual_leiden_clusters_' + str(resolution)])
+	counter = 0
+	for cluster_id in unique_clusters:
+		counter = counter + 1
+		neighbor_indices = adata.obs['individual_leiden_clusters_' + str(resolution)] == cluster_id
+		cluster_to_indices_mapping[cluster_id] = neighbor_indices
+
+
+	for i, cell_id in enumerate(ordered_cell_ids):
+		cell_type = ordered_cell_types[i]
+		cell_cluster_id = adata.obs['individual_leiden_clusters_' + str(resolution)][i]
+		cell_index = cell_type_to_pos[cell_type]
+		neighbor_indices = cluster_to_indices_mapping[cell_cluster_id]
+		for neighbor_cell_type in ordered_cell_types[neighbor_indices]:
+			neighbor_position = cell_type_to_pos[neighbor_cell_type]
+			mapping[cell_type][neighbor_position] = mapping[cell_type][neighbor_position] + 1
+		# Dont coun't the cell itself (only neighbors)
+		mapping[cell_type][cell_index] = mapping[cell_type][cell_index] - 1
+
+	t = open(ct_summary_file, 'w')
+	t.write('cell_type\t' + '\t'.join(unique_cell_types) + '\n')
+	for cell_type in unique_cell_types:
+		t.write(cell_type + '\t')
+		frac_ct = mapping[cell_type]/np.sum(mapping[cell_type])
+		t.write('\t'.join(frac_ct.astype(str)) + '\n')
+	t.close()
+
 
 #####################
 # Command line args
@@ -951,7 +1164,7 @@ def generate_cluster_pseudobulk_expression(adata, cluster_assignments, output_ro
 input_h5py_file = sys.argv[1]
 processed_expression_dir = sys.argv[2]
 gene_annotation_file = sys.argv[3]
-genotype_id_mapping_file = sys.argv[4]
+genotyped_individuals_file = sys.argv[4]
 
 
 ######################
@@ -968,7 +1181,6 @@ expected_cells_per_pseudobulk_sample = 10
 ######################
 # Load in ScanPy data
 #######################
-'''
 adata = sc.read_h5ad(input_h5py_file)
 
 ##################
@@ -979,7 +1191,7 @@ num_cells = len(adata.obs['ind_cov'])
 #adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
 cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
 
-counter = 0
+resolution = 3
 # Loop through individuals
 for individual in unique_individuals:
 	# Get cell indices corresponding to this individual
@@ -991,27 +1203,112 @@ for individual in unique_individuals:
 	# Construct neighborhood graph for cells from this indivudal
 	sc.pp.neighbors(adata_indi)
 	# Perform leiden clustering
-	sc.tl.leiden(adata_indi, max_comm_size=30)
+	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
 	# Get leiden cluster assignemnts
 	leiden_cluster_assignments = adata_indi.obs['leiden']
 	# Add to global vector of assignments
 	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
 	# Delete adata_indi from memory
 	del adata_indi
-adata.obs['individual_leiden_clusters'] = cluster_assignments
-'''
+adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
+
+##################
+# Perform cell clustering seperately in each individual
+##################
+unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
+num_cells = len(adata.obs['ind_cov'])
+#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
+cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
+
+resolution = 5
+# Loop through individuals
+for individual in unique_individuals:
+	# Get cell indices corresponding to this individual
+	cell_indices = adata.obs['ind_cov'] == individual
+	# Number of cells in this indiviudal
+	num_cells_per_indi = sum(cell_indices)
+	# Make anndata object for just this individual
+	adata_indi = adata[cell_indices, :]
+	# Construct neighborhood graph for cells from this indivudal
+	sc.pp.neighbors(adata_indi)
+	# Perform leiden clustering
+	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
+	# Get leiden cluster assignemnts
+	leiden_cluster_assignments = adata_indi.obs['leiden']
+	# Add to global vector of assignments
+	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
+	# Delete adata_indi from memory
+	del adata_indi
+adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
+
+##################
+# Perform cell clustering seperately in each individual
+##################
+unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
+num_cells = len(adata.obs['ind_cov'])
+#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
+cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
+
+resolution = 10
+# Loop through individuals
+for individual in unique_individuals:
+	# Get cell indices corresponding to this individual
+	cell_indices = adata.obs['ind_cov'] == individual
+	# Number of cells in this indiviudal
+	num_cells_per_indi = sum(cell_indices)
+	# Make anndata object for just this individual
+	adata_indi = adata[cell_indices, :]
+	# Construct neighborhood graph for cells from this indivudal
+	sc.pp.neighbors(adata_indi)
+	# Perform leiden clustering
+	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
+	# Get leiden cluster assignemnts
+	leiden_cluster_assignments = adata_indi.obs['leiden']
+	# Add to global vector of assignments
+	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
+	# Delete adata_indi from memory
+	del adata_indi
+adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
+
+
+
+
+
+
 # Save in temporary adata object
 temp_h5_output_file = processed_expression_dir + 'scanpy_temp.h5ad'
-#adata.write(temp_h5_output_file)
-adata = sc.read_h5ad(temp_h5_output_file)
+adata.write(temp_h5_output_file)
+#adata = sc.read_h5ad(temp_h5_output_file)
 
+
+
+
+#######################
+# Add cell id to covariate file
+#######################
+adata.obs['cell_id'] = adata.obs.index
+
+
+#######################
+# Create cell type summary of clustering file
+#######################
+resolution = 3
+clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
+
+resolution = 5
+clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
+
+resolution = 10
+clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
 
 
 
 #######################
 # Save Covariate Info
 #######################
-adata.obs['cell_id'] = adata.obs.index
 covariate_output_file = processed_expression_dir + 'cell_covariates.txt'
 np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
 
@@ -1033,6 +1330,96 @@ np.savetxt(pc_pve_output_file, adata.uns['pca']['variance_ratio'], fmt="%s", del
 #######################
 umap_output_file = processed_expression_dir + 'cell_expression_umaps.txt'
 np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', comments='')
+
+
+
+
+##################
+# Generate cluster-pseudobulk expression
+##################
+min_depth_threshold = 10000.0
+resolution = 3
+output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+
+
+##################
+# Generate cluster-pseudobulk expression
+##################
+min_depth_threshold = 10000.0
+resolution = 5
+output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+
+
+
+##################
+# Generate cluster-pseudobulk expression
+##################
+min_depth_threshold = 10000.0
+resolution = 10
+output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
