@@ -88,6 +88,7 @@ python add_genotype_pcs_to_cell_covariates_file.py $cell_covariates_file $sc_rna
 #########################
 # Visualize processed genotypes
 ########################
+if false; then
 module load R/3.5.1
 Rscript visualize_processed_genotypes.R $processed_genotype_dir $visualize_processed_genotype_dir
-
+fi

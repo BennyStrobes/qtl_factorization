@@ -139,6 +139,7 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 	# Fill in file containing lists of variant gene pairs for each chromosome iteratively
 	used_genes = {}
 	for chrom_num in range(1,23):
+		print(chrom_num)
 		# Create array where each element is a BP in this chromosome
 		# 'Null' if no genes in distance BP of gene
 		# Otherwise is a list of gene names
@@ -154,7 +155,7 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 			if head_count == 0:
 				head_count = head_count + 1
 				continue
-			if len(data) != 169:
+			if len(data) != 239:
 				print('assumption error!')
 			variant_id = data[0] + ':' + data[1]
 			variant_chrom = int(data[0])
@@ -171,7 +172,7 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 			if maf < .1:
 				print('skipped variant' + '\t' + str(maf))
 				continue
-			if pass_genotype_filter(genotype, .05) == False:
+			if pass_genotype_filter(genotype, .025) == False:
 				continue
 			# List of genes that variant maps to
 			mapping_genes = chromosome[variant_pos].split(':')
@@ -216,7 +217,7 @@ def get_mapping_from_gene_to_chromosome_position(gene_annotation_file, genes):
 			pdb.set_trace()
 		if data[6] != 'protein_coding' or data[7] != 'KNOWN':
 			continue
-		if data[1] == 'chrX' or data[1] == 'chrY':
+		if data[1] == 'chrX' or data[1] == 'chrY' or data[1] == 'chrM':
 			continue
 		# Extract relevent info on gene: Chrom num and TSS
 		chrom_num = int(data[1].split('hr')[1])
@@ -354,7 +355,7 @@ def get_cell_level_ordered_individaul_array(cell_level_info_file):
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		array.append(data[3])
+		array.append(data[1])
 	f.close()
 	return np.asarray(array)
 
@@ -391,7 +392,7 @@ def create_mapping_from_variants_to_genotype(variant_list, genotype_data_dir):
 				head_count = head_count + 1
 				continue
 			# Simple error checking
-			if len(data) != 169:
+			if len(data) != 239:
 				print('assumption error!')
 			variant_id = data[0] + ':' + data[1]
 			# Limit to variants in variant_list
@@ -478,44 +479,7 @@ def construct_library_size_file(cell_type_sc_sample_covariate_file, cell_type_li
 	f.close()
 	t.close()
 
-# For each cell type generate eqtl input files
-def generate_cell_type_eqtl_input_files(cell_type, genotype_data_dir, cell_type_sc_expression_file, cell_type_sc_sample_covariate_file, cell_type_eqtl_variant_gene_pairs_file, cell_type_eqtl_expression_file, cell_type_eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, cell_type_sample_overlap_file, cell_type_sc_raw_expression_file, cell_type_eqtl_raw_expression_file, cell_type_test_info_file, cell_type_library_size_file):
-	########################
-	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
-	########################
-	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, cell_type_eqtl_variant_gene_pairs_file)
-
-	########################
-	# Step 3: Generate expression matrix
-	########################
-	generate_single_cell_expression_eqtl_training_data(cell_type_eqtl_variant_gene_pairs_file, cell_type_sc_expression_file, gene_id_file, cell_type_eqtl_expression_file)
-
-	#######################
-	# Step 3: Generate raw expression matrix
-	########################
-	generate_single_cell_expression_eqtl_training_data(cell_type_eqtl_variant_gene_pairs_file, cell_type_sc_raw_expression_file, gene_id_file, cell_type_eqtl_raw_expression_file)
-	
-	#######################
-	# Step 4: Create covariate matrix describing each test
-	########################
-	generate_test_level_covariate_file(cell_type_eqtl_variant_gene_pairs_file, cell_type_sc_raw_expression_file, gene_id_file, cell_type_test_info_file)
-
-
-	########################
-	# Step 5: Generate Genotype matrix
-	########################
-	construct_genotype_matrix(cell_type_eqtl_variant_gene_pairs_file, genotype_data_dir, cell_type_sc_sample_covariate_file, cell_type_eqtl_genotype_file)
-
-	########################
-	# Step 5: Generate sample overlap file
-	########################
-	construct_sample_overlap_file(cell_type_sc_sample_covariate_file, cell_type_sample_overlap_file)
-	########################
-	# Step 6: Generate library size file
-	########################
-	construct_library_size_file(cell_type_sc_sample_covariate_file, cell_type_library_size_file)
-
-def construct_covariate_file(sc_sample_covariate_file, pcs, eqtl_covariate_file):
+def construct_covariate_file(sc_sample_covariate_file, eqtl_covariate_file):
 	# First need to extract genotype pcs
 	f = open(sc_sample_covariate_file)
 	head_count = 0
@@ -537,42 +501,44 @@ def construct_covariate_file(sc_sample_covariate_file, pcs, eqtl_covariate_file)
 	f.close()
 	geno_pcs = np.asarray(geno_pcs)
 	# Merge geno pcs and expression pcs
-	covs = np.hstack((geno_pcs, pcs))
-	np.savetxt(eqtl_covariate_file, covs, fmt="%s", delimiter='\t')
+	#covs = np.hstack((geno_pcs, pcs))
+	np.savetxt(eqtl_covariate_file, geno_pcs, fmt="%s", delimiter='\t')
 
-def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, residual_expression_file, sc_sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_residual_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs):
+def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs):
 	########################
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
-	#extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
+	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
 
 	########################
 	# Step 2: Generate expression matrix
 	########################
-	#generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
-	#generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, residual_expression_file, gene_id_file, eqtl_residual_expression_file)
+	print('expr')
+	generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
 
 	########################
 	# Step 3: Generate Genotype matrix
 	########################
-	# construct_genotype_matrix(eqtl_variant_gene_pairs_file, genotype_data_dir, sc_sample_covariate_file, eqtl_genotype_file)
+	print('geno')
+	construct_genotype_matrix(eqtl_variant_gene_pairs_file, genotype_data_dir, sample_covariate_file, eqtl_genotype_file)
 
 	########################
 	# Step 4: Generate sample overlap file
 	########################
-	#construct_sample_overlap_file(sc_sample_covariate_file, eqtl_sample_overlap_file)
+	print('sample overlap')
+	construct_sample_overlap_file(sample_covariate_file, eqtl_sample_overlap_file)
 
 	########################
 	# Step 5: Generate covariate file
 	########################
-	pcs_full = np.loadtxt(expression_pcs_file)
-	pcs = pcs_full[:, :num_pcs]
-	construct_covariate_file(sc_sample_covariate_file, pcs, eqtl_covariate_file)
+	construct_covariate_file(sample_covariate_file, eqtl_covariate_file)
 
 
 	########################
 	# Step 6: Generate latent factor file
 	########################
+	pcs_full = np.loadtxt(expression_pcs_file)
+	pcs = pcs_full[:, :num_pcs]
 	np.savetxt(eqtl_lf_file, pcs, fmt="%s", delimiter='\t')
 
 
@@ -588,8 +554,8 @@ latent_factor_interaction_eqtl_dir = sys.argv[4]  # Output dir
 ###################
 # Input files
 ###################
-# Pseudobulk gene names (in same order as raw_pseudobulk_expression_file)
-gene_id_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False_gene_ids.txt'
+# Pseudobulk gene names 
+gene_id_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_12_gene_names.txt'
 
 
 ###################
@@ -616,55 +582,18 @@ distance=10000
 num_pcs = 50
 
 # Input files
-expression_file = processed_expression_dir + 'single_cell_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False_standardized.txt'
-residual_expression_file = processed_expression_dir + 'single_cell_residual_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False_standardized.txt'
-sc_sample_covariate_file = genotype_data_dir + 'cell_level_covariates_with_genotype_pcs.txt'
-expression_pcs_file = processed_expression_dir + 'pca_scores_residual_expression_sle_individuals_min_expressed_cells_0.05_log_transform_transform_regress_out_batch_False.txt'
+expression_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_12_log_tmm_normalized_expression.txt'
+sample_covariate_file = genotype_data_dir + 'pseudobulk_sample_covariates_with_genotype_pcs.txt'
+expression_pcs_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_12_pca_scores.txt'
 
 # Output files
 eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_variant_gene_pairs.txt'
 eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_expression.txt'
-eqtl_residual_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_residual_expression.txt'
 eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_genotype.txt'
 eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_sample_overlap.txt'
 eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_covariates.txt'
 eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_latent_factors.txt'
-#generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, residual_expression_file, sc_sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_residual_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs)
-
-
-
-
-
-
-
-
-###################
-# Version run on KNN POOLED DATA (GIVES weird results...)
-###################
-###################
-# Extract latent factor eqtl input data
-###################
-# Max distance between variant and gene tss
-distance=10000
-num_pcs = 50
-
-# Input files
-expression_file = processed_expression_dir + 'knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_expression_sle_individuals_standardized.txt'
-residual_expression_file = processed_expression_dir + 'knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_residual_expression_sle_individuals_standardized.txt'
-sc_sample_covariate_file = genotype_data_dir + 'cell_level_covariates_with_genotype_pcs.txt'
-expression_pcs_file = processed_expression_dir + 'pca_scores_knn_boosted_k_30_euclidean_pca_median_gaussian_kernel_regress_out_batch_False_sle_individuals.txt'
-
-# Output files
-eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_variant_gene_pairs.txt'
-eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_expression.txt'
-eqtl_residual_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_residual_expression.txt'
-eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_genotype.txt'
-eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_sample_overlap.txt'
-eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_covariates.txt'
-eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_knn_boosted_latent_factors.txt'
-generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, residual_expression_file, sc_sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_residual_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs)
-
-
+generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs)
 
 
 

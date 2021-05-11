@@ -21,6 +21,7 @@ run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
 	fit_full <- lm(expr ~ geno + covariates + lfs:geno)
 	fit_null <- lm(expr ~ geno + covariates)
 	obj <- lrtest(fit_null, fit_full)
+	#lrt2 <- anova(fit_null, fit_full)
 	aggregate_pvalue <- obj[[5]][2]
 	num_cov = dim(covariates)[2]
 	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
@@ -28,18 +29,64 @@ run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
 	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
 }
 
-run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups) {
-	fit_full <- lmer(expr ~ geno + covariates + lfs:geno + (1 | groups) + (0+lfs|groups), REML=FALSE)
-	fit_null <- lmer(expr ~ geno + covariates + (1 | groups) + (0+lfs|groups), REML=FALSE)
+run_lf_interaction_eqtl_lm_perm <- function(expr, geno, covariates, lfs, groups, individual_groups) {
+	individual_genotype <- geno[individual_groups]
+	if (all.equal(geno, individual_genotype[groups]) == FALSE) {
+		print("EROROROR")
+	}
+	perm_geno <- (sample(individual_genotype))[groups]
+
+	fit_full <- lm(expr ~ geno + covariates + lfs:perm_geno)
+	fit_null <- lm(expr ~ geno + covariates)
+	obj <- lrtest(fit_null, fit_full)
+	#lrt2 <- anova(fit_null, fit_full)
+	aggregate_pvalue <- obj[[5]][2]
+	num_cov = dim(covariates)[2]
+	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
+	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
+	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
+}
+
+run_lf_interaction_eqtl_lmm_perm <- function(expr, geno, covariates, lfs, groups, individual_groups) {
+	individual_genotype <- geno[individual_groups]
+	if (all.equal(geno, individual_genotype[groups]) == FALSE) {
+		print("EROROROR")
+	}
+	perm_geno <- (sample(individual_genotype))[groups]
+	#fit_full <- lmer(expr ~ geno + covariates + lfs:geno + (1 | groups) + (0+lfs|groups), REML=FALSE)
+	#fit_null <- lmer(expr ~ geno + covariates + (1 | groups) + (0+lfs|groups), REML=FALSE)
+
+	fit_full <- lmer(expr ~ geno + covariates + lfs:perm_geno + (1 | groups), REML=FALSE)
+	fit_null <- lmer(expr ~ geno + covariates + (1 | groups), REML=FALSE)
 
 	lrt <- anova(fit_null,fit_full)
 
-	print(lrt)
+	aggregate_pvalue <- lrt[[8]][2]
 	#obj <- lrtest(fit_null, fit_full)
 	#aggregate_pvalue <- obj[[5]][2]
 	#num_cov = dim(covariates)[2]
 	#coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
 	#lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
+	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=c(1.0, 1.0)))
+}
+
+run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups) {
+	fit_full <- lmer(expr ~ geno + covariates + lfs + lfs:geno + (1 | groups), REML=FALSE)
+	fit_null <- lmer(expr ~ geno + covariates + lfs + (1 | groups), REML=FALSE)
+
+	lrt <- anova(fit_null,fit_full)
+
+	aggregate_pvalue <- lrt[[8]][2]
+
+	# extract coefficients
+	coefs <- data.frame(coef(summary(fit_full)))
+	# use normal distribution to approximate p-value
+	coefficient_pvalues <- 2 * (1 - pnorm(abs(coefs$t.value)))
+
+	num_cov = dim(covariates)[2]
+	num_lf = dim(lfs)[2]
+	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov + num_lf):length(coefficient_pvalues)]
+
 	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
 }
 
@@ -95,7 +142,14 @@ end_num = (job_number + 1)*lines_per_job
 
 covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
-groups <- read.table(sample_overlap_file, header=FALSE)$V1
+groups <- read.table(sample_overlap_file, header=FALSE)$V1 +1
+
+unique_groups <- unique(groups)
+individual_groups <- c()
+for (index in 1:length(unique_groups)) {
+	group_name <- unique_groups[index]
+	individual_groups <- c(individual_groups, which(groups==group_name)[1])
+}
 print("Data loaded in.. starting")
 
 num_lfs <- dim(lfs)[2]
@@ -123,29 +177,24 @@ while(!stop) {
 		expr = as.numeric(strsplit(line_expr,'\t')[[1]])
 		geno = as.numeric(strsplit(line_geno,'\t')[[1]])
 
-
 		# Run eqtl analysis
 		line_info <- strsplit(line_test,'\t')[[1]]
 		ensamble_id = line_info[1]
 		rs_id = line_info[2]
-		if (pass_genotype_filter(geno, .05)) {
-			tryCatch(
-			{
-				lm_results = run_lf_interaction_eqtl_lm(expr, geno, covariates, lfs)
-				#lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
-				new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lm_results$eqtl_pvalue, "\t", paste0(lm_results$coefficient_pvalues, collapse=","), "\n")
-        		cat(new_line)
-        	},
-        	error = function(e) {
-        		new_line <- paste0(rs_id, "\t", ensamble_id ,"\t", 1.0, "\t", paste0(rep(1.0, num_lfs), collapse=","), "\n")
-        		cat(new_line)
-        	}
-        	)
-			}
-		else {
-			new_line <- paste0(rs_id, "\t", ensamble_id, "\t", "NA", "\t", paste0(rep("NA", num_lfs), collapse=","), "\n")
-			cat(new_line)
-		}
+		tryCatch(
+		{
+			lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
+			#lmm_results_perm = run_lf_interaction_eqtl_lmm_perm(expr, geno, covariates, lfs, groups, individual_groups)
+
+			new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lmm_results$eqtl_pvalue, "\t", paste0(lmm_results$coefficient_pvalues, collapse=","), "\n")
+        		
+        	cat(new_line)
+        },
+        error = function(e) {
+        	new_line <- paste0(rs_id, "\t", ensamble_id ,"\t", 1.0, "\t", paste0(rep(1.0, num_lfs), collapse=","), "\n")
+        	cat(new_line)
+        }
+        )
 	}
 	# Get info for next line
 	count = count + 1

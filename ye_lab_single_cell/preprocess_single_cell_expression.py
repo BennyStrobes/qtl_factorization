@@ -1111,7 +1111,7 @@ def generate_cluster_pseudobulk_expression(adata, cluster_assignments, min_depth
 
 
 
-def print_pseudobulk_clustering_mapping_cell_type_summary(adata, ct_summary_file, resolution):
+def print_pseudobulk_clustering_mapping_cell_type_summary(adata, ct_summary_file, cluster_name):
 	ordered_cell_types = np.asarray(adata.obs['cg_cov'])
 	ordered_cell_ids = np.asarray(adata.obs['cell_id'])
 	# create mapping from cell id to cell type
@@ -1130,17 +1130,17 @@ def print_pseudobulk_clustering_mapping_cell_type_summary(adata, ct_summary_file
 		mapping[cell_type] = np.zeros(num_cell_types)
 
 	cluster_to_indices_mapping = {}
-	unique_clusters = np.unique(adata.obs['individual_leiden_clusters_' + str(resolution)])
+	unique_clusters = np.unique(adata.obs[cluster_name])
 	counter = 0
 	for cluster_id in unique_clusters:
 		counter = counter + 1
-		neighbor_indices = adata.obs['individual_leiden_clusters_' + str(resolution)] == cluster_id
+		neighbor_indices = adata.obs[cluster_name] == cluster_id
 		cluster_to_indices_mapping[cluster_id] = neighbor_indices
 
 
 	for i, cell_id in enumerate(ordered_cell_ids):
 		cell_type = ordered_cell_types[i]
-		cell_cluster_id = adata.obs['individual_leiden_clusters_' + str(resolution)][i]
+		cell_cluster_id = adata.obs[cluster_name][i]
 		cell_index = cell_type_to_pos[cell_type]
 		neighbor_indices = cluster_to_indices_mapping[cell_cluster_id]
 		for neighbor_cell_type in ordered_cell_types[neighbor_indices]:
@@ -1183,6 +1183,46 @@ expected_cells_per_pseudobulk_sample = 10
 #######################
 adata = sc.read_h5ad(input_h5py_file)
 
+
+##################
+# Perform joint cell clustering
+##################
+#resolution = 12
+#sc.pp.neighbors(adata)
+#sc.tl.leiden(adata, resolution=resolution)
+#pdb.set_trace()
+
+
+##################
+# Perform cell clustering seperately in each individual
+##################
+unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
+num_cells = len(adata.obs['ind_cov'])
+#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
+cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
+
+resolution = 12
+# Loop through individuals
+for individual in unique_individuals:
+	# Get cell indices corresponding to this individual
+	cell_indices = adata.obs['ind_cov'] == individual
+	# Number of cells in this indiviudal
+	num_cells_per_indi = sum(cell_indices)
+	# Make anndata object for just this individual
+	adata_indi = adata[cell_indices, :]
+	# Construct neighborhood graph for cells from this indivudal
+	sc.pp.neighbors(adata_indi)
+	# Perform leiden clustering
+	sc.tl.leiden(adata_indi, resolution=resolution)
+	# Get leiden cluster assignemnts
+	leiden_cluster_assignments = adata_indi.obs['leiden']
+	# Add to global vector of assignments
+	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
+	# Delete adata_indi from memory
+	del adata_indi
+adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)] = cluster_assignments
+
+
 ##################
 # Perform cell clustering seperately in each individual
 ##################
@@ -1211,65 +1251,6 @@ for individual in unique_individuals:
 	# Delete adata_indi from memory
 	del adata_indi
 adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
-
-##################
-# Perform cell clustering seperately in each individual
-##################
-unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
-num_cells = len(adata.obs['ind_cov'])
-#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
-cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
-
-resolution = 5
-# Loop through individuals
-for individual in unique_individuals:
-	# Get cell indices corresponding to this individual
-	cell_indices = adata.obs['ind_cov'] == individual
-	# Number of cells in this indiviudal
-	num_cells_per_indi = sum(cell_indices)
-	# Make anndata object for just this individual
-	adata_indi = adata[cell_indices, :]
-	# Construct neighborhood graph for cells from this indivudal
-	sc.pp.neighbors(adata_indi)
-	# Perform leiden clustering
-	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
-	# Get leiden cluster assignemnts
-	leiden_cluster_assignments = adata_indi.obs['leiden']
-	# Add to global vector of assignments
-	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
-	# Delete adata_indi from memory
-	del adata_indi
-adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
-
-##################
-# Perform cell clustering seperately in each individual
-##################
-unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
-num_cells = len(adata.obs['ind_cov'])
-#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
-cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
-
-resolution = 10
-# Loop through individuals
-for individual in unique_individuals:
-	# Get cell indices corresponding to this individual
-	cell_indices = adata.obs['ind_cov'] == individual
-	# Number of cells in this indiviudal
-	num_cells_per_indi = sum(cell_indices)
-	# Make anndata object for just this individual
-	adata_indi = adata[cell_indices, :]
-	# Construct neighborhood graph for cells from this indivudal
-	sc.pp.neighbors(adata_indi)
-	# Perform leiden clustering
-	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
-	# Get leiden cluster assignemnts
-	leiden_cluster_assignments = adata_indi.obs['leiden']
-	# Add to global vector of assignments
-	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
-	# Delete adata_indi from memory
-	del adata_indi
-adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
-
 
 
 
@@ -1294,15 +1275,12 @@ adata.obs['cell_id'] = adata.obs.index
 #######################
 resolution = 3
 clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(resolution))
 
-resolution = 5
-clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
 
-resolution = 10
-clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, resolution)
+resolution = 12
+clustering_ct_summary_file = processed_expression_dir + 'clustering_no_cap_resolution_' + str(resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_no_cap_clusters_' + str(resolution))
 
 
 
@@ -1343,29 +1321,14 @@ output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(reso
 generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
-##################
-# Generate cluster-pseudobulk expression
-##################
-min_depth_threshold = 10000.0
-resolution = 5
-output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
-
-
 
 ##################
 # Generate cluster-pseudobulk expression
 ##################
 min_depth_threshold = 10000.0
-resolution = 10
-output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
-
-
-
-
-
-
+resolution = 12
+output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
 

@@ -21,4 +21,3 @@ module load R/3.5.1
 Rscript visualize_processed_single_cell_expression.R $processed_expression_dir $visualize_processed_expression_dir
 
 
-
