@@ -88,7 +88,36 @@ fi
 #############################################
 # Prepare data for eQTL factorization 
 #############################################
+if false; then
 sh preprocess_data_for_eqtl_factorization.sh $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
+fi
+
+
+
+
+
+
+#############################################
+## Run eqtl factorization!
+#############################################
+sample_overlap_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_eqtl_input_sample_overlap.txt"
+expression_training_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_eqtl_input_expression.npy"
+genotype_training_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_eqtl_input_genotype.npy"
+covariate_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_eqtl_input_covariates.txt"
+num_latent_factors="20"
+lambda_v="1"
+model_name="eqtl_factorization_vi"
+seed="1"
+
+output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_init3_"
+if false; then
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
+fi
+
+
+
+
+
 
 
 
