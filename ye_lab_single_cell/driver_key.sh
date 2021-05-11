@@ -46,7 +46,7 @@ standard_eqtl_dir=$output_root"standard_eqtl/"
 latent_factor_interaction_eqtl_dir=$output_root"latent_factor_interaction_eqtl/"
 
 # Directory containing visualizations of standard eqtls
-visualize_standard_eqtl_dir=$output_root"visualize_standard_eqtl/"
+visualize_latent_factor_interaction_eqtl_dir=$output_root"visualize_latent_factor_interaction_eqtl/"
 
 # Directory containing pre-processed eqtl factorization input files
 eqtl_factorization_input_dir=$output_root"eqtl_factorization_input/"
@@ -62,8 +62,9 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 # Preprocess single cell expression
 ######################
+if false; then
 sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file
-
+fi
 
 ######################
 # Preprocess Genotype data
@@ -75,13 +76,19 @@ sh preprocess_genotype.sh $genotype_data_dir $processed_genotype_dir $sample_cov
 fi
 
 
-
 ######################
 # Call latent-factor (PCA) interaction-eqtls
 ######################
 if false; then
-sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
+sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
 fi
+
+
+
+#############################################
+# Prepare data for eQTL factorization 
+#############################################
+sh preprocess_data_for_eqtl_factorization.sh $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
 
 
 

@@ -11,6 +11,7 @@ processed_expression_dir="$1"
 processed_genotype_dir="$2"
 gene_annotation_file="$3"
 latent_factor_interaction_eqtl_dir="$4"
+visualize_latent_factor_interaction_eqtl_dir="$5"
 
 
 
@@ -54,8 +55,20 @@ for job_number in $(seq 1 $(($num_jobs-1))); do
 done
 fi
 
+# merge parallel runs
+if false; then
+python merge_parallelized_latent_factor_interaction_eqtl_calls.py $latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_results_" $num_jobs
+fi
 
 
+
+#############################################
+# Visualize latent factor interaction results
+#############################################
+if false; then
+module load R/3.5.1
+Rscript visualize_latent_factor_interaction_eqtls.R $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir 
+fi
 
 
 
