@@ -2,7 +2,7 @@
 
 #SBATCH
 #SBATCH --time=40:00:00
-#SBATCH --partition=lrgmem
+#SBATCH --partition=shared
 #SBATCH --mem=40GB
 
 #SBATCH --nodes=1

@@ -62,9 +62,8 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 # Preprocess single cell expression
 ######################
-if false; then
 sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file
-fi
+
 
 ######################
 # Preprocess Genotype data
@@ -109,15 +108,19 @@ lambda_v="1"
 model_name="eqtl_factorization_vi"
 seed="1"
 
-output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_init3_"
+output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_lf_interaction_egenes_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_init4_"
 if false; then
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
 fi
 
 
 
-
-
-
+#############################################
+## Visualize eqtl factorization
+#############################################
+if false; then
+module load R/3.5.1
+Rscript visualize_eqtl_factorization.R $processed_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir
+fi
 
 

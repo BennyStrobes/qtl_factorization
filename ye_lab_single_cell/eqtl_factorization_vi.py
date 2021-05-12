@@ -775,11 +775,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects variances
 		self.psi_alpha = np.ones(self.T)*self.alpha_prior
-		self.psi_beta = np.ones(self.T)*self.beta_prior*.1  # Initialize random effects variance to be samller than residual variance (tau)
+		self.psi_beta = np.ones(self.T)*self.beta_prior  # Initialize random effects variance to be samller than residual variance (tau)
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
@@ -812,5 +812,5 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
 		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*2
+		self.theta_U_a = np.ones(self.K)*self.a_prior*10
 		self.theta_U_b = np.ones(self.K)*self.b_prior
