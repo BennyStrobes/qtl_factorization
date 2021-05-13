@@ -43,14 +43,14 @@ qtl_sample_overlap_file=$latent_factor_interaction_eqtl_dir"latent_factor_intera
 #In parallel
 num_jobs="50"
 job_number="0"
-qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_results_"$job_number"_"$num_jobs"_"
+qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction2_eqtl_results_"$job_number"_"$num_jobs"_"
 if false; then
 sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
 fi
 
 if false; then
 for job_number in $(seq 1 $(($num_jobs-1))); do 
-	qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_eqtl_results_"$job_number"_"$num_jobs"_"
+	qtl_output_root=$latent_factor_interaction_eqtl_dir"latent_factor_interaction2_eqtl_results_"$job_number"_"$num_jobs"_"
 	sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
 done
 fi

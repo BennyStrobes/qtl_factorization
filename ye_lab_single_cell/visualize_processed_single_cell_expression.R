@@ -206,6 +206,27 @@ make_number_of_cells_per_cluster_bar_plot <- function(filtered_covariate_data, c
   return(p) 
 }
 
+make_number_of_clusters_per_individual_bar_plot <- function(pseudobulk_covariate_data) {
+  individuals <- as.character(pseudobulk_covariate_data$ind_cov)
+  unique_indis <- as.character(unique(individuals))
+  cells_arr <- c()
+  for (indi_index in 1:length(unique_indis)) {
+    indi <- unique_indis[indi_index]
+    num_cells <- sum(individuals == indi)
+    cells_arr <- c(cells_arr, num_cells)
+  }
+  ordering <- order(cells_arr)
+  df <- data.frame(num_cells=cells_arr[ordering], indi=factor(unique_indis[ordering], levels=unique_indis[ordering]))
+
+  p<-ggplot(data=df, aes(x=indi, y=num_cells)) +
+    geom_bar(stat="identity", fill="steelblue")+
+    figure_theme() +
+    labs(x = "Individual", y = "Number of clusters") +
+      theme(axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+  return(p) 
+}
+
 
 
 make_ct_proportion_per_individual_bar_plot_stratefied_by_sle_status <- function(filtered_covariate_data) {
@@ -482,15 +503,15 @@ visualize_processed_expression_dir <- args[2]  # Output Dir
 ##########################
 # Load in Covariates
 filtered_covariate_file <- paste0(processed_expression_dir, "cell_covariates.txt")
-#filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
-#saveRDS(filtered_covariate_data, "cov.rds")
-filtered_covariate_data <- readRDS("cov.rds")
+filtered_covariate_data <- read.table(filtered_covariate_file, header=TRUE, sep="\t")
+saveRDS(filtered_covariate_data, "cov.rds")
+#filtered_covariate_data <- readRDS("cov.rds")
 
 # Load in PCS
 pc_file <- paste0(processed_expression_dir, "cell_expression_pcs.txt")
-#pcs <- read.table(pc_file, header=FALSE, sep="\t")
-#saveRDS(pcs, "pcs.rds")
-pcs <- readRDS("pcs.rds")
+pcs <- read.table(pc_file, header=FALSE, sep="\t")
+saveRDS(pcs, "pcs.rds")
+#pcs <- readRDS("pcs.rds")
 
 # Load in PC PVE
 pc_pve_file <- paste0(processed_expression_dir, "cell_expression_pc_percent_variance_explained.txt")
@@ -498,29 +519,29 @@ pc_pve <- read.table(pc_pve_file, header=FALSE, sep="\t")
 
 # Load in umap_loadings
 umap_file <- paste0(processed_expression_dir, "cell_expression_umaps.txt")
-#umap_loadings <- read.table(umap_file, header=FALSE, sep="\t")
-#saveRDS(umap_loadings, "umap.rds")
-umap_loadings <- readRDS("umap.rds")
+umap_loadings <- read.table(umap_file, header=FALSE, sep="\t")
+saveRDS(umap_loadings, "umap.rds")
+#umap_loadings <- readRDS("umap.rds")
 
 # Get cluster neighbor ct summary file
-neighbor_ct_summary_file <- paste0(processed_expression_dir, "clustering_no_cap_resolution_12_cell_type_summary.txt")
+neighbor_ct_summary_file <- paste0(processed_expression_dir, "clustering_joint_resolution_5_cell_type_summary.txt")
 neighbor_ct_summary_df <- read.table(neighbor_ct_summary_file, header=TRUE, sep="\t")
 
 
 # Load in pseudobulk covariate data
-pseudobulk_covariate_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_no_cap_12_sample_covariates.txt")
-#pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
-#saveRDS(pseudobulk_covariate_data, "pseudobulk_cov.rds")
-pseudobulk_covariate_data <- readRDS("pseudobulk_cov.rds")
+pseudobulk_covariate_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_joint_5_sample_covariates.txt")
+pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
+saveRDS(pseudobulk_covariate_data, "pseudobulk_cov.rds")
+#pseudobulk_covariate_data <- readRDS("pseudobulk_cov.rds")
 
 # Load in pseudobulk expression_pcs
-pseudobulk_pcs_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_no_cap_12_pca_scores.txt")
-#pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
-#saveRDS(pseudobulk_pcs, "pseudobulk_pcs.rds")
-pseudobulk_pcs <- readRDS("pseudobulk_pcs.rds")
+pseudobulk_pcs_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_joint_5_pca_scores.txt")
+pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
+saveRDS(pseudobulk_pcs, "pseudobulk_pcs.rds")
+#pseudobulk_pcs <- readRDS("pseudobulk_pcs.rds")
 
 # Load in pseudobulk PC PVE
-pseudobulk_pc_pve_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_no_cap_12_pca_pve.txt")
+pseudobulk_pc_pve_file <- paste0(processed_expression_dir, "cluster_pseudobulk_leiden_joint_5_pca_pve.txt")
 pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
 
 
@@ -566,11 +587,9 @@ ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 ##########################
 # Clustering neighboring cell type summary
 ##########################
-if (FALSE) {
 cluster_ct_stacked_bar <- make_knn_cell_type_stacked_bar_chart(neighbor_ct_summary_df)
 output_file <- paste0(visualize_processed_expression_dir, "cluster_neighbor_cell_type_stacked_bar_chart.pdf")
 ggsave(cluster_ct_stacked_bar, file=output_file, width=7.2, height=5, units="in")
-}
 
 ##########################
 # Make PCA PVE line plot
@@ -628,22 +647,21 @@ umap_scatter_colored_by_lupus <- make_dimensionality_reduction_scatter_colored_b
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_disease_cov.pdf")
 ggsave(umap_scatter_colored_by_lupus, file=output_file, width=7.2, height=5, units="in")
 
-
+}
 ##########################
 # Make UMAP Plot colored by cluster assignmnent in one individual
 ##########################
 individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1760_1760"
-umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_no_cap_clusters_12[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_joint_clusters_5[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1760_1760_cluster_assignments.pdf")
 ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
 
 
 individual_indices <- as.character(filtered_covariate_data$ind_cov) == "1811_1811"
-umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_no_cap_clusters_12[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
+umap_scatter_colored_by_cluster_assignments <- make_dimensionality_reduction_scatter_colored_by_categorical_variable_with_specified_cell_type_colors(filtered_covariate_data$individual_leiden_joint_clusters_5[individual_indices], umap_loadings[individual_indices,1], umap_loadings[individual_indices,2], "", "umap1", "umap2")
 output_file <- paste0(visualize_processed_expression_dir, "umap_1_2_scatter_colored_by_individual_1811_1811_cluster_assignments.pdf")
 ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
 
-}
 
 
 
@@ -652,11 +670,9 @@ ggsave(umap_scatter_colored_by_cluster_assignments + theme(legend.position="none
 ##########################
 # PCA-covariate heatmap for pseudobulk data
 ##########################
-if (FALSE) {
 heatmap <- make_pseudobulk_covariate_loading_correlation_heatmap(pseudobulk_covariate_data, pseudobulk_pcs)
 output_file <- paste0(visualize_processed_expression_dir, "pseudobulk_covariate_pca_pve_heatmap.pdf")
 ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
-}
 
 
 ##########################
@@ -671,15 +687,22 @@ ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
 ##########################
 # Make bar plot showing number of cells per cluster
 ##########################
-num_cells_bar_plot <- make_number_of_cells_per_cluster_bar_plot(filtered_covariate_data, filtered_covariate_data$individual_leiden_no_cap_clusters_12)
+num_cells_bar_plot <- make_number_of_cells_per_cluster_bar_plot(filtered_covariate_data, filtered_covariate_data$individual_leiden_joint_clusters_5)
 output_file <- paste0(visualize_processed_expression_dir, "number_of_cells_per_pseudobulk_cluster_bar_plot.pdf")
 ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
 
 
 ##########################
+# Make Number of clusters per individual
+##########################
+num_cells_bar_plot <- make_number_of_clusters_per_individual_bar_plot(pseudobulk_covariate_data)
+output_file <- paste0(visualize_processed_expression_dir, "number_of_clusters_per_individual_bar_plot.pdf")
+ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
+
+##########################
 # Make bar plot showing number of cells per cluster per cell type
 ##########################
-num_cells_bar_plot <- make_number_of_cells_per_cluster_per_cell_type_bar_plot(filtered_covariate_data, pseudobulk_covariate_data, filtered_covariate_data$individual_leiden_no_cap_clusters_12)
+num_cells_bar_plot <- make_number_of_cells_per_cluster_per_cell_type_bar_plot(filtered_covariate_data, pseudobulk_covariate_data, filtered_covariate_data$individual_leiden_joint_clusters_5)
 output_file <- paste0(visualize_processed_expression_dir, "number_of_cells_per_pseudobulk_cluster_per_cell_type_bar_plot.pdf")
 ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=10, units="in")
 

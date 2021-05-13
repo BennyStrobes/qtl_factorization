@@ -1032,7 +1032,7 @@ def get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file):
 		dicti[ele] = 1
 	return dicti
 
-def generate_cluster_pseudobulk_expression(adata, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
+def generate_cluster_pseudobulk_expression(adata, gene_annotation_file, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
 	# Get dictionary list of genotyped individuals
 	geno_indi_dicti = get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file)
 
@@ -1049,31 +1049,51 @@ def generate_cluster_pseudobulk_expression(adata, cluster_assignments, min_depth
 	print(str(len(used_indis)) + ' individuals of ' + str(len(geno_indi_dicti)) + ' genotyped indiviudals used in analysis')
 
 	# Then get ordred list of gene ids
-	ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
+	raw_ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
+
+	raw_protein_coding_gene_indices = extract_protein_coding_known_autosomal_genes(adata.raw.var, gene_annotation_file)
+
 
 	# Generate raw cluster pseudobulk expression
-	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, ordered_genes)
+	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, raw_ordered_genes)
 
 	# Remove pseudobulk samples with fewer than 10K reads (following Josh's paper heree)
 	valid_pseudobulk_sample_indices = np.sum(raw_cluster_pseudobulk_expression, axis=1) >= min_depth_threshold
 	filtered_raw_cluster_pseudobulk_expression = raw_cluster_pseudobulk_expression[valid_pseudobulk_sample_indices, :]
 	filtered_ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)[valid_pseudobulk_sample_indices]
-	
+
+	# Remove genes with zeros across all samples
+	new_gene_indices = np.sum(raw_cluster_pseudobulk_expression, axis=0) > 0.0
+	filtered2_raw_cluster_pseudobulk_expression = filtered_raw_cluster_pseudobulk_expression[:, new_gene_indices]
+	ordered_genes = raw_ordered_genes[new_gene_indices, :]
+	protein_coding_gene_indices = raw_protein_coding_gene_indices[new_gene_indices]
+
+	'''	
 	# TMM normalize expression
 	counts_df = pd.DataFrame(np.transpose(filtered_raw_cluster_pseudobulk_expression))
 	tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=False)))
 	log_tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=True)))
+	'''
+
+	# TMMwsp normalization (needs to be run in R)
+	np.savetxt('temp_raw.txt', np.transpose(filtered2_raw_cluster_pseudobulk_expression), delimiter='\t', fmt="%s")
+	print(np.transpose(filtered2_raw_cluster_pseudobulk_expression).shape)
+	os.system('Rscript tmm_normalization.R temp_raw.txt')
+	# Re-load in normalized data
+	print('start loading')
+	tmm_counts = np.transpose(np.loadtxt('temp_raw_cpm.txt',delimiter='\t'))
+	log_tmm_counts = np.transpose(np.loadtxt('temp_raw_log_cpm.txt',delimiter='\t'))
 
 	# Filter to genes that pass our filters
 	valid_gene_indices = []
 	num_samples = tmm_counts.shape[0]
-	min_samples = num_samples*.1
+	min_samples = num_samples*.05
 	# Require to pass both tmm filter and raw counts filter
 	tmm_pass_filter = np.sum(tmm_counts >= .1, axis=0) >= min_samples
-	counts_pass_filter = np.sum(filtered_raw_cluster_pseudobulk_expression >= 5, axis=0) >= min_samples
+	counts_pass_filter = np.sum(filtered2_raw_cluster_pseudobulk_expression >= 5, axis=0) >= min_samples
 	# Test for each gene
 	for gene_num in range(len(ordered_genes)):
-		if tmm_pass_filter[gene_num] == True and counts_pass_filter[gene_num] == True:
+		if tmm_pass_filter[gene_num] == True and counts_pass_filter[gene_num] == True and protein_coding_gene_indices[gene_num] == True:
 			valid_gene_indices.append(True)
 		else:
 			valid_gene_indices.append(False)
@@ -1177,22 +1197,21 @@ regress_out_batch = True
 expected_cells_per_pseudobulk_sample = 10
 
 
-
 ######################
 # Load in ScanPy data
 #######################
 adata = sc.read_h5ad(input_h5py_file)
 
-
 ##################
 # Perform joint cell clustering
 ##################
-#resolution = 12
-#sc.pp.neighbors(adata)
-#sc.tl.leiden(adata, resolution=resolution)
-#pdb.set_trace()
+resolution = 5
+sc.pp.neighbors(adata)
+sc.tl.leiden(adata, resolution=resolution)
 
+adata.obs['individual_leiden_joint_clusters_' + str(resolution)] = np.char.add(np.char.add(np.asarray(adata.obs['ind_cov']).astype(str), ':'), np.asarray(adata.obs['leiden']).astype(str))
 
+'''
 ##################
 # Perform cell clustering seperately in each individual
 ##################
@@ -1201,7 +1220,7 @@ num_cells = len(adata.obs['ind_cov'])
 #adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
 cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
 
-resolution = 12
+resolution = 10
 # Loop through individuals
 for individual in unique_individuals:
 	# Get cell indices corresponding to this individual
@@ -1221,38 +1240,7 @@ for individual in unique_individuals:
 	# Delete adata_indi from memory
 	del adata_indi
 adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)] = cluster_assignments
-
-
-##################
-# Perform cell clustering seperately in each individual
-##################
-unique_individuals = sorted(np.unique(adata.obs['ind_cov']))
-num_cells = len(adata.obs['ind_cov'])
-#adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
-cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
-
-resolution = 3
-# Loop through individuals
-for individual in unique_individuals:
-	# Get cell indices corresponding to this individual
-	cell_indices = adata.obs['ind_cov'] == individual
-	# Number of cells in this indiviudal
-	num_cells_per_indi = sum(cell_indices)
-	# Make anndata object for just this individual
-	adata_indi = adata[cell_indices, :]
-	# Construct neighborhood graph for cells from this indivudal
-	sc.pp.neighbors(adata_indi)
-	# Perform leiden clustering
-	sc.tl.leiden(adata_indi, max_comm_size=30, resolution=resolution)
-	# Get leiden cluster assignemnts
-	leiden_cluster_assignments = adata_indi.obs['leiden']
-	# Add to global vector of assignments
-	cluster_assignments[cell_indices] = np.char.add(individual + ':', leiden_cluster_assignments.astype(str))
-	# Delete adata_indi from memory
-	del adata_indi
-adata.obs['individual_leiden_clusters_' + str(resolution)] = cluster_assignments
-
-
+'''
 
 
 
@@ -1273,15 +1261,9 @@ adata.obs['cell_id'] = adata.obs.index
 #######################
 # Create cell type summary of clustering file
 #######################
-resolution = 3
-clustering_ct_summary_file = processed_expression_dir + 'clustering_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(resolution))
-
-
-resolution = 12
-clustering_ct_summary_file = processed_expression_dir + 'clustering_no_cap_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_no_cap_clusters_' + str(resolution))
-
+resolution = 5
+clustering_ct_summary_file = processed_expression_dir + 'clustering_joint_resolution_' + str(resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_joint_clusters_' + str(resolution))
 
 
 #######################
@@ -1289,6 +1271,8 @@ print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summa
 #######################
 covariate_output_file = processed_expression_dir + 'cell_covariates.txt'
 np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
+'''
+
 
 #######################
 # Save Expression PCs
@@ -1308,27 +1292,16 @@ np.savetxt(pc_pve_output_file, adata.uns['pca']['variance_ratio'], fmt="%s", del
 #######################
 umap_output_file = processed_expression_dir + 'cell_expression_umaps.txt'
 np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', comments='')
-
-
-
-
-##################
-# Generate cluster-pseudobulk expression
-##################
-min_depth_threshold = 10000.0
-resolution = 3
-output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
-
+'''
 
 
 ##################
 # Generate cluster-pseudobulk expression
 ##################
 min_depth_threshold = 10000.0
-resolution = 12
-output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression(adata, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+resolution = 5
+output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_joint_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression(adata, gene_annotation_file, adata.obs['individual_leiden_joint_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
 
