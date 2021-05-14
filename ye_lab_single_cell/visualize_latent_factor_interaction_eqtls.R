@@ -134,17 +134,17 @@ visualization_dir <- args[2]
 ###################
 
 # Subsset of results from latent-factor interaction analysis
-lf_interaction_results_file <- paste0(working_dir, "latent_factor_interaction_eqtl_results_merged.txt")
+lf_interaction_results_file <- paste0(working_dir, "latent_factor_interaction2_eqtl_results_merged.txt")
 lf_interaction_pvalues <- read.table(lf_interaction_results_file, header=FALSE, sep="\t", nrows=50000)$V3
 
 
 # File containing tally of number of FDR hits driven by each latent factor
-num_hits_per_latent_factor_file <- paste0(working_dir, "latent_factor_interaction_eqtl_results_number_of_hits_per_latent_factor.txt")
+num_hits_per_latent_factor_file <- paste0(working_dir, "latent_factor_interaction2_eqtl_results_number_of_hits_per_latent_factor.txt")
 num_hits_per_latent_factor <- read.table(num_hits_per_latent_factor_file, header=TRUE, sep="\t")
 
 
 # File containing tally of number of FDR hits driven by each latent factor stratefied by pvalue quantiles
-num_hits_per_latent_factor_quantile_stratefied_file <- paste0(working_dir, "latent_factor_interaction_eqtl_results_number_of_hits_per_latent_factor_stratefied_by_5_quantiles.txt")
+num_hits_per_latent_factor_quantile_stratefied_file <- paste0(working_dir, "latent_factor_interaction2_eqtl_results_number_of_hits_per_latent_factor_stratefied_by_5_quantiles.txt")
 num_hits_per_latent_factor_quantile_stratefied <- read.table(num_hits_per_latent_factor_quantile_stratefied_file, header=TRUE, sep="\t")
 
 

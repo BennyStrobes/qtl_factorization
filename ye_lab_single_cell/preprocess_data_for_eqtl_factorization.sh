@@ -14,7 +14,7 @@ eqtl_factorization_input_dir="$2"
 
 
 
-num_genes="1450"
+num_genes="1950"
 
 
 

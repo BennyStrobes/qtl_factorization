@@ -511,7 +511,7 @@ def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expre
 	########################
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
-	#extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
+	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
 
 	########################
 	# Step 2: Generate expression matrix
@@ -558,7 +558,7 @@ latent_factor_interaction_eqtl_dir = sys.argv[4]  # Output dir
 # Input files
 ###################
 # Pseudobulk gene names 
-gene_id_file = processed_expression_dir + 'cluster_pseudobulk_leiden_joint_5_gene_names.txt'
+gene_id_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_5_gene_names.txt'
 
 
 ###################
@@ -585,17 +585,17 @@ distance=10000
 num_pcs = 50
 
 # Input files
-expression_file = processed_expression_dir + 'cluster_pseudobulk_leiden_joint_5_log_tmm_normalized_expression.txt'
+expression_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_5_log_tmm_normalized_expression.txt'
 sample_covariate_file = genotype_data_dir + 'pseudobulk_sample_covariates_with_genotype_pcs.txt'
-expression_pcs_file = processed_expression_dir + 'cluster_pseudobulk_leiden_joint_5_pca_scores.txt'
+expression_pcs_file = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_5_pca_scores.txt'
 
 # Output files
-eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_variant_gene_pairs.txt'
-eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_expression.txt'
-eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_genotype.txt'
-eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_sample_overlap.txt'
-eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_covariates.txt'
-eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_eqtl_input_latent_factors.txt'
+eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_variant_gene_pairs.txt'
+eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_expression.txt'
+eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_genotype.txt'
+eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_sample_overlap.txt'
+eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_covariates.txt'
+eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_5_eqtl_input_latent_factors.txt'
 generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs)
 
 

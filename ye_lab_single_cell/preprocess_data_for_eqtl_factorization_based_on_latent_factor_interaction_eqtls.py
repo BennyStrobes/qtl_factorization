@@ -156,8 +156,8 @@ output_dir = sys.argv[3]
 
 
 # Input files
-latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'latent_factor_interaction_eqtl_results_genome_wide_signficant_bf_fdr_0.05.txt'
-latent_factor_interaction_eqtl_results_file = working_dir + 'latent_factor_interaction_eqtl_results_merged_include_nan.txt'
+latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'latent_factor_interaction2_eqtl_results_genome_wide_signficant_bf_fdr_0.05.txt'
+latent_factor_interaction_eqtl_results_file = working_dir + 'latent_factor_interaction2_eqtl_results_merged_include_nan.txt'
 
 
 test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_factor_interaction_eqtl_results_file, latent_factor_interaction_eqtl_genome_wide_sig_results_file, num_genes)
@@ -165,31 +165,31 @@ test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_
 
 # Generate eqtl factorization test names file
 all_test_names_file = working_dir + 'latent_factor_interaction_eqtl_input_variant_gene_pairs.txt'
-eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_lf_interaction_eqtl_input_test_names.txt'
+eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_lf_interaction_joint_5_eqtl_input_test_names.txt'
 generate_eqtl_factorization_test_names_file(all_test_names_file, eqtl_factorization_test_names_file, test_eqtl_binary_arr)
 
 # Generate eqtl factorization gene expression file
 all_gene_expression_file = working_dir + 'latent_factor_interaction_eqtl_input_expression.txt'
-eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_lf_interaction_eqtl_input_expression.txt'
+eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_lf_interaction_joint_5_eqtl_input_expression.txt'
 generate_eqtl_factorization_expression_file(all_gene_expression_file, eqtl_factorization_expression_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_expression_file)
 
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'latent_factor_interaction_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_joint_5_eqtl_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
 # Generate covariate file
 covariate_file = working_dir + 'latent_factor_interaction_eqtl_input_covariates.txt'
 lf_covariate_file = working_dir + 'latent_factor_interaction_eqtl_input_latent_factors.txt'
-covariate_with_intercept_file = output_dir + 'eqtl_factorization_lf_interaction_eqtl_input_covariates.txt'
+covariate_with_intercept_file = output_dir + 'eqtl_factorization_lf_interaction_joint_5_eqtl_input_covariates.txt'
 generate_covariate_file(covariate_file, lf_covariate_file, covariate_with_intercept_file)
 
 # Generate sample overlap file
 sample_overlap_input_file = working_dir + 'latent_factor_interaction_eqtl_input_sample_overlap.txt'
-sample_overlap_output_file = output_dir + 'eqtl_factorization_lf_interaction_eqtl_input_sample_overlap.txt'
+sample_overlap_output_file = output_dir + 'eqtl_factorization_lf_interaction_joint_5_eqtl_input_sample_overlap.txt'
 generate_sample_overlap_file(sample_overlap_input_file, sample_overlap_output_file)
 
 

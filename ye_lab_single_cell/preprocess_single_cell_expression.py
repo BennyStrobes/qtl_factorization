@@ -1205,11 +1205,12 @@ adata = sc.read_h5ad(input_h5py_file)
 ##################
 # Perform joint cell clustering
 ##################
-resolution = 5
+resolution = 3
 sc.pp.neighbors(adata)
 sc.tl.leiden(adata, resolution=resolution)
 
 adata.obs['individual_leiden_joint_clusters_' + str(resolution)] = np.char.add(np.char.add(np.asarray(adata.obs['ind_cov']).astype(str), ':'), np.asarray(adata.obs['leiden']).astype(str))
+
 
 '''
 ##################
@@ -1220,7 +1221,7 @@ num_cells = len(adata.obs['ind_cov'])
 #adata.obs['kmeans10'] = np.asarray(['unassigned']*num_cells)
 cluster_assignments = np.asarray(['unassigned']*num_cells,dtype='<U40')
 
-resolution = 10
+resolution = 5
 # Loop through individuals
 for individual in unique_individuals:
 	# Get cell indices corresponding to this individual
@@ -1245,7 +1246,7 @@ adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)] = cluster_assi
 
 
 # Save in temporary adata object
-temp_h5_output_file = processed_expression_dir + 'scanpy_temp.h5ad'
+temp_h5_output_file = processed_expression_dir + 'scanpy_temp3.h5ad'
 adata.write(temp_h5_output_file)
 #adata = sc.read_h5ad(temp_h5_output_file)
 
@@ -1261,7 +1262,7 @@ adata.obs['cell_id'] = adata.obs.index
 #######################
 # Create cell type summary of clustering file
 #######################
-resolution = 5
+resolution = 3
 clustering_ct_summary_file = processed_expression_dir + 'clustering_joint_resolution_' + str(resolution) + '_cell_type_summary.txt'
 print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_joint_clusters_' + str(resolution))
 
@@ -1299,7 +1300,7 @@ np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', com
 # Generate cluster-pseudobulk expression
 ##################
 min_depth_threshold = 10000.0
-resolution = 5
+resolution = 3
 output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_joint_' + str(resolution) + '_'
 generate_cluster_pseudobulk_expression(adata, gene_annotation_file, adata.obs['individual_leiden_joint_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 

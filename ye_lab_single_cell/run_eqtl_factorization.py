@@ -3,6 +3,8 @@ import os
 import sys
 import pdb
 import eqtl_factorization_vi
+import eqtl_factorization_pca
+
 
 # Load in sample overlap data
 def load_in_sample_overlap_data(sample_overlap_file):
@@ -49,6 +51,9 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
 		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
 		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
+	elif model_name == 'eqtl_factorization_pca':
+		eqtl_pca = eqtl_factorization_pca.EQTL_FACTORIZATION_PCA(K=num_latent_factors, output_root=output_root)
+		eqtl_pca.fit(G=G, Y=Y, z=Z, cov=cov)
 
 
 
