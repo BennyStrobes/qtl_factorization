@@ -19,7 +19,8 @@ lambda_v="$6"
 model_name="$7"
 seed="$8"
 output_stem="$9"
+variance_param="${10}"
 
 module load python/3.7-anaconda
 
-python run_eqtl_factorization.py $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem
+python run_eqtl_factorization.py $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param

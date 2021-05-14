@@ -166,12 +166,12 @@ visualization_dir <- args[3]
 ############################
 # Load in files
 ############################
-sample_covariate_file <- paste0(processed_data_dir, "cluster_pseudobulk_leiden_joint_5_sample_covariates.txt")
+sample_covariate_file <- paste0(processed_data_dir, "cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_sample_covariates.txt")
 
 ############################
 # Model Specification
 ############################
-model_stem <- paste0("eqtl_factorization_results_lf_interaction_egenes_joint_5_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_init2_temper_")
+model_stem <- paste0("eqtl_factorization_results_lf_interaction_egenes_no_cap_2.5_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_var_param_1e-3_temper_")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 print(sample_covariate_file)

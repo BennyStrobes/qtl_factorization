@@ -34,34 +34,6 @@ def run_linear_model_for_initialization(Y, G, cov, z):
 	return np.asarray(F_betas), np.asarray(C_betas)
 
 
-def run_linear_mixed_model_for_initialization(Y, G, cov, z):
-	num_tests = Y.shape[1]
-	F_betas = []
-	C_betas = []
-	num_features = cov.shape[1]
-	model_command = 'y ~ 0 + g'
-	column_names = ['y', 'g', 'z']
-	for feature_num in range(num_features):
-		column_names.append('cov' + str(feature_num))
-		model_command = model_command + ' + cov' + str(feature_num)
-	model_command = model_command + ' + (1|z)'
-
-	for test_number in range(num_tests):
-		print(test_number)
-		y_vec = Y[:,test_number]
-		g_vec = G[:,test_number]
-		dd = {'y':y_vec, 'g':g_vec, 'z':z}
-		df = pd.DataFrame(dd)
-		df2 = pd.concat([df, pd.DataFrame(cov)], axis=1)
-		df2.columns = (column_names)
-		model = Lmer(model_command, data=df2)
-		fitted_model = model.fit()
-		coefs = np.asarray(fitted_model)[:,0]
-		F_betas.append(coefs[0])
-		C_betas.append(coefs[1:])
-	return np.asarray(F_betas), np.asarray(C_betas)
-
-
 def compute_kl_divergence_of_gaussian_bernoulli(S, W_mu, W_var, W_var_s_0, gamma_expected, theta_a, theta_b, K):
 	num_feat = W_mu.shape[1]
 	# Relevent expectations
@@ -399,9 +371,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print(end_time-start_time)
 			print('##############')
 			print('##############')
-
 			np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu*self.S_U), fmt="%s", delimiter='\t')
-
 			# Remove irrelevent factors
 			if np.mod(vi_iter, 20) == 0 and vi_iter > 0:
 				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
@@ -765,6 +735,7 @@ class EQTL_FACTORIZATION_VI(object):
 		return svi_sample_indices
 		# return np.random.choice(self.N_full, size=self.N, replace=False)
 	def initialize_variables(self):
+		print(self.Y.shape)
 		# Initialize array to keep track of ELBO
 		self.elbo = []
 
@@ -779,7 +750,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_mu = pca.components_.T
 		for k in range(self.K):
 			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
-		self.U_var = np.ones((self.N, self.K))
+		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v) 
 		self.S_U = np.ones((self.N,self.K))
 
 		# Random effects
@@ -805,11 +776,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects variances
 		self.psi_alpha = np.ones(self.T)*self.alpha_prior
-		self.psi_beta = np.ones(self.T)*self.beta_prior  # Initialize random effects variance to be samller than residual variance (tau)
+		self.psi_beta = np.ones(self.T)*self.beta_prior*.1 # Initialize random effects variance to be samller than residual variance (tau)
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
@@ -823,20 +794,18 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_mu = pca.components_
 		for k in range(self.K):
 			self.V_mu[k,:] = ((self.V_mu[k,:]-np.mean(self.V_mu[k,:]))/np.std(self.V_mu[k,:]))
-		self.V_var = np.ones((self.K, self.T))
-		print(self.gamma_v)
-		#F_betas, C_betas = run_linear_mixed_model_for_initialization(self.Y, self.G, self.cov, self.z)
+		self.V_var = np.ones((self.K, self.T))*(1.0/self.gamma_v)
+
 		# Initialize C and F
 		F_betas, C_betas = run_linear_model_for_initialization(self.Y, self.G, self.cov, self.z)
 		self.F_mu = F_betas
 		#self.F_mu = np.zeros(self.T)
 		self.F_var = np.ones(self.T)
 		self.C_mu = np.transpose(C_betas)
-		# self.C_mu = np.zeros(self.C_mu.shape)
+		#self.C_mu = np.zeros(self.C_mu.shape)
 		self.C_var = np.ones(self.C_mu.shape)
 
 		self.cov_squared = np.square(self.cov)
-
 		# Variances
 		self.tau_alpha = np.ones(self.T)*self.alpha_prior
 		self.tau_beta = np.ones(self.T)*self.beta_prior

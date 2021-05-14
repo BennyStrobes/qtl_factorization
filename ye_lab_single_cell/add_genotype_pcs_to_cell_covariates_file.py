@@ -59,7 +59,8 @@ individual_level_genotype_pcs = processed_genotype_dir + 'individual_level_genot
 t = open(individual_level_genotype_pcs,'w')
 t.write('individual\tancestry\tgeno_pc1\tgeno_pc2\tgeno_pc3\tgeno_pc4\n')
 for indi in ordered_indis:
-	t.write(indi + '\t' + indi_to_ancestry[indi] + '\t' + '\t'.join(indi_to_genotype_pc[indi][:4]) + '\n')
+	if indi in indi_to_ancestry:
+		t.write(indi + '\t' + indi_to_ancestry[indi] + '\t' + '\t'.join(indi_to_genotype_pc[indi][:4]) + '\n')
 t.close()
 
 ####################

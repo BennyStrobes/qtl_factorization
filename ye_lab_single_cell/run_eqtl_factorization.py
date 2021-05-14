@@ -17,7 +17,7 @@ def load_in_sample_overlap_data(sample_overlap_file):
 	num_individuals = len(np.unique(Z1))
 	return np.asarray(Z1), int(num_individuals)
 
-def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v):
+def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param):
 	# Load in expression data (dimension: num_samplesXnum_tests)
 	Y = np.transpose(np.load(expression_training_file))
 	# Load in Genotype data (dimension: num_samplesXnum_tests)
@@ -36,7 +36,7 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# Run model
 	#####################################
 	if model_name == 'eqtl_factorization_vi':
-		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=1e-3, beta=1e-3, a=1, b=1, max_iter=200, gamma_v=lambda_v, output_root=output_root)
+		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=200, gamma_v=lambda_v, output_root=output_root)
 		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
 		# Order and Filter Factors
 		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
@@ -76,9 +76,10 @@ lambda_v = float(sys.argv[6])
 model_name = sys.argv[7]
 seed = int(sys.argv[8])
 output_root = sys.argv[9]
+variance_param = float(sys.argv[10])
 
 
 np.random.seed(seed)
 
 
-train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v)
+train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param)
