@@ -63,7 +63,7 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 # Preprocess single cell expression
 ######################
 if false; then
-sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file
+sbatch preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file
 fi
 
 ######################
@@ -153,7 +153,8 @@ fi
 #############################################
 ## Visualize eqtl factorization
 #############################################
+if false; then
 module load R/3.5.1
 Rscript visualize_eqtl_factorization.R $processed_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir
-
+fi
 

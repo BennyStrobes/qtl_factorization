@@ -1032,6 +1032,121 @@ def get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file):
 		dicti[ele] = 1
 	return dicti
 
+
+def generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
+	# Get dictionary list of genotyped individuals
+	geno_indi_dicti = get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file)
+
+	# First generate list of ordered pseudobulk samples
+	ordered_pseudobulk_samples_raw = sorted(np.unique(cluster_assignments))
+	ordered_pseudobulk_samples = []
+	used_indis = {}
+	for pseudobulk_sample in ordered_pseudobulk_samples_raw:
+		indi = pseudobulk_sample.split(':')[0]
+		if indi in geno_indi_dicti:
+			ordered_pseudobulk_samples.append(pseudobulk_sample)
+			used_indis[indi] = 1
+	ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)
+	print(str(len(used_indis)) + ' individuals of ' + str(len(geno_indi_dicti)) + ' genotyped indiviudals used in analysis')
+
+	# Then get ordred list of gene ids
+	raw_ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
+
+	raw_protein_coding_gene_indices = extract_protein_coding_known_autosomal_genes(adata.raw.var, gene_annotation_file)
+
+
+	# Filter out genes with zero counts
+	gene_counts = np.asarray(np.sum(adata.raw.X,axis=0))[0,:]
+	non_zero_genes = gene_counts != 0.0
+	temp_raw = adata.raw.X.toarray()
+	temp_raw2 = temp_raw[:, non_zero_genes]
+	
+	np.savetxt(output_root + 'raw_counts.txt', temp_raw2, fmt="%s", delimiter='\t')
+	np.savetxt(output_root + 'raw_counts_subset_debug.txt', temp_raw2[:10000,:], fmt="%s", delimiter='\t')
+
+
+	print('NEED TO DEAL WITH raw_ordered_genes AND raw_protein_coding_gene_indices')
+
+	'''
+
+	# Generate raw cluster pseudobulk expression
+	raw_cluster_pseudobulk_expression = generate_raw_cluster_pseudobulk_expression(adata.raw.X, ordered_pseudobulk_samples, cluster_assignments, raw_ordered_genes)
+
+	# Remove pseudobulk samples with fewer than 10K reads (following Josh's paper heree)
+	valid_pseudobulk_sample_indices = np.sum(raw_cluster_pseudobulk_expression, axis=1) >= min_depth_threshold
+	filtered_raw_cluster_pseudobulk_expression = raw_cluster_pseudobulk_expression[valid_pseudobulk_sample_indices, :]
+	filtered_ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)[valid_pseudobulk_sample_indices]
+
+
+	# Remove genes with zeros across all samples
+	new_gene_indices = np.sum(raw_cluster_pseudobulk_expression, axis=0) > 0.0
+	filtered2_raw_cluster_pseudobulk_expression = filtered_raw_cluster_pseudobulk_expression[:, new_gene_indices]
+	ordered_genes = raw_ordered_genes[new_gene_indices, :]
+	protein_coding_gene_indices = raw_protein_coding_gene_indices[new_gene_indices]
+
+		
+	# TMM normalize expression
+	#counts_df = pd.DataFrame(np.transpose(filtered_raw_cluster_pseudobulk_expression))
+	#tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=False)))
+	#log_tmm_counts = np.transpose(np.asarray(rnaseqnorm.edgeR_cpm(counts_df, normalized_lib_sizes=True, log=True)))
+	
+
+	# TMMwsp normalization (needs to be run in R)
+	np.savetxt('temp_raw.txt', np.transpose(filtered2_raw_cluster_pseudobulk_expression), delimiter='\t', fmt="%s")
+	print(np.transpose(filtered2_raw_cluster_pseudobulk_expression).shape)
+	os.system('Rscript tmm_normalization.R temp_raw.txt')
+	# Re-load in normalized data
+	print('start loading')
+	tmm_counts = np.transpose(np.loadtxt('temp_raw_cpm.txt',delimiter='\t'))
+	log_tmm_counts = np.transpose(np.loadtxt('temp_raw_log_cpm.txt',delimiter='\t'))
+
+	# Filter to genes that pass our filters
+	valid_gene_indices = []
+	num_samples = tmm_counts.shape[0]
+	min_samples = num_samples*.05
+	# Require to pass both tmm filter and raw counts filter
+	tmm_pass_filter = np.sum(tmm_counts >= .1, axis=0) >= min_samples
+	counts_pass_filter = np.sum(filtered2_raw_cluster_pseudobulk_expression >= 5, axis=0) >= min_samples
+	# Test for each gene
+	for gene_num in range(len(ordered_genes)):
+		if tmm_pass_filter[gene_num] == True and counts_pass_filter[gene_num] == True and protein_coding_gene_indices[gene_num] == True:
+			valid_gene_indices.append(True)
+		else:
+			valid_gene_indices.append(False)
+	# Array of length number of genes that determines whether gene passed filter
+	valid_gene_indices = np.asarray(valid_gene_indices)
+
+	# Remove genes that don't pass our filters
+	filtered_log_tmm_counts = log_tmm_counts[:, valid_gene_indices]
+	filtered_ordered_genes = ordered_genes[valid_gene_indices, :]
+
+	# THEN STANDARDIZE
+	num_filtered_genes = filtered_log_tmm_counts.shape[1]
+	for gene_num in range(num_filtered_genes):
+		filtered_log_tmm_counts[:, gene_num] = (filtered_log_tmm_counts[:, gene_num] - np.mean(filtered_log_tmm_counts[:, gene_num]))/np.std(filtered_log_tmm_counts[:, gene_num])
+
+	# Save processed gene expression to output file
+	# Pseudobulk expression
+	pseudobulk_expression_file = output_root + 'log_tmm_normalized_expression.txt'
+	np.savetxt(pseudobulk_expression_file, filtered_log_tmm_counts, fmt="%s", delimiter='\t')
+	# Gene names
+	gene_names_file = output_root + 'gene_names.txt'
+	np.savetxt(gene_names_file, filtered_ordered_genes, fmt="%s", delimiter='\t')
+	# Sample names
+	sample_names_file = output_root + 'sample_names.txt'
+	np.savetxt(sample_names_file, filtered_ordered_pseudobulk_samples, fmt="%s", delimiter='\t')
+	# Generate pseudobulk covaraite file
+	pseudobulk_covariate_file = output_root + 'sample_covariates.txt'
+	print_pseudobulk_covariate_file_from_cell_covariates(filtered_ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file)
+
+	# Run PCA on pseudobulk data
+	num_pcs = 100
+	pca_file = output_root + 'pca_scores.txt'
+	pca_ve_file = output_root + 'pca_pve.txt'
+	generate_pca_scores_and_variance_explained(pseudobulk_expression_file, num_pcs, pca_file, pca_ve_file)
+
+	'''
+
 def generate_cluster_pseudobulk_expression(adata, gene_annotation_file, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
 	# Get dictionary list of genotyped individuals
 	geno_indi_dicti = get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file)
@@ -1421,11 +1536,16 @@ output_root = processed_expression_dir + 'cluster_pseudobulk_leiden_no_cap_' + s
 min_depth_threshold = 50000.0
 resolution = 2.5
 output_root = processed_expression_dir + 'cluster_tmm_ign_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression_tmm_igp(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+# generate_cluster_pseudobulk_expression_tmm_igp(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
-
-
+##################
+# Generate cluster-pseudobulk expression
+##################
+min_depth_threshold = 50000.0
+resolution = 2.5
+output_root = processed_expression_dir + 'cluster_scran_ign_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
+generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
 
