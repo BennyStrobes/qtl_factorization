@@ -1064,8 +1064,9 @@ def generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file
 	np.savetxt(output_root + 'raw_counts.txt', temp_raw2, fmt="%s", delimiter='\t')
 	np.savetxt(output_root + 'raw_counts_subset_debug.txt', temp_raw2[:10000,:], fmt="%s", delimiter='\t')
 
+	os.system('Rscript scran_normalization.R ' + output_root + 'raw_counts_subset_debug.txt')
+	os.system('Rscript scran_normalization.R ' + output_root + 'raw_counts.txt')
 
-	print('NEED TO DEAL WITH raw_ordered_genes AND raw_protein_coding_gene_indices')
 
 	'''
 
