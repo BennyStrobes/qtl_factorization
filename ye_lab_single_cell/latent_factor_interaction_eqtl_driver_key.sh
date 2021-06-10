@@ -65,10 +65,9 @@ fi
 #############################################
 # Visualize latent factor interaction results
 #############################################
-if false; then
 module load R/3.5.1
 Rscript visualize_latent_factor_interaction_eqtls.R $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir 
-fi
+
 
 
 

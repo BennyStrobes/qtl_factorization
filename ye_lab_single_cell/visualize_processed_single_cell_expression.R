@@ -524,24 +524,24 @@ saveRDS(umap_loadings, "umap.rds")
 #umap_loadings <- readRDS("umap.rds")
 
 # Get cluster neighbor ct summary file
-neighbor_ct_summary_file <- paste0(processed_expression_dir, "clustering_leiden_no_cap_resolution_2.5_cell_type_summary.txt")
+neighbor_ct_summary_file <- paste0(processed_expression_dir, "clustering_leiden_no_cap_resolution_12_cell_type_summary.txt")
 neighbor_ct_summary_df <- read.table(neighbor_ct_summary_file, header=TRUE, sep="\t")
 
 
 # Load in pseudobulk covariate data
-pseudobulk_covariate_file <- paste0(processed_expression_dir, "cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_sample_covariates.txt")
+pseudobulk_covariate_file <- paste0(processed_expression_dir, "cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_12_sample_covariates.txt")
 pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
 saveRDS(pseudobulk_covariate_data, "pseudobulk_cov.rds")
 #pseudobulk_covariate_data <- readRDS("pseudobulk_cov.rds")
 
 # Load in pseudobulk expression_pcs
-pseudobulk_pcs_file <- paste0(processed_expression_dir, "cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_pca_scores.txt")
+pseudobulk_pcs_file <- paste0(processed_expression_dir, "cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_12_pca_scores.txt")
 pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
 saveRDS(pseudobulk_pcs, "pseudobulk_pcs.rds")
 #pseudobulk_pcs <- readRDS("pseudobulk_pcs.rds")
 
 # Load in pseudobulk PC PVE
-pseudobulk_pc_pve_file <- paste0(processed_expression_dir, "cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_pca_pve.txt")
+pseudobulk_pc_pve_file <- paste0(processed_expression_dir, "cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_12_pca_pve.txt")
 pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
 
 

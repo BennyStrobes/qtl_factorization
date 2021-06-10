@@ -166,12 +166,12 @@ visualization_dir <- args[3]
 ############################
 # Load in files
 ############################
-sample_covariate_file <- paste0(processed_data_dir, "cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_sample_covariates.txt")
+sample_covariate_file <- paste0(processed_data_dir, "cluster_ye_lab_normalized_qn_ign_pseudobulk_leiden_no_cap_2.5_sample_covariates.txt")
 
 ############################
 # Model Specification
 ############################
-model_stem <- paste0("eqtl_factorization_results_lf_interaction_egenes_no_cap_2.5_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_var_param_1e-3_temper_")
+model_stem <- paste0("eqtl_factorization_results_lf_interaction_egenes_no_cap_2.5_eqtl_factorization_vi_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_temper_")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 print(sample_covariate_file)
@@ -179,6 +179,16 @@ print(eqtl_factorization_loading_file)
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
+valid_columns <- c(2,3,4,5,7)
+loadings <- loadings[, valid_columns]
+
+covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
+covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
+covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
+covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
+
+
+
 
 ######################################
 # Make loading boxplot colored by Ancestry
@@ -192,6 +202,43 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type.pdf")
 boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings, "Cell Type")
+ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading boxplot colored by Ancestry
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_typeXstatus.pdf")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_by_status, loadings, "Cell Type X status")
+ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading boxplot colored by Ancestry
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type2Xstatus.pdf")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_by_status, loadings, "Cell Type (fine grained) X status")
+ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading boxplot colored by Ancestry
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_typeXpop.pdf")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_by_pop, loadings, "Cell Type X pop")
+ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading boxplot colored by Ancestry
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type2Xpop.pdf")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_by_pop, loadings, "Cell Type (fine grained) X pop")
+ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+
+
+######################################
+# Make loading boxplot colored by Ancestry
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type_fine_res.pdf")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_cov_mode, loadings, "Cell Type (fine res)")
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################################
@@ -213,7 +260,6 @@ ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
 
 
-if (FALSE) {
 
 print('UMAP START')
 umap_loadings = umap(loadings)$layout
@@ -236,9 +282,29 @@ umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(c
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 ######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_cell_type2.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_loadings, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_status.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$Status, umap_loadings, "Status")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sle_status.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$SLE_status, umap_loadings, "SLE Status")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
 # Visualize UMAP scatter plot colored by number of cells
 #######################################
-output_file <- paste0(eqtl_visualization_dir, "umap_loading_scatter_colored_by_num_cells.pdf")
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_num_cells.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$num_cells, umap_loadings, "Number of cells")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-}

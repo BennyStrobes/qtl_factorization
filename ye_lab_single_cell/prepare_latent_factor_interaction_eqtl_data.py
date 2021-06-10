@@ -558,7 +558,7 @@ latent_factor_interaction_eqtl_dir = sys.argv[4]  # Output dir
 # Input files
 ###################
 # Pseudobulk gene names 
-gene_id_file = processed_expression_dir + 'cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_gene_names.txt'
+gene_id_file = processed_expression_dir + 'cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_2.5_gene_names.txt'
 
 
 ###################
@@ -582,12 +582,12 @@ if len(np.unique(ensamble_ids)) != len(ensamble_ids):
 ###################
 # Max distance between variant and gene tss
 distance=10000
-num_pcs = 50
+num_pcs = 30
 
 # Input files
-expression_file = processed_expression_dir + 'cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_log_tmm_normalized_expression.txt'
+expression_file = processed_expression_dir + 'cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_2.5_normalized_expression.txt'
 sample_covariate_file = genotype_data_dir + 'pseudobulk_sample_covariates_with_genotype_pcs.txt'
-expression_pcs_file = processed_expression_dir + 'cluster_tmm_ign_pseudobulk_leiden_no_cap_2.5_pca_scores.txt'
+expression_pcs_file = processed_expression_dir + 'cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_2.5_pca_scores.txt'
 
 # Output files
 eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_variant_gene_pairs.txt'
