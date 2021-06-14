@@ -1068,7 +1068,6 @@ def generate_cluster_pseudobulk_expression_ye_lab_normalized_qn_zscore(adata, ge
 
 	# Generate raw cluster pseudobulk expression
 	raw_cluster_pseudobulk_expression = generate_mean_cluster_pseudobulk_expression(adata.X, ordered_pseudobulk_samples, cluster_assignments, raw_ordered_genes)
-
 	# Normalization
 	df = pd.DataFrame(np.transpose(raw_cluster_pseudobulk_expression))
 	# Quantile normalize samples
@@ -1155,9 +1154,45 @@ def generate_cluster_pseudobulk_expression_ye_lab_normalized_qn_ign(adata, gene_
 	generate_pca_scores_and_variance_explained(pseudobulk_expression_file, num_pcs, pca_file, pca_ve_file)
 
 
-def generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
+def extract_matrix_from_market_format(input_file):
+	f = open(input_file)
+	head_count = 0
+	prev_val = 1
+	for line in f:
+		line = line.rstrip()
+		data = line.split()
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		elif head_count == 1:
+			head_count = head_count + 1
+			# Initialize matrix
+			rows = int(data[1])
+			columns = int(data[0])
+			matty = np.zeros((rows, columns))
+			continue
+		# Minus 1 for conversion from R to python 
+		row_num = int(data[1]) - 1
+		col_num = int(data[0]) - 1
+		value = float(data[2])
+		matty[row_num, col_num] = value
+		if prev_val != row_num:
+			if np.mod(row_num, 100) == 0:
+				print(row_num)
+			prev_val = row_num
+	f.close()
+	return matty
+
+
+def generate_cluster_pseudobulk_expression_scran_qn_zscore(adata, gene_annotation_file, cluster_assignments, min_depth_threshold, genotyped_individuals_file, output_root):
+	cluster_assignments2 = np.asarray(cluster_assignments)
 	# Get dictionary list of genotyped individuals
 	geno_indi_dicti = get_dictionary_list_of_genotyped_individuals(genotyped_individuals_file)
+
+	# Compute number of cells per individual
+	cells_per_indi = {}
+	for indi in np.asarray(np.unique(adata.obs['ind_cov'])):
+		cells_per_indi[indi] = sum(adata.obs['ind_cov'] == indi)
 
 	# First generate list of ordered pseudobulk samples
 	ordered_pseudobulk_samples_raw = sorted(np.unique(cluster_assignments))
@@ -1165,7 +1200,7 @@ def generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file
 	used_indis = {}
 	for pseudobulk_sample in ordered_pseudobulk_samples_raw:
 		indi = pseudobulk_sample.split(':')[0]
-		if indi in geno_indi_dicti:
+		if indi in geno_indi_dicti and cells_per_indi[indi] > 2500:
 			ordered_pseudobulk_samples.append(pseudobulk_sample)
 			used_indis[indi] = 1
 	ordered_pseudobulk_samples = np.asarray(ordered_pseudobulk_samples)
@@ -1173,23 +1208,65 @@ def generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file
 
 	# Then get ordred list of gene ids
 	raw_ordered_genes = np.vstack((adata.raw.var.index, adata.raw.var[adata.raw.var.columns[0]])).T
-	print('a1')
 	raw_protein_coding_gene_indices = extract_protein_coding_known_autosomal_genes(adata.raw.var, gene_annotation_file)
-	print('a')
 
 	# Filter out genes with zero counts
 	gene_counts = np.asarray(np.sum(adata.raw.X,axis=0))[0,:]
 	non_zero_genes = gene_counts != 0.0
-	temp_raw = adata.raw.X.toarray()
-	temp_raw2 = temp_raw[:, non_zero_genes]
-	
+	raw_ordered_genes = raw_ordered_genes[non_zero_genes,:]
+
+	#temp_raw = adata.raw.X.toarray()
+	#temp_raw2 = temp_raw[:, non_zero_genes]	
 	#np.savetxt(output_root + 'raw_counts.txt', np.transpose((temp_raw2).astype(int)), fmt="%s", delimiter='\t')
-	print("start")
-	#np.savetxt(output_root + 'raw_counts_subset_debug.txt', np.transpose((temp_raw2[:5000,:]).astype(int)), fmt="%s", delimiter='\t')
-	print("DONE")
-	os.system('Rscript scran_normalization.R ' + output_root + 'raw_counts_subset_debug.txt')
-	print("DONE2")
-	os.system('Rscript scran_normalization.R ' + output_root + 'raw_counts.txt')
+	#os.system('Rscript scran_normalization.R ' + output_root + 'raw_counts.txt')
+	scran_log_counts = extract_matrix_from_market_format(output_root + 'raw_counts_log_norm_cpm_matrix_market_format.txt')
+	#np.save('temp_mat.npy', scran_log_counts)
+	#scran_log_counts = np.load('temp_mat.npy')
+	print('done')
+
+	num_expressed_cells_per_gene = np.asarray(np.sum(adata.raw.X[:, non_zero_genes]>0,axis=0))[0,:]
+	num_cells = adata.raw.X.shape[0]
+	fraction_expressed_cells_per_gene = num_expressed_cells_per_gene/num_cells
+	highly_expressed_genes = (num_expressed_cells_per_gene/num_cells)>.01
+	scran_log_counts = scran_log_counts[:, highly_expressed_genes]
+	raw_ordered_genes = raw_ordered_genes[highly_expressed_genes,:]
+
+	# Generate raw cluster pseudobulk expression
+	print(len(ordered_pseudobulk_samples))
+	raw_cluster_pseudobulk_expression = generate_mean_cluster_pseudobulk_expression(scran_log_counts, ordered_pseudobulk_samples, cluster_assignments, raw_ordered_genes)
+
+	# Normalization
+	df = pd.DataFrame(np.transpose(raw_cluster_pseudobulk_expression))
+	# Quantile normalize samples
+	temp_out = rnaseqnorm.normalize_quantiles(df)
+	# Standardize each gene
+	#norm_df = rnaseqnorm.inverse_normal_transform(temp_out)
+	normalized_expression = np.transpose(np.asarray(temp_out))
+
+	for gene_num in range(normalized_expression.shape[1]):
+		normalized_expression[:,gene_num] = (normalized_expression[:, gene_num] - np.mean(normalized_expression[:, gene_num]))/np.std(normalized_expression[:, gene_num])
+
+
+	# Save processed gene expression to output file
+	# Pseudobulk expression
+	pseudobulk_expression_file = output_root + 'normalized_expression.txt'
+	np.savetxt(pseudobulk_expression_file, normalized_expression, fmt="%s", delimiter='\t')
+	# Gene names
+	gene_names_file = output_root + 'gene_names.txt'
+	np.savetxt(gene_names_file, raw_ordered_genes, fmt="%s", delimiter='\t')
+	# Sample names
+	sample_names_file = output_root + 'sample_names.txt'
+	np.savetxt(sample_names_file, ordered_pseudobulk_samples, fmt="%s", delimiter='\t')
+	# Generate pseudobulk covaraite file
+	pseudobulk_covariate_file = output_root + 'sample_covariates.txt'
+	print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file)
+
+	# Run PCA on pseudobulk data
+	num_pcs = 100
+	pca_file = output_root + 'pca_scores.txt'
+	pca_ve_file = output_root + 'pca_pve.txt'
+	generate_pca_scores_and_variance_explained(pseudobulk_expression_file, num_pcs, pca_file, pca_ve_file)
+
 
 
 	'''
@@ -1593,7 +1670,7 @@ adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)] = cluster_assi
 
 
 # Save in temporary adata object
-resolution = 12
+resolution = 2.5
 temp_h5_output_file = processed_expression_dir + 'scanpy_temp_individual_leiden_no_cap_clusters_' + str(resolution) + '.h5ad'
 #adata.write(temp_h5_output_file)
 adata = sc.read_h5ad(temp_h5_output_file)
@@ -1610,14 +1687,14 @@ adata.obs['cell_id'] = adata.obs.index
 #######################
 resolution = 12
 clustering_ct_summary_file = processed_expression_dir + 'clustering_leiden_no_cap_resolution_' + str(resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_no_cap_clusters_' + str(resolution))
+#print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_no_cap_clusters_' + str(resolution))
 
 
 #######################
 # Save Covariate Info
 #######################
 covariate_output_file = processed_expression_dir + 'cell_covariates.txt'
-np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
+#np.savetxt(covariate_output_file, adata.obs, fmt="%s", delimiter='\t', header='\t'.join(adata.obs.columns), comments='')
 '''
 
 
@@ -1664,10 +1741,10 @@ output_root = processed_expression_dir + 'cluster_tmm_ign_pseudobulk_leiden_no_c
 ##################
 # Generate cluster-pseudobulk expression
 ##################
-min_depth_threshold = 50000.0
+min_depth_threshold = 10000.0
 resolution = 2.5
 output_root = processed_expression_dir + 'cluster_scran_ign_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
-#generate_cluster_pseudobulk_expression_scran_ign(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
+generate_cluster_pseudobulk_expression_scran_qn_zscore(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], min_depth_threshold, genotyped_individuals_file, output_root)
 
 
 
@@ -1684,7 +1761,7 @@ output_root = processed_expression_dir + 'cluster_ye_lab_normalized_qn_ign_pseud
 ##################
 resolution = 12
 output_root = processed_expression_dir + 'cluster_ye_lab_normalized_qn_zscore_pseudobulk_leiden_no_cap_' + str(resolution) + '_'
-generate_cluster_pseudobulk_expression_ye_lab_normalized_qn_zscore(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], genotyped_individuals_file, output_root)
+#generate_cluster_pseudobulk_expression_ye_lab_normalized_qn_zscore(adata, gene_annotation_file, adata.obs['individual_leiden_no_cap_clusters_' + str(resolution)], genotyped_individuals_file, output_root)
 
 
 
