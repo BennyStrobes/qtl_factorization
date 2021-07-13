@@ -235,8 +235,9 @@ args <- commandArgs(TRUE)
 processed_pseudobulk_expression_dir <- args[1]  # input dir
 cluster_resolution <- args[2]  # Hyperparameter
 visualize_processed_pseudobulk_expression_dir <- args[3]  # output dir
-regress_out_batch <- args[4]
-gene_level_normalization <- args[5]
+regress_out_batch <- args[4]  # Normalization parameter
+gene_level_normalization <- args[5]  # Normalization parameter
+sample_level_normalization <- args[6]  # Normalization parameter
 
 
 ############################
@@ -251,18 +252,18 @@ pseudobulk_covariate_file <- paste0(processed_pseudobulk_expression_dir, "pseudo
 pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
 
 # Load in pseudobulk expression_pcs
-pseudobulk_pcs_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_none_sample_norm_", gene_level_normalization, "_gene_norm_pca_scores.txt")
+pseudobulk_pcs_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_scores.txt")
 pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
 
 # Load in pseudobulk PC PVE
-pseudobulk_pc_pve_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_none_sample_norm_", gene_level_normalization, "_gene_norm_pca_pve.txt")
+pseudobulk_pc_pve_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_pve.txt")
 pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
 
 
 ############################
 # Output root
 ############################
-output_root <- paste0(visualize_processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_resolution_", cluster_resolution, "_gene_level_normalization_", gene_level_normalization, "_")
+output_root <- paste0(visualize_processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_resolution_", cluster_resolution, "_sample_level_normalization_", sample_level_normalization, "_gene_level_normalization_", gene_level_normalization, "_")
 
 ##########################
 # Clustering neighboring cell type summary
@@ -284,7 +285,7 @@ ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 ##########################
 # Make PCA PVE line plot
 ##########################
-num_pcs <- 50
+num_pcs <- 200
 output_file <- paste0(output_root, "pseudobulk_pca_variance_explained_", num_pcs, "_pcs_line_plot.pdf")
 ve_line_plot <- make_pc_variance_explained_line_plot(pseudobulk_pc_pve[,1], num_pcs)
 ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")

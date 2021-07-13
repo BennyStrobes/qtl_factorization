@@ -14,6 +14,39 @@ gtex_v8_figure_theme <- function() {
 }
 
 
+make_loading_boxplot_for_one_factor_by_categorical_covariate <- function(covariate, loadings, factor_number, covariate_name) {
+  df <- data.frame(loading=loadings, covariate=factor(covariate))
+
+  boxplot <- ggplot(df, aes(x=covariate, y=loading, fill=covariate)) + geom_boxplot(outlier.size = .00001) +
+        gtex_v8_figure_theme() + 
+            labs(x="", y = paste0("Sample loading (", factor_number,")"), fill="") +
+            theme(legend.position="none") +
+            guides(colour = guide_legend(override.aes = list(size=2))) +
+            theme(axis.text.x=element_blank()) + 
+              guides(colour=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=2))) 
+
+}
+
+
+
+make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate <- function(covariate, loadings, covariate_name) {
+  loading_vec <- c()
+  covariate_vec <- c()
+  num_factors <- dim(loadings)[2]
+
+  plot_arr <- list()
+
+  for (factor_num in 1:num_factors) {
+    factor_boxplot <- make_loading_boxplot_for_one_factor_by_categorical_covariate(covariate, loadings[,factor_num], factor_num, covariate_name)
+    plot_arr[[factor_num]] <- factor_boxplot
+  }
+
+  merged = plot_grid(plotlist=plot_arr, ncol=1)
+
+
+  return(merged)
+}
+
 
 
 make_loading_boxplot_plot_by_categorical_covariate <- function(covariates, loadings, covariate_name) {
@@ -81,8 +114,8 @@ make_pseudobulk_covariate_loading_correlation_heatmap <- function(covariates, lo
   loadings <- as.matrix(loadings)
 
 
-  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
-  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30)
+  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
 
   #print(summary(covariates))
 
@@ -150,7 +183,32 @@ make_pseudobulk_covariate_loading_correlation_heatmap <- function(covariates, lo
 }
 
 
+make_factor_distribution_histograms <- function(factors) {
+  factor_min <- floor(min(factors)) 
+  factor_max <- ceiling(max(factors))
 
+  num_factors <- dim(factors)[1]
+
+  plot_arr <- list()
+  factor_vals_vec <- c()
+  factor_names_vec <- c()
+  factor_num <- 1
+  num_tests <- dim(factors)[2]
+  print(num_factors)
+  ordered_factors <- c()
+  for (factor_num in 1:num_factors) {
+    factor_vals_vec <- c(factor_vals_vec, as.numeric(factors[factor_num,]))
+    factor_names_vec <- c(factor_names_vec, rep(paste0("factor", factor_num), num_tests))
+    ordered_factors <- c(ordered_factors, paste0("factor", factor_num))
+  }
+  df <- data.frame(factor_values=factor_vals_vec, factor_names=factor(factor_names_vec, levels=ordered_factors))
+  p <- ggplot(df, aes(x=factor_values))+
+      geom_histogram(color="darkblue", fill="lightblue") + 
+      facet_grid(factor_names ~ .)
+      gtex_v8_figure_theme() 
+
+  return(p)
+}
 
 
 
@@ -166,28 +224,44 @@ visualization_dir <- args[3]
 ############################
 # Load in files
 ############################
-sample_covariate_file <- paste0(processed_data_dir, "cluster_ye_lab_normalized_qn_ign_pseudobulk_leiden_no_cap_2.5_sample_covariates.txt")
-
+sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_sample_covariates.txt")
 ############################
 # Model Specification
 ############################
-model_stem <- paste0("eqtl_factorization_results_lf_interaction_egenes_no_cap_2.5_eqtl_factorization_vi_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_temper_")
+model_stem <- paste0("eqtl_factorization_results_standard_eqtl_egenes_10.0_none_zscore_capped_tau_prior_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_temper_")
+eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "theta_normalized.txt")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
+
+
+eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
+
 
 print(sample_covariate_file)
 print(eqtl_factorization_loading_file)
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
-valid_columns <- c(2,3,4,5,7)
-loadings <- loadings[, valid_columns]
+factors <- read.table(eqtl_factorization_factor_file, header=FALSE)
+valid_columns <- c(1, 2, 3, 4, 5)
+valid_columns <- c(3, 4, 5, 6, 7)
+valid_columns <- c(5, 7, 8)
+valid_columns <- c(3,5, 7)
+
+
+print(head(covariates))
+
+#loadings <- loadings[, valid_columns]
 
 covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
-
+#####################
+# Make histogram showing distribution of factor values for each factor
+output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
+hist <- make_factor_distribution_histograms(factors)
+ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
 
 ######################################
@@ -260,6 +334,53 @@ ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
 
 
+######################################
+# Make loading boxplot with row for every factor colored by individual
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_individual.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$ind_cov, loadings, "Individual")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+######################################
+# Make loading boxplot with row for every factor colored by batch
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_batch.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov, loadings, "Batch")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+
+######################################
+# Make loading boxplot with row for every factor colored by individual limited to B cells
+#######################################
+cell_indices <- as.character(covariates$cg_cov_mode) == "B"
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_individual_for_only_B_cells.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$ind_cov[cell_indices], loadings[cell_indices,], "Individual")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+######################################
+# Make loading boxplot with row for every factor colored by batch limited to B cells
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_batch_for_only_B_cells.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov[cell_indices], loadings[cell_indices,], "Batch")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+
+######################################
+# Make loading boxplot with row for every factor colored by individual limited to NK cells
+#######################################
+cell_indices <- as.character(covariates$cg_cov_mode) == "NK"
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_individual_for_only_NK_cells.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$ind_cov[cell_indices], loadings[cell_indices,], "Individual")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+######################################
+# Make loading boxplot with row for every factor colored by batch limited to NK cells
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_batch_for_only_NK_cells.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov[cell_indices], loadings[cell_indices,], "Batch")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
+
+
 
 print('UMAP START')
 umap_loadings = umap(loadings)$layout
@@ -308,3 +429,18 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_num_cells.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$num_cells, umap_loadings, "Number of cells")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_pop_cov.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$pop_cov, umap_loadings, "pop cov")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sex.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$Sex, umap_loadings, "sex")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+

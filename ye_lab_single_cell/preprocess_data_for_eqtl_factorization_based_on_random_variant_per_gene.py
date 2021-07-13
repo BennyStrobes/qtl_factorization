@@ -6,28 +6,41 @@ import pdb
 
 
 
-def extract_eqtl_factorization_tests(test_names_file, cross_tissue_genome_wide_sig_results_file, num_genes):
+def extract_eqtl_factorization_tests(test_names_file, num_genes):
 	dicti = {}
 	binary_arr = []
 	temp_dicti = {}
-	f = open(cross_tissue_genome_wide_sig_results_file)
+
+	gene_to_variants = {}
+	f = open(test_names_file)
 	head_count = 0
+	counter = 0
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		# Extract relevent fields
-		gene_id = data[1]
-		variant_id = data[0]
-		test_name = variant_id + ':' + gene_id
-		if test_name in dicti:
-			print('assumption error')
-			pdb.set_trace()
-		if len(dicti) < num_genes:
-			dicti[test_name] = 1
+		gene_id = data[0]
+		variant_id = data[1]
+		if gene_id not in gene_to_variants:
+			gene_to_variants[gene_id] = []
+		gene_to_variants[gene_id].append(variant_id)
 	f.close()
+
+	temp_arr = []
+	for gene_id in gene_to_variants.keys():
+		if len(gene_to_variants[gene_id]) != len(np.unique(gene_to_variants[gene_id])):
+			print('assumption erroror')
+			continue
+		genes_variants = np.asarray(gene_to_variants[gene_id])
+		randomly_selected_variant = np.random.choice(genes_variants)
+		randomly_selected_test_name = randomly_selected_variant + ';' + gene_id
+		temp_arr.append(randomly_selected_test_name)
+
+	randomly_selected_tests = np.random.choice(temp_arr, num_genes, replace=False)
+	for test in randomly_selected_tests:
+		dicti[test] = 1
 
 	f = open(test_names_file)
 	head_count = 0
@@ -40,7 +53,7 @@ def extract_eqtl_factorization_tests(test_names_file, cross_tissue_genome_wide_s
 			continue
 		gene_id = data[0]
 		variant_id = data[1]
-		test_name = variant_id + ':' + gene_id
+		test_name = variant_id + ';' + gene_id
 		if test_name in dicti:
 			binary_arr.append(1)
 		else:
@@ -158,91 +171,80 @@ output_dir = sys.argv[3]
 
 
 # Input files
-latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'standard_eqtl_10.0_none_zscore_eqtl_results_genome_wide_signficant_bf_fdr_0.2.txt'
+#latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'standard_eqtl_10.0_qn_zscore_eqtl_results_genome_wide_signficant_bf_fdr_0.2.txt'
 #latent_factor_interaction_eqtl_results_file = working_dir + 'latent_factor_interaction_no_cap_5_eqtl_results_merged_include_nan.txt'
 latent_factor_interaction_test_names_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_variant_gene_pairs.txt'
 
-test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_factor_interaction_test_names_file, latent_factor_interaction_eqtl_genome_wide_sig_results_file, num_genes)
+test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_factor_interaction_test_names_file, num_genes)
 
 # Generate eqtl factorization test names file
 all_test_names_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_variant_gene_pairs.txt'
-eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_test_names.txt'
+eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_test_names.txt'
 generate_eqtl_factorization_test_names_file(all_test_names_file, eqtl_factorization_test_names_file, test_eqtl_binary_arr)
 
 # Generate eqtl factorization gene expression file
 all_gene_expression_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_expression.txt'
-eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_expression.txt'
+eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_expression.txt'
 generate_eqtl_factorization_expression_file(all_gene_expression_file, eqtl_factorization_expression_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_expression_file)
 
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
 # Generate covariate file
 covariate_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_covariates.txt'
 lf_covariate_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_latent_factors.txt'
-covariate_with_intercept_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_covariates.txt'
+covariate_with_intercept_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_covariates.txt'
 generate_covariate_file(covariate_file, lf_covariate_file, covariate_with_intercept_file)
 
 # Generate sample overlap file
 sample_overlap_input_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_sample_overlap.txt'
-sample_overlap_output_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt'
+sample_overlap_output_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt'
 generate_sample_overlap_file(sample_overlap_input_file, sample_overlap_output_file)
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+'''
 # Input files
-latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_results_genome_wide_signficant_bf_fdr_0.05.txt'
+latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_results_genome_wide_signficant_bf_fdr_0.05.txt'
 #latent_factor_interaction_eqtl_results_file = working_dir + 'latent_factor_interaction_no_cap_5_eqtl_results_merged_include_nan.txt'
-latent_factor_interaction_test_names_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_variant_gene_pairs.txt'
+latent_factor_interaction_test_names_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_variant_gene_pairs.txt'
 
 test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_factor_interaction_test_names_file, latent_factor_interaction_eqtl_genome_wide_sig_results_file, num_genes)
 
 # Generate eqtl factorization test names file
-all_test_names_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_variant_gene_pairs.txt'
-eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_test_names.txt'
+all_test_names_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_variant_gene_pairs.txt'
+eqtl_factorization_test_names_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_qn_zscore_capped_eqtl_input_test_names.txt'
 generate_eqtl_factorization_test_names_file(all_test_names_file, eqtl_factorization_test_names_file, test_eqtl_binary_arr)
 
 # Generate eqtl factorization gene expression file
-all_gene_expression_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_expression.txt'
-eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_expression.txt'
+all_gene_expression_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_expression.txt'
+eqtl_factorization_expression_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_qn_zscore_capped_eqtl_input_expression.txt'
 generate_eqtl_factorization_expression_file(all_gene_expression_file, eqtl_factorization_expression_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_expression_file)
 
 
 # Generate eqtl factorization genotype expression file
-all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_genotype.txt'
+all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_qn_zscore_capped_eqtl_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
 # Generate covariate file
-covariate_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_covariates.txt'
-lf_covariate_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_latent_factors.txt'
-covariate_with_intercept_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_covariates.txt'
+covariate_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_covariates.txt'
+lf_covariate_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_latent_factors.txt'
+covariate_with_intercept_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_qn_zscore_capped_eqtl_input_covariates.txt'
 generate_covariate_file(covariate_file, lf_covariate_file, covariate_with_intercept_file)
 
 # Generate sample overlap file
-sample_overlap_input_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_sample_overlap.txt'
-sample_overlap_output_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt'
+sample_overlap_input_file = working_dir + 'latent_factor_interaction_10.0_qn_zscore_eqtl_input_sample_overlap.txt'
+sample_overlap_output_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_qn_zscore_capped_eqtl_input_sample_overlap.txt'
 generate_sample_overlap_file(sample_overlap_input_file, sample_overlap_output_file)
 
+'''
 

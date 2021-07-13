@@ -30,24 +30,32 @@ if false; then
 Rscript visualize_scran_processed_single_cell_expression.R $processed_expression_dir $visualize_processed_expression_dir $regress_out_batch
 fi
 
-cluster_resolution="2.5"
+cluster_resolution="10.0"
 module load R/3.6.1
 module load python/3.7.4-anaconda
 # Generate pseudobulk expression
-if false; then
 python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $regress_out_batch
-fi
 
 
 if false; then
 module load R/3.5.1
+sample_level_normalization="qn"
 gene_level_normalization="zscore"
-Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization
+Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
 
+sample_level_normalization="qn"
 gene_level_normalization="ign"
-Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization
-fi
+Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
 
+sample_level_normalization="none"
+gene_level_normalization="zscore"
+Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
+
+sample_level_normalization="none"
+gene_level_normalization="ign"
+Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
+
+fi
 
 
 

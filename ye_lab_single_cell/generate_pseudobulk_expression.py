@@ -152,6 +152,7 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 	t.write('pseudobulk_sample\tind_cov\tAge\tSex\tpop_cov\tStatus\tSLE_status\tnum_cells\tbatch_cov\tcg_cov_mode\tct_cov_mode')
 	for cell_type in unique_cell_types:
 		t.write('\t' + cell_type + '_fraction')
+	t.write('\tavg_n_genes_by_counts\tavg_log1p_n_genes_by_counts\ttotal_counts\tlog_total_counts\tavg_total_counts\tavg_log_total_counts\tavg_pct_counts_in_top_50_genes\tavg_pct_counts_in_top_100_genes\tavg_pct_counts_in_top_200_genes')
 	t.write('\n')
 
 	count = 0
@@ -228,7 +229,43 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 		for cg in np.asarray(adata_obs['cg_cov'][pseudobulk_sample_indices]):
 			cg_fraction[cell_type_to_position_mapping[cg]] = cg_fraction[cell_type_to_position_mapping[cg]] + 1
 		cg_fraction = cg_fraction/np.sum(cg_fraction)
-		t.write('\t' + '\t'.join(cg_fraction.astype(str)) + '\n')
+		t.write('\t' + '\t'.join(cg_fraction.astype(str)))
+
+		# n_genes_by_counts
+		avg_n_genes_by_counts = np.mean(adata.obs['n_genes_by_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_n_genes_by_counts))
+
+		# avg log1p_n_genes_by_counts
+		avg_log1p_n_genes_by_counts = np.mean(adata.obs['log1p_n_genes_by_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_log1p_n_genes_by_counts))
+
+		# total_counts
+		total_counts = np.sum(adata.obs['total_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(total_counts))	
+
+		# log total_counts
+		total_counts = np.sum(adata.obs['total_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(np.log(total_counts)))
+
+		# avg total_counts
+		avg_total_counts = np.mean(adata.obs['total_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_total_counts))	
+
+		# avg log total_counts
+		avg_log_total_counts = np.mean(adata.obs['log1p_total_counts'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_log_total_counts))	
+
+		# avg pct_counts in top 50 genes
+		avg_pct_counts_in_top_50_genes = np.mean(adata.obs['pct_counts_in_top_50_genes'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_pct_counts_in_top_50_genes))	
+
+		# avg pct_counts in top 100 genes
+		avg_pct_counts_in_top_100_genes = np.mean(adata.obs['pct_counts_in_top_100_genes'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_pct_counts_in_top_100_genes))	
+
+		# avg pct_counts in top 200 genes
+		avg_pct_counts_in_top_200_genes = np.mean(adata.obs['pct_counts_in_top_200_genes'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_pct_counts_in_top_200_genes) + '\n')	
 	t.close()
 
 
@@ -257,6 +294,14 @@ def generate_pca_scores_and_variance_explained(filtered_standardized_sc_expressi
 def normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root):
 	# Initialize output normalized expression matrix
 	normalized_expression = np.zeros(raw_pseudobulk_expression.shape)
+
+	##################################
+	# Perform sample level normalization
+	##################################
+	if sample_level_normalization == 'qn':
+		df = pd.DataFrame(np.transpose(raw_pseudobulk_expression))
+		temp_out = rnaseqnorm.normalize_quantiles(df)
+		raw_pseudobulk_expression = np.transpose(np.asarray(temp_out))
 
 	##################################
 	# Perform gene level normalization
@@ -296,19 +341,19 @@ regress_out_batch = sys.argv[5]  # Hyperparameter
 
 # Load in processed-SC Ann-Data file
 input_h5py_file = processed_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_2.h5ad'
-adata = sc.read_h5ad(input_h5py_file)
+#adata = sc.read_h5ad(input_h5py_file)
 
 
 
 ##################
 # Perform cell clustering seperately in each individual
 ##################
-adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
+#adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
 
 # Save in temporary adata object
 temp_h5_output_file = processed_pseudobulk_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_with_individual_leiden_clusters_' + str(cluster_resolution) + '.h5ad'
-adata.write(temp_h5_output_file)
-#adata = sc.read_h5ad(temp_h5_output_file)
+#adata.write(temp_h5_output_file)
+adata = sc.read_h5ad(temp_h5_output_file)
 
 
 #######################
@@ -321,7 +366,7 @@ adata.obs['cell_id'] = adata.obs.index
 # Create cell type summary output file of clustering file
 #######################
 clustering_ct_summary_file = processed_pseudobulk_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
+# print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
 
 
 
@@ -380,6 +425,36 @@ pseudobulk_covariate_file = processed_pseudobulk_expression_dir + 'pseudobulk_sc
 print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file)
 
 
+
+
+#####################
+# Normalize expression and generate expression pcs
+#####################	
+# Options for sample level normalization are currently 'none'
+sample_level_normalization = 'qn'
+# Options for gene level normalization are 'zscore' and 'ign'
+gene_level_normalization = 'zscore'
+# number of pcs
+num_pcs = 200
+# output root
+pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
+normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
+
+
+#####################
+# Normalize expression and generate expression pcs
+#####################	
+# Options for sample level normalization are currently 'none'
+sample_level_normalization = 'qn'
+# Options for gene level normalization are 'zscore' and 'ign'
+gene_level_normalization = 'ign'
+# number of pcs
+num_pcs = 200
+# output root
+pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
+normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
+
+
 #####################
 # Normalize expression and generate expression pcs
 #####################	
@@ -388,7 +463,7 @@ sample_level_normalization = 'none'
 # Options for gene level normalization are 'zscore' and 'ign'
 gene_level_normalization = 'zscore'
 # number of pcs
-num_pcs = 100
+num_pcs = 200
 # output root
 pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
@@ -402,7 +477,7 @@ sample_level_normalization = 'none'
 # Options for gene level normalization are 'zscore' and 'ign'
 gene_level_normalization = 'ign'
 # number of pcs
-num_pcs = 100
+num_pcs = 200
 # output root
 pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)

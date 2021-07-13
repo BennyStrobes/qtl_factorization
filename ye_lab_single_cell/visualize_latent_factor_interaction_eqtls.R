@@ -134,17 +134,21 @@ visualization_dir <- args[2]
 ###################
 
 # Subsset of results from latent-factor interaction analysis
-lf_interaction_results_file <- paste0(working_dir, "latent_factor_interaction_no_cap_2.5_eqtl_results_merged.txt")
+lf_interaction_results_file <- paste0(working_dir, "latent_factor_interaction_10.0_qn_zscore_eqtl_results_merged.txt")
 lf_interaction_pvalues <- read.table(lf_interaction_results_file, header=FALSE, sep="\t", nrows=50000)$V3
+
+# Subsset of results from standard eqtl analysis
+standard_results_file <- paste0(working_dir, "standard_eqtl_10.0_qn_zscore_eqtl_results_merged.txt")
+standard_eqtl_pvalues <- read.table(standard_results_file, header=FALSE, sep="\t", nrows=50000)$V3
 
 
 # File containing tally of number of FDR hits driven by each latent factor
-num_hits_per_latent_factor_file <- paste0(working_dir, "latent_factor_interaction_no_cap_2.5_eqtl_results_number_of_hits_per_latent_factor.txt")
+num_hits_per_latent_factor_file <- paste0(working_dir, "latent_factor_interaction_10.0_qn_zscore_eqtl_results_number_of_hits_per_latent_factor.txt")
 num_hits_per_latent_factor <- read.table(num_hits_per_latent_factor_file, header=TRUE, sep="\t")
 
 
 # File containing tally of number of FDR hits driven by each latent factor stratefied by pvalue quantiles
-num_hits_per_latent_factor_quantile_stratefied_file <- paste0(working_dir, "latent_factor_interaction_no_cap_2.5_eqtl_results_number_of_hits_per_latent_factor_stratefied_by_5_quantiles.txt")
+num_hits_per_latent_factor_quantile_stratefied_file <- paste0(working_dir, "latent_factor_interaction_10.0_qn_zscore_eqtl_results_number_of_hits_per_latent_factor_stratefied_by_5_quantiles.txt")
 num_hits_per_latent_factor_quantile_stratefied <- read.table(num_hits_per_latent_factor_quantile_stratefied_file, header=TRUE, sep="\t")
 
 
@@ -154,9 +158,9 @@ num_hits_per_latent_factor_quantile_stratefied <- read.table(num_hits_per_latent
 ###################
 
 # Make scatter plot of lf interactions vs kt interactions
-output_file <- paste0(visualization_dir, "scatterplot_of_lf_and_kt_interaction_pvalues.pdf")
-# scatter <- make_neg_log10_pvalue_scatter(lf_interaction_pvalues, kt_interaction_pvalues, "-log10(latent factor interaction pvalue)", "-log10(known tissue interaction pvalue)")
-# ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
+output_file <- paste0(visualization_dir, "scatterplot_of_lf_interaction_and_standard_eqtl_pvalues.pdf")
+scatter <- make_neg_log10_pvalue_scatter(lf_interaction_pvalues, standard_eqtl_pvalues, "-log10(latent factor interaction eqtl pvalue)", "-log10(standard eqtl p-value)")
+ggsave(scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 # Make qq plot of lf interactions vs kt interactions

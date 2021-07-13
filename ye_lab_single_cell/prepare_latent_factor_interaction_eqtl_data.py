@@ -140,12 +140,13 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 	used_genes = {}
 	for chrom_num in range(1,23):
 		print(chrom_num)
+		used_variants = {}
 		# Create array where each element is a BP in this chromosome
 		# 'Null' if no genes in distance BP of gene
 		# Otherwise is a list of gene names
 		chromosome = create_gene_chromsome(chrom_num, gene_mapping, distance)
 		# Now loop through variants on this chromosome
-		genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS.FORMAT'
+		genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS2.FORMAT'
 		f = open(genotype_file)
 		head_count = 0
 		for line in f:
@@ -155,11 +156,16 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 			if head_count == 0:
 				head_count = head_count + 1
 				continue
-			if len(data) != 239:
+			if len(data) != 240:
 				print('assumption error!')
 			variant_id = data[0] + ':' + data[1]
 			variant_chrom = int(data[0])
 			variant_pos = int(data[1])
+			full_variant_id = data[2]
+			if full_variant_id in used_variants:
+				print('assumption error')
+				pdb.set_trace()
+			used_variants[full_variant_id] = 1
 			# Simple error check
 			if variant_chrom != chrom_num:
 				print('assumption error')
@@ -167,7 +173,7 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 			# No genes within 10KB of variant
 			if chromosome[variant_pos] == 'Null':
 				continue
-			genotype = np.asarray(data[2:]).astype(float)
+			genotype = np.asarray(data[3:]).astype(float)
 			maf = get_maf(genotype)
 			if maf < .1:
 				print('skipped variant' + '\t' + str(maf))
@@ -183,7 +189,7 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 				# THIS IS A VARIANT-GENE PAIR WE WILL TEST
 				# PRINT TO OUTPUT
 				used_genes[gene_id] = 1
-				t.write(gene_id + '\t' + variant_id + '\t' + str(chrom_num) + '\t' + str(gene_mapping[gene_id][1]) + '\t' + str(variant_pos) + '\n')
+				t.write(gene_id + '\t' + full_variant_id + '\t' + str(chrom_num) + '\t' + str(gene_mapping[gene_id][1]) + '\t' + str(variant_pos) + '\n')
 		f.close()
 	t.close()
 
@@ -343,8 +349,12 @@ def generate_single_cell_expression_eqtl_training_data(ld_pruned_variant_gene_pa
 		if gene_name not in gene_name_to_expression_vector:
 			pdb.set_trace()
 		expression_string = gene_name_to_expression_vector[gene_name]
+		data = np.asarray(expression_string.split()).astype(float)
+		data[data > 5.0] = 5.0
+		data[data < -5.0] = -5.0
+		data = data - np.mean(data)
 		# Print to output file
-		t.write(expression_string + '\n')
+		t.write('\t'.join(data.astype(str)) + '\n')
 	t.close()
 
 
@@ -366,14 +376,14 @@ def get_cell_level_ordered_individaul_array(cell_level_info_file):
 def get_genotype_level_ordered_individual_array(genotype_data_dir):
 	chrom_num = 1
 	# genotype_file = genotype_data_dir + 'chr' + str(chrom_num) + '.genotypes.matrix.eqtl.txt'
-	genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS.FORMAT'
+	genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS2.FORMAT'
 	f = open(genotype_file)
 	head_count = 0
 	for line in f:
 		if head_count == 0:
 			line = line.rstrip()
 			data = line.split()
-			indi = data[2:]
+			indi = data[3:]
 			head_count = head_count + 1
 			continue
 	f.close()
@@ -384,7 +394,7 @@ def create_mapping_from_variants_to_genotype(variant_list, genotype_data_dir):
 	variants = {}
 	for chrom_num in range(1,23):
 		# genotype_file = genotype_data_dir + 'chr' + str(chrom_num) + '.genotypes.matrix.eqtl.txt'
-		genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS.FORMAT'
+		genotype_file = genotype_data_dir + 'clues_immvar_chrom_' + str(chrom_num) + '.DS2.FORMAT'
 		f = open(genotype_file)
 		head_count = 0
 		for line in f:
@@ -395,13 +405,13 @@ def create_mapping_from_variants_to_genotype(variant_list, genotype_data_dir):
 				head_count = head_count + 1
 				continue
 			# Simple error checking
-			if len(data) != 239:
+			if len(data) != 240:
 				print('assumption error!')
-			variant_id = data[0] + ':' + data[1]
+			variant_id = data[2]
 			# Limit to variants in variant_list
 			if variant_id not in variant_list:
 				continue
-			variants[variant_id] = np.asarray(data[2:])
+			variants[variant_id] = np.asarray(data[3:])
 		f.close()
 	if len(variants) != len(variant_list):
 		print('assumption error')
@@ -482,7 +492,7 @@ def construct_library_size_file(cell_type_sc_sample_covariate_file, cell_type_li
 	f.close()
 	t.close()
 
-def construct_covariate_file(sc_sample_covariate_file, eqtl_covariate_file):
+def construct_covariate_file(sc_sample_covariate_file, covariate_pcs, eqtl_covariate_file):
 	# First need to extract genotype pcs
 	f = open(sc_sample_covariate_file)
 	head_count = 0
@@ -504,10 +514,10 @@ def construct_covariate_file(sc_sample_covariate_file, eqtl_covariate_file):
 	f.close()
 	geno_pcs = np.asarray(geno_pcs)
 	# Merge geno pcs and expression pcs
-	#covs = np.hstack((geno_pcs, pcs))
-	np.savetxt(eqtl_covariate_file, geno_pcs, fmt="%s", delimiter='\t')
+	covs = np.hstack((geno_pcs, covariate_pcs))
+	np.savetxt(eqtl_covariate_file, covs, fmt="%s", delimiter='\t')
 
-def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs):
+def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_covariate_pcs, num_lf_pcs):
 	########################
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
@@ -531,17 +541,23 @@ def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expre
 	print('sample overlap')
 	construct_sample_overlap_file(sample_covariate_file, eqtl_sample_overlap_file)
 
+	# Quick error checking
+	if num_covariate_pcs < num_lf_pcs:
+		print('Fatal assumption erororor')
+		pdb.set_trace()
+
 	########################
 	# Step 5: Generate covariate file
 	########################
-	construct_covariate_file(sample_covariate_file, eqtl_covariate_file)
+	pcs_full = np.loadtxt(expression_pcs_file)
+	covariate_pcs = pcs_full[:,num_lf_pcs:num_covariate_pcs]
+	construct_covariate_file(sample_covariate_file, covariate_pcs, eqtl_covariate_file)
 
 
 	########################
 	# Step 6: Generate latent factor file
 	########################
-	pcs_full = np.loadtxt(expression_pcs_file)
-	pcs = pcs_full[:, :num_pcs]
+	pcs = pcs_full[:, :num_lf_pcs]
 	np.savetxt(eqtl_lf_file, pcs, fmt="%s", delimiter='\t')
 
 
@@ -558,7 +574,7 @@ latent_factor_interaction_eqtl_dir = sys.argv[4]  # Output dir
 # Input files
 ###################
 # Pseudobulk gene names 
-gene_id_file = processed_expression_dir + 'cluster_scran_ign_pseudobulk_leiden_no_cap_2.5_gene_names.txt'
+gene_id_file = processed_expression_dir + 'pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_2.5_gene_names.txt'
 
 
 ###################
@@ -582,21 +598,22 @@ if len(np.unique(ensamble_ids)) != len(ensamble_ids):
 ###################
 # Max distance between variant and gene tss
 distance=10000
-num_pcs = 30
+num_covariate_pcs = 80
+num_lf_pcs = 20
 
 # Input files
-expression_file = processed_expression_dir + 'cluster_scran_ign_pseudobulk_leiden_no_cap_2.5_normalized_expression.txt'
+expression_file = processed_expression_dir + 'pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_normalized_expression.txt'
 sample_covariate_file = genotype_data_dir + 'pseudobulk_sample_covariates_with_genotype_pcs.txt'
-expression_pcs_file = processed_expression_dir + 'cluster_scran_ign_pseudobulk_leiden_no_cap_2.5_pca_scores.txt'
+expression_pcs_file = processed_expression_dir + 'pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_pca_scores.txt'
 
 # Output files
-eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_variant_gene_pairs.txt'
-eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_expression.txt'
-eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_genotype.txt'
-eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_sample_overlap.txt'
-eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_covariates.txt'
-eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_no_cap_2.5_eqtl_input_latent_factors.txt'
-generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_pcs)
+eqtl_variant_gene_pairs_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_variant_gene_pairs.txt'
+eqtl_expression_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_expression.txt'
+eqtl_genotype_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
+eqtl_sample_overlap_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_sample_overlap.txt'
+eqtl_covariate_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_covariates.txt'
+eqtl_lf_file = latent_factor_interaction_eqtl_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_latent_factors.txt'
+generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expression_file, sample_covariate_file, expression_pcs_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, distance, gene_annotation_file, gene_id_file, eqtl_sample_overlap_file, eqtl_covariate_file, eqtl_lf_file, num_covariate_pcs, num_lf_pcs)
 
 
 

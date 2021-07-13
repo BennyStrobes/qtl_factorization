@@ -162,28 +162,36 @@ def compute_kl_divergence_of_beta(a_prior, b_prior, theta_a, theta_b):
 	kl_divergence = entropy_term - likelihood_term
 	return kl_divergence
 
+def make_dp_betas_on_coordinate(vec):
+	new_vec = []
+	prev = 1
+	for i, val in enumerate(vec):
+		new_vec.append(val*prev)
+		prev = prev*(1.0-val)
+	new_vec = np.asarray(new_vec)
+	return new_vec
 
-def outside_update_U_n(U_mu, S_U, U_var, G_slice, Y_slice, K, V_S_expected_val, V_S_squared_expected_val, F_S_expected_val, covariate_predicted_slice, gamma_v, tau_expected_val, theta_U_a, theta_U_b, alpha_i_expected_val):
+def outside_update_U_n(U_mu, U_var, G_slice, Y_slice, K, V_S_expected_val, V_S_squared_expected_val, F_S_expected_val, covariate_predicted_slice, gamma_u, tau_expected_val, alpha_i_expected_val):
 	for k in range(K):
 		# Compute relevent expectations
-		U_S_expected_val = U_mu*S_U
+		U_S_expected_val = U_mu
 		V_k_S_k_expected_val = V_S_expected_val[k,:]
-		theta_U_expected_val = theta_U_a[k]/(theta_U_a[k] + theta_U_b[k])
-		ln_theta_U_expected_val = special.digamma(theta_U_a[k]) - special.digamma(theta_U_a[k]+theta_U_b[k])  # expectation of ln(1-X)
-		ln_1_minus_theta_U_expected_val = special.digamma(theta_U_b[k]) - special.digamma(theta_U_a[k]+theta_U_b[k])
+		#theta_U_expected_val = theta_U_a[k]/(theta_U_a[k] + theta_U_b[k])
+		#ln_theta_U_expected_val = special.digamma(theta_U_a[k]) - special.digamma(theta_U_a[k]+theta_U_b[k])  # expectation of ln(1-X)
+		#ln_1_minus_theta_U_expected_val = special.digamma(theta_U_b[k]) - special.digamma(theta_U_a[k]+theta_U_b[k])
 		# Compute expectations on other components
 		other_components_expected = (U_S_expected_val@V_S_expected_val) - U_S_expected_val[k]*V_S_expected_val[k,:]
 		# Update variance of q(U|s=1)
-		a_term = np.sum(tau_expected_val*np.square(G_slice)*V_S_squared_expected_val[k,:]) + gamma_v
+		a_term = np.sum(tau_expected_val*np.square(G_slice)*V_S_squared_expected_val[k,:]) + gamma_u[k]
 		U_var[k] = 1.0/a_term
 		# Update mean of q(U|s=1)
 		resid = Y_slice - covariate_predicted_slice - alpha_i_expected_val - G_slice*(F_S_expected_val + other_components_expected)
 		b_term = np.sum(tau_expected_val*G_slice*V_k_S_k_expected_val*resid)
 		U_mu[k] = U_var[k]*b_term
 		# Now update q(S_U=1)
-		z_term = ln_theta_U_expected_val - ln_1_minus_theta_U_expected_val + .5*np.log(gamma_v) - .5*np.log(a_term) + (np.square(b_term)/(2.0*a_term))
-		S_U[k] = sigmoid_function(z_term)
-	return np.hstack((U_mu, S_U, U_var))
+		#z_term = ln_theta_U_expected_val - ln_1_minus_theta_U_expected_val + .5*np.log(gamma_v[k]) - .5*np.log(a_term) + (np.square(b_term)/(2.0*a_term))
+		#S_U[k] = sigmoid_function(z_term)
+	return np.hstack((U_mu, U_var))
 
 def outside_update_V_t(V_mu, V_var, G_slice, Y_slice, K, U_S_expected_val, U_S_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, gamma_v, tau_t_expected_val):
 	for k in range(K):
@@ -200,6 +208,89 @@ def outside_update_V_t(V_mu, V_var, G_slice, Y_slice, K, U_S_expected_val, U_S_s
 		V_var[k] = new_var
 		V_mu[k] = new_mu
 	return np.hstack((V_mu, V_var))
+
+
+def outside_update_qc_n(G_slice, Y_slice, J, K, beta_expected_val, beta_squared_expected_val, F_expected_val, covariate_predicted_slice, alpha_mu_slice, tau, expected_log_phi, expected_log_phi_inv, qz_n):
+	# Initialize output
+	un_normalized_qc = np.zeros((J, K))
+
+	# term_a term gets multiplied by beta
+	a_term = tau*G_slice*(Y_slice - alpha_mu_slice - covariate_predicted_slice - (G_slice*F_expected_val))
+	# term_b term gets multiplied by beta_squared
+	b_term = np.square(G_slice)*tau/2.0
+
+
+	for kk in range(K):
+		# Update prior
+		un_normalized_qc[:, kk] = un_normalized_qc[:, kk] + expected_log_phi[kk] + np.sum(expected_log_phi_inv[:kk])
+		# Update liklihood (a term and b term)
+		un_normalized_qc[:, kk] = un_normalized_qc[:, kk] + np.sum((a_term*beta_expected_val[kk,:] - b_term*beta_squared_expected_val[kk,:])[:,None]*qz_n,axis=0)
+	normalized_qc = np.exp(np.transpose(np.transpose(un_normalized_qc) - special.logsumexp(un_normalized_qc, axis=1)))
+	return normalized_qc
+
+def outside_update_qz_t_old(G_slice, Y_slice, J, K, beta_t_expected_val, beta_t_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, tau_t_expected_val, expected_log_theta, expected_log_theta_inv, qc):
+
+	# Initialize output
+	un_normalized_qz = np.zeros(expected_log_theta.shape)
+
+	# term_a term gets multiplied by beta
+	a_term = tau_t_expected_val*G_slice*(Y_slice - alpha_t_mu - covariate_predicted_slice - (G_slice*F_S_t_expected_val))
+	# term_b term get multiplied by beta_squared
+	b_term = np.square(G_slice)*tau_t_expected_val/2.0
+	# Get in correct format (dimensions)
+	a_term = a_term[:, None]
+	b_term = b_term[:, None]
+
+	for jj in range(J):
+		# Updata prior
+		un_normalized_qz[:, jj] = un_normalized_qz[:, jj] + expected_log_theta[:, jj] + np.sum(expected_log_theta_inv[:,:jj],axis=1)
+		# Update liklihood (a term)
+		un_normalized_qz[:, jj] = un_normalized_qz[:, jj] + np.dot((a_term*qc[:,jj,:]), beta_t_expected_val)
+		# update likelihood (b term)
+		un_normalized_qz[:, jj] = un_normalized_qz[:, jj] - np.dot((b_term*qc[:,jj,:]), beta_t_squared_expected_val)
+
+	# Normalize using log-sum-exp trick
+	normalized_qz = np.exp(np.transpose(np.transpose(un_normalized_qz) - special.logsumexp(un_normalized_qz, axis=1)))
+
+	return normalized_qz
+
+def outside_update_qz_t(G_slice, Y_slice, J, K, beta_t_expected_val, beta_t_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, tau_t_expected_val, expected_log_theta, expected_log_theta_inv, qc):
+
+	# Initialize output
+	un_normalized_qz = np.zeros(expected_log_theta.shape)
+
+	# term_a term gets multiplied by beta
+	a_term = tau_t_expected_val*G_slice*(Y_slice - alpha_t_mu - covariate_predicted_slice - (G_slice*F_S_t_expected_val))
+	# term_b term get multiplied by beta_squared
+	b_term = np.square(G_slice)*tau_t_expected_val/2.0
+	# Get in correct format (dimensions)
+	a_term = a_term[:, None]
+	b_term = b_term[:, None]
+
+	tmp_likelihood = np.dot(a_term, beta_t_expected_val[None,:]) - np.dot(b_term, beta_t_squared_expected_val[None,:])
+
+	for jj in range(J):
+		# Updata prior
+		un_normalized_qz[:, jj] = un_normalized_qz[:, jj] + expected_log_theta[:, jj] + np.sum(expected_log_theta_inv[:,:jj],axis=1)
+		# Update liklihood (a term and b_term)
+		un_normalized_qz[:, jj] = un_normalized_qz[:, jj] + np.sum(tmp_likelihood*qc[:,jj,:], axis=1)
+	# Normalize using log-sum-exp trick
+	normalized_qz = np.exp(np.transpose(np.transpose(un_normalized_qz) - special.logsumexp(un_normalized_qz, axis=1)))
+
+	return normalized_qz
+
+def outside_update_beta_t(G_slice, Y_slice, K, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, tau_t_expected_val, gamma, qz_t, qc):
+	beta_mus = []
+	beta_vars = []
+	for kk in range(K):
+		weights = np.sum(qc[:,:,kk]*qz_t,axis=1)
+		# a_term = -(gamma[kk]/2.0) - (np.sum(np.square(G_slice)*tau_t_expected_val*weights)/2.0)
+		a_term = 0.0 - (np.sum(np.square(G_slice)*tau_t_expected_val*weights)/2.0)
+		b_term = np.sum(tau_t_expected_val*G_slice*weights*(Y_slice - alpha_t_mu - covariate_predicted_slice - (G_slice*F_S_t_expected_val)))
+		beta_mus.append(-b_term/(2.0*a_term))
+		beta_vars.append(-1.0/(2.0*a_term))
+	return np.hstack((np.asarray(beta_mus), np.asarray(beta_vars)))
+
 
 def outside_update_intercept_t(intercept_mu, intercept_var, G_slice, Y_slice, N, U_S_expected_val, V_S_t_expected_val, F_S_t_expected_val, tau_t_expected_val, alpha_t_mu, sample_batch_fraction, step_size, SVI):
 	# Compute relevent expectations
@@ -219,10 +310,10 @@ def outside_update_intercept_t(intercept_mu, intercept_var, G_slice, Y_slice, N,
 	return np.hstack((intercept_mu, intercept_var))
 
 
-def outside_update_C_t(C_t_mu, C_t_var, G_slice, Y_slice, N, U_S_expected_val, V_S_t_expected_val, F_S_t_expected_val, tau_t_expected_val, alpha_t_mu, cov, cov_squared):
+def outside_update_C_t(C_t_mu, C_t_var, G_slice, Y_slice, N, beta_predicted_t, F_S_t_expected_val, tau_t_expected_val, alpha_t_mu, cov, cov_squared):
 	num_cov = len(C_t_mu)
-	components_expected = U_S_expected_val@V_S_t_expected_val
-	base_resid = Y_slice - alpha_t_mu - G_slice*(F_S_t_expected_val + components_expected)
+	#components_expected = U_S_expected_val@V_S_t_expected_val
+	base_resid = Y_slice - alpha_t_mu - G_slice*(F_S_t_expected_val + beta_predicted_t)
 	for cov_num in range(num_cov):
 		other_covariates = (cov@C_t_mu) - (cov[:, cov_num]*C_t_mu[cov_num])
 		b_term = tau_t_expected_val*np.sum(cov[:, cov_num]*(base_resid - other_covariates))
@@ -233,9 +324,8 @@ def outside_update_C_t(C_t_mu, C_t_var, G_slice, Y_slice, N, U_S_expected_val, V
 		C_t_var[cov_num] = new_var
 	return np.hstack((C_t_mu, C_t_var))
 
-def outside_update_alpha_t(alpha_mu_copy, alpha_var_copy, G_slice, Y_slice, I, U_S_expected_val, V_S_t_expected_val, F_S_t_expected_val, covariate_predicted_t, tau_t_expected_val, psi_t_expected_val, individual_to_sample_indices, individual_to_number_full_indices):
-	other_components_expected = U_S_expected_val@V_S_t_expected_val
-	resid = Y_slice - covariate_predicted_t - G_slice*(F_S_t_expected_val + other_components_expected)
+def outside_update_alpha_t(alpha_mu_copy, alpha_var_copy, G_slice, Y_slice, I, beta_predicted_t, F_S_t_expected_val, covariate_predicted_t, tau_t_expected_val, psi_t_expected_val, individual_to_sample_indices, individual_to_number_full_indices):
+	resid = Y_slice - covariate_predicted_t - G_slice*(F_S_t_expected_val + beta_predicted_t)
 	# Loop through individuals
 	for individual_index in range(I):
 		# Indices of samples corresponding to this label
@@ -255,14 +345,14 @@ def outside_update_alpha_t(alpha_mu_copy, alpha_var_copy, G_slice, Y_slice, I, U
 		alpha_mu_copy[individual_index] = new_mu
 	return np.hstack((alpha_mu_copy, alpha_var_copy))
 
-def outside_update_F_t(F_mu, F_var, G_slice, Y_slice, U_S_expected_val, V_S_t_expected_val, covariate_predicted_t, gamma_f_expected_val, tau_t_expected_val, alpha_t_mu):
+def outside_update_F_t(F_mu, F_var, G_slice, Y_slice, beta_predicted_t, covariate_predicted_t, gamma_f_expected_val, tau_t_expected_val, alpha_t_mu):
 	# Compute expectations on other components
-	other_components_expected = U_S_expected_val@V_S_t_expected_val
+	#other_components_expected = U_S_expected_val@V_S_t_expected_val
 
 	# Update variance of q(F|s=1)
 	a_term = gamma_f_expected_val + tau_t_expected_val*np.sum(np.square(G_slice))
 	# Update mean of q(F|s=1)
-	resid = Y_slice - alpha_t_mu - covariate_predicted_t - G_slice*(other_components_expected)
+	resid = Y_slice - alpha_t_mu - covariate_predicted_t - G_slice*(beta_predicted_t)
 	b_term = np.sum(tau_t_expected_val*G_slice*resid)
 	new_var = 1.0/a_term
 	new_mu = new_var*b_term
@@ -271,10 +361,10 @@ def outside_update_F_t(F_mu, F_var, G_slice, Y_slice, U_S_expected_val, V_S_t_ex
 
 	return np.hstack((F_mu, F_var))
 
-def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, U_S, V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior):
+def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, beta_predicted_t, F_S_t, C_t, beta_predicted_t_squared, F_S_t_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior):
 	# Compute Relevent expectations
-	squared_factor_terms = U_S_squared@V_S_t_squared
-	factor_terms = U_S@V_S_t
+	#squared_factor_terms = U_S_squared@V_S_t_squared
+	#factor_terms = U_S@V_S_t
 
 
 	alpha_t_squared = np.square(alpha_mu_t) + alpha_var_t
@@ -283,17 +373,16 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, U_S, V_S_t, F
 	covariate_terms = cov@C_t
 
 	# First add together square terms
-	resid = np.square(Y_slice) + alpha_t_squared + squared_covariate_terms + np.square(G_slice)*(F_S_t_squared + squared_factor_terms)
+	resid = np.square(Y_slice) + alpha_t_squared + squared_covariate_terms + np.square(G_slice)*(F_S_t_squared + beta_predicted_t_squared)
 	# Now add terms with Y
-	resid = resid - (2.0*Y_slice*(covariate_terms + alpha_mu_t + G_slice*factor_terms + G_slice*F_S_t))
+	resid = resid - (2.0*Y_slice*(covariate_terms + alpha_mu_t + G_slice*beta_predicted_t + G_slice*F_S_t))
 
-	resid = resid + 2.0*covariate_terms*(alpha_mu_t + G_slice*(factor_terms + F_S_t))
-	resid = resid + 2.0*alpha_mu_t*G_slice*(factor_terms + F_S_t)
+	resid = resid + 2.0*covariate_terms*(alpha_mu_t + G_slice*(beta_predicted_t + F_S_t))
+	resid = resid + 2.0*alpha_mu_t*G_slice*(beta_predicted_t + F_S_t)
 	# Now add terms with factors
-	resid = resid + 2.0*G_slice*factor_terms*G_slice*F_S_t
+	resid = resid + 2.0*G_slice*beta_predicted_t*G_slice*F_S_t
 	# Now add terms with interactions between factors
-	resid = resid + (np.square(G_slice)*(factor_terms*factor_terms - np.sum(np.square(U_S*V_S_t),axis=1)))
-	#resid = resid + ((covariate_terms*covariate_terms - np.sum(np.square(cov*C_t),axis=1)))
+	#resid = resid + (np.square(G_slice)*(factor_terms*factor_terms - np.sum(np.square(U_S*V_S_t),axis=1)))
 	resid = resid + (covariate_terms*covariate_terms - cov_squared@np.square(C_t))
 
 	# Make Updates
@@ -305,17 +394,37 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, U_S, V_S_t, F
 
 	return np.hstack((tau_alpha, tau_beta))
 
+def generate_expected_value_of_mixture_old(qz, beta):
+	num_tests = beta.shape[1]
+	num_samples = qz.shape[0]
+	# Initialize output matrix
+	weighted_beta = np.zeros((num_samples, num_tests))
+	for test_index in range(num_tests):
+		weighted_beta[:, test_index] = np.dot(qz[:,test_index,:], beta[:,test_index])
+	return weighted_beta
+
+def generate_expected_value_of_mixture(qz, qc, beta):
+	num_tests = beta.shape[1]
+	num_samples = qz.shape[0]
+	# Initialize output matrix
+	weighted_beta = np.zeros((num_samples, num_tests))
+	for test_index in range(num_tests):
+		for sample_index in range(num_samples):
+			weighted_beta[sample_index, test_index] = np.dot(beta[:,test_index], np.dot(qz[sample_index,test_index,:], qc[sample_index,:,:]))
+	return weighted_beta
+
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, a=1, b=1, gamma_v=1.0, max_iter=1000, delta_elbo_threshold=.01, output_root=''):
+	def __init__(self, K=100, J=80, alpha=1e-16, beta=1e-16, a=1, b=1, max_iter=1000, delta_0=1.0, delta_elbo_threshold=.01, output_root=''):
 		self.alpha_prior = alpha
 		self.beta_prior = beta
 		self.a_prior = a 
 		self.b_prior = b
 		self.max_iter = max_iter
 		self.K = K
-		self.gamma_v = gamma_v
+		self.J = J
 		self.iter = 0
+		self.delta_0 = delta_0
 		self.delta_elbo_threshold = delta_elbo_threshold
 		self.output_root = output_root
 	def fit(self, G, Y, z, cov):
@@ -333,69 +442,84 @@ class EQTL_FACTORIZATION_VI(object):
 		# Initialize variables
 		self.initialize_variables()
 		print('Initialization Complete')
+
 		# Elbo after initialization 
-		self.update_elbo()
+		#self.update_elbo()
 		# Loop through VI iterations
 		for vi_iter in range(self.max_iter):
 			start_time = time.time()
 			# Update parameter estimaters via coordinate ascent
-			print('U')
-			self.update_U()
-			print('V')
-			self.update_V()
+			for document_iter in range(8):
+				print('qc')
+				self.update_qc()
+				print('qz')
+				self.update_qz()
+				print('theta')
+				self.update_theta()
+			print('phi')
+			self.update_phi()
+			print('beta')
+			self.update_beta()
+			print('beta expectations')
+			self.update_beta_expected_val()
 			print('alpha')
 			self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
 			self.update_F()
-			print('thetaU')
-			if vi_iter > 50:
-				self.update_theta_U()
+			#print('gammaU')
+			#if vi_iter > 4:
+				#self.update_gamma_beta()
 			print('psi')
 			self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
+			theta_prime = self.get_theta_prime()
+			phi_prime = self.get_phi_prime()
+			corpus_theta_prime = self.get_corpus_theta_prime()
 
 			# Compute ELBO after update
-			print('Variational Inference iteration: ' + str(vi_iter))
-			self.update_elbo()
-			current_elbo = self.elbo[len(self.elbo)-1]
-			delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
-			print('delta ELBO: ' + str(delta_elbo))
+			#print('Variational Inference iteration: ' + str(vi_iter))
+			#self.update_elbo()
+			#=#current_elbo = self.elbo[len(self.elbo)-1]
+			#delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
+			#print('delta ELBO: ' + str(delta_elbo))
 
 			####################
-			print(self.theta_U_a/(self.theta_U_a + self.theta_U_b))
-			shared_pve, factor_pve = self.compute_variance_explained_of_factors()
-			print(factor_pve)
-			print(shared_pve)
+			print(self.gamma_beta_alpha/self.gamma_beta_beta)
+			#shared_pve, factor_pve = self.compute_variance_explained_of_factors()
+			#print(factor_pve)
+			#print(shared_pve)
 			end_time = time.time()
 			print(end_time-start_time)
 			print('##############')
 			print('##############')
-			np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu*self.S_U), fmt="%s", delimiter='\t')
-			np.savetxt(self.output_root + 'temper_V.txt', (self.V_mu), fmt="%s", delimiter='\t')
-			# Remove irrelevent factors
-			if np.mod(vi_iter, 20) == 0 and vi_iter > 0:
-				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
-				self.remove_irrelevent_factors()
-				# Order and Filter Factors
-				theta_U = self.theta_U_a/(self.theta_U_b + self.theta_U_a)
+			np.savetxt(self.output_root + 'temper_beta.txt', (self.beta_mu), fmt="%s", delimiter='\t')
+			np.savetxt(self.output_root + 'temper_theta_prime.txt', theta_prime, fmt="%s", delimiter='\t')
+			np.savetxt(self.output_root + 'temper_corpus_theta_prime.txt', corpus_theta_prime, fmt="%s", delimiter='\t')
+			np.savetxt(self.output_root + 'temper_phi_prime.txt', phi_prime, fmt="%s", delimiter='\t')
 
-				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu*self.S_U), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_factor_pve.txt', (factor_pve), fmt="%s", delimiter='\t')
-				np.save(self.output_root + 'temper_U_S.npy', self.U_mu*self.S_U)
-				np.save(self.output_root + 'temper_S.npy', self.S_U)
-				np.save(self.output_root + 'temper_theta_U.npy', self.theta_U_a/(self.theta_U_a + self.theta_U_b))
-				np.save(self.output_root + 'temper_V.npy', (self.V_mu))
+			# Remove irrelevent factors
+			if np.mod(vi_iter, 2) == 0 and vi_iter > 0:
+				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
+				#self.remove_irrelevent_factors()
+				# Order and Filter Factors
+				np.save(self.output_root + 'temper_beta.npy', self.beta_mu)
+				np.save(self.output_root + 'temper_qz.npy', self.qz)
+				np.save(self.output_root + 'temper_qc.npy', self.qc)
+				np.save(self.output_root + 'temper_theta_a.npy', self.theta_a)
+				np.save(self.output_root + 'temper_theta_b.npy', self.theta_b)
+				np.save(self.output_root + 'temper_phi_a.npy', self.phi_a)
+				np.save(self.output_root + 'temper_phi_b.npy', self.phi_b)
 				np.save(self.output_root + 'temper_F.npy', (self.F_mu))
 				np.save(self.output_root + 'temper_alpha.npy', self.alpha_mu)
 				np.save(self.output_root + 'temper_tau.npy', (self.tau_alpha/self.tau_beta))
 				np.save(self.output_root + 'temper_psi.npy', (self.psi_alpha/self.psi_beta))
 				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
 				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+				#np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
 				
 				'''
 				ordered_indices = np.argsort(-theta_U)
@@ -414,6 +538,9 @@ class EQTL_FACTORIZATION_VI(object):
 				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
 				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
 				'''
+	def update_beta_expected_val(self):
+		self.beta_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, self.beta_mu)
+		self.beta_squared_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, np.square(self.beta_mu) + self.beta_var)
 	def update_step_size(self):
 		# Only needs to be done for SVI
 		if self.SVI == True:
@@ -446,7 +573,7 @@ class EQTL_FACTORIZATION_VI(object):
 		shared_genetic_effect = np.sum(np.square(F_terms))
 
 		# Initailize array to keep track of variance explained from each factor
-		U_S = self.U_mu*self.S_U
+		U_S = self.U_mu
 		V_S = self.V_mu
 		factor_genetic_effects = []
 		for k in range(self.K):
@@ -462,8 +589,8 @@ class EQTL_FACTORIZATION_VI(object):
 		# UPDATE V
 		###################
 		# Precompute quantities
-		U_S_expected_val = self.U_mu*self.S_U
-		U_S_squared_expected_val = (np.square(self.U_mu) + self.U_var)*self.S_U
+		U_S_expected_val = self.U_mu
+		U_S_squared_expected_val = (np.square(self.U_mu) + self.U_var)
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		V_mu_copy = np.copy(self.V_mu)
 		V_var_copy = np.copy(self.V_var)
@@ -481,6 +608,70 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_mu = V_update_data[(self.K*0):(1*self.K), :]
 		self.V_var = V_update_data[(self.K*1):(2*self.K), :]
 
+	def update_qc(self):
+		# Precompute quantities
+		tau_expected_val = self.tau_alpha/self.tau_beta
+		covariate_predicted = np.dot(self.cov, self.C_mu)
+		beta_expected_val = self.beta_mu
+		beta_squared_expected_val = np.square(self.beta_mu) + self.beta_var
+
+		expected_log_phi = special.digamma(self.phi_a) - special.digamma(self.phi_a + self.phi_b)
+		expected_log_phi_inv = special.digamma(self.phi_b) - special.digamma(self.phi_a + self.phi_b)
+
+		# Keep track of variables
+		qc_update_data = []
+		for sample_index in range(self.N):
+			qc_update_data.append(outside_update_qc_n(self.G[sample_index, :], self.Y[sample_index, :], self.J, self.K, beta_expected_val, beta_squared_expected_val, self.F_mu, covariate_predicted[sample_index, :], self.alpha_big_mu[sample_index, :], tau_expected_val, expected_log_phi, expected_log_phi_inv, self.qz[sample_index,:,:]))
+		
+		# Put data in correct format and save to object
+		self.qc = np.asarray(qc_update_data)
+
+	def update_qz(self):
+		# Precompute quantities
+		tau_expected_val = self.tau_alpha/self.tau_beta
+		covariate_predicted = np.dot(self.cov, self.C_mu)
+		beta_expected_val = self.beta_mu
+		beta_squared_expected_val = np.square(self.beta_mu) + self.beta_var
+
+		expected_log_theta = special.digamma(self.theta_a) - special.digamma(self.theta_a + self.theta_b)
+		expected_log_theta_inv = special.digamma(self.theta_b) - special.digamma(self.theta_a + self.theta_b)
+
+		# Keep track of variables
+		qz_update_data_old = []
+		qz_update_data = []
+		for test_index in range(self.T):
+			#qz_update_data_old.append(outside_update_qz_t_old(self.G[:, test_index], self.Y[:, test_index], self.J, self.K, beta_expected_val[:, test_index], beta_squared_expected_val[:, test_index], self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], tau_expected_val[test_index], expected_log_theta, expected_log_theta_inv, self.qc))
+			qz_update_data.append(outside_update_qz_t(self.G[:, test_index], self.Y[:, test_index], self.J, self.K, beta_expected_val[:, test_index], beta_squared_expected_val[:, test_index], self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], tau_expected_val[test_index], expected_log_theta, expected_log_theta_inv, self.qc))
+		# Put data in correct format and save to object
+		self.qz = np.asarray(qz_update_data).transpose(1,0,2)
+
+	def update_beta(self):
+		# Precompute quantities
+		tau_expected_val = self.tau_alpha/self.tau_beta
+		covariate_predicted = np.dot(self.cov, self.C_mu)
+		gamma = self.gamma_beta_alpha/self.gamma_beta_beta
+
+		# Keep track of variables
+		beta_update_data = []
+		for test_index in range(self.T):
+			beta_update_data.append(outside_update_beta_t(self.G[:, test_index], self.Y[:, test_index], self.K, self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], tau_expected_val[test_index], gamma, self.qz[:, test_index,:], self.qc))
+		
+		# Convert to array
+		beta_update_data = np.asarray(beta_update_data)
+		# Fill in data structures
+		self.beta_mu = np.transpose(beta_update_data[:,(self.K*0):(1*self.K)])
+		self.beta_var = np.transpose(beta_update_data[:,(self.K*1):(2*self.K)])
+	def update_theta(self):
+		# Update each sample at a time
+		for sample_index in range(self.N):
+			for topic_index in range(self.J - 1):
+				self.theta_a[sample_index, topic_index] = 1.0 + np.sum(self.qz[sample_index, :, topic_index])
+				self.theta_b[sample_index, topic_index] = self.delta_0 + np.sum(self.qz[sample_index,:,(1 + topic_index):])
+	def update_phi(self):
+		# Update each sample at a time
+		for topic_index in range(self.K - 1):
+			self.phi_a[topic_index] = 1.0 + np.sum(self.qc[:,:,topic_index])
+			self.phi_b[topic_index] = self.delta_0 + np.sum(self.qc[:,:,(topic_index+1):])
 
 	def update_U(self):
 		###################
@@ -488,39 +679,40 @@ class EQTL_FACTORIZATION_VI(object):
 		###################
 		V_S_squared_expected_val = (np.square(self.V_mu) + self.V_var)
 		U_mu_copy = np.copy(self.U_mu)
-		S_U_copy = np.copy(self.S_U)
 		U_var_copy = np.copy(self.U_var)
 		covariate_predicted = np.dot(self.cov, self.C_mu)
 		U_update_data = []
-		gamma_u = 1.0
+		gamma_u = self.gamma_U_alpha/self.gamma_U_beta
 
 		for sample_index in range(self.N):
-			U_update_data.append(outside_update_U_n(U_mu_copy[sample_index,:], S_U_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.theta_U_a, self.theta_U_b, self.alpha_big_mu[sample_index, :]))
+			U_update_data.append(outside_update_U_n(U_mu_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.alpha_big_mu[sample_index, :]))
 
 		# Convert to array
 		U_update_data = np.asarray(U_update_data)
 		# Fill in data structures
 		self.U_mu = U_update_data[:,(self.K*0):(1*self.K)]
-		self.S_U = U_update_data[:,(self.K*1):(2*self.K)]
-		self.U_var = U_update_data[:,(self.K*2):(3*self.K)]
+		self.U_var = U_update_data[:,(self.K*1):(2*self.K)]
+		#self.U_var = U_update_data[:,(self.K*2):(3*self.K)]
 
 	def update_F(self):
-		U_S_expected_val = self.U_mu*self.S_U
+		#U_S_expected_val = self.U_mu
 
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		F_mu_copy = np.copy(self.F_mu)
 		F_var_copy = np.copy(self.F_var)
 		covariate_predicted = np.dot(self.cov, self.C_mu)
+		#beta_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, self.beta_mu)
 		F_update_data = []
 		gamma_f = 0.001
 		for test_index in range(self.T):
-			F_update_data.append(outside_update_F_t(F_mu_copy[test_index], F_var_copy[test_index], self.G[:, test_index], self.Y[:, test_index], U_S_expected_val, self.V_mu[:,test_index], covariate_predicted[:, test_index], gamma_f, tau_expected_val[test_index], self.alpha_big_mu[:, test_index]))
+			F_update_data.append(outside_update_F_t(F_mu_copy[test_index], F_var_copy[test_index], self.G[:, test_index], self.Y[:, test_index], self.beta_expected_val[:,test_index], covariate_predicted[:, test_index], gamma_f, tau_expected_val[test_index], self.alpha_big_mu[:, test_index]))
 		F_update_data = np.asarray(F_update_data)
 		self.F_mu = F_update_data[:,0]
 		self.F_var = F_update_data[:,1]
 
 	def update_alpha(self):
-		U_S_expected_val = self.U_mu*self.S_U
+		#U_S_expected_val = self.U_mu
+		# beta_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, self.beta_mu)
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		psi_expected_val = self.psi_alpha/self.psi_beta
 		alpha_mu_copy = np.copy(self.alpha_mu)
@@ -529,7 +721,7 @@ class EQTL_FACTORIZATION_VI(object):
 
 		alpha_update_data = []
 		for test_index in range(self.T):
-			alpha_update_data.append(outside_update_alpha_t(alpha_mu_copy[:, test_index], alpha_var_copy[:, test_index], self.G[:, test_index], self.Y[:, test_index], self.I, U_S_expected_val, self.V_mu[:, test_index], self.F_mu[test_index], covariate_predicted[:, test_index], tau_expected_val[test_index], psi_expected_val[test_index], self.individual_to_sample_indices, self.individual_to_number_full_indices))
+			alpha_update_data.append(outside_update_alpha_t(alpha_mu_copy[:, test_index], alpha_var_copy[:, test_index], self.G[:, test_index], self.Y[:, test_index], self.I, self.beta_expected_val[:, test_index], self.F_mu[test_index], covariate_predicted[:, test_index], tau_expected_val[test_index], psi_expected_val[test_index], self.individual_to_sample_indices, self.individual_to_number_full_indices))
 
 		alpha_update_data = np.transpose(np.asarray(alpha_update_data))
 		self.alpha_mu = alpha_update_data[:(self.I),:]
@@ -542,15 +734,17 @@ class EQTL_FACTORIZATION_VI(object):
 			self.alpha_big_var[sample_num,:] = self.alpha_var[self.z_mapping[z_label], :]
 
 	def update_C(self):
-		U_S_expected_val = self.U_mu*self.S_U
+		#U_S_expected_val = self.U_mu
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		C_mu_copy = np.copy(self.C_mu)
 		C_var_copy = np.copy(self.C_var)
 
+		#beta_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, self.beta_mu)
+
 
 		C_update_data = []
 		for test_index in range(self.T):
-			C_update_data.append(outside_update_C_t(C_mu_copy[:, test_index], C_var_copy[:, test_index], self.G[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index], self.alpha_big_mu[:, test_index], self.cov, self.cov_squared))
+			C_update_data.append(outside_update_C_t(C_mu_copy[:, test_index], C_var_copy[:, test_index], self.G[:, test_index], self.Y[:, test_index], self.N, self.beta_expected_val[:, test_index], self.F_mu[test_index], tau_expected_val[test_index], self.alpha_big_mu[:, test_index], self.cov, self.cov_squared))
 		C_update_data = np.transpose(np.asarray(C_update_data))
 
 		# Fill in data structures
@@ -561,9 +755,16 @@ class EQTL_FACTORIZATION_VI(object):
 		# Loop through factors
 		for k in range(self.K):
 			#U_squared_k_expected_val = ((np.square(self.U_mu[:,k]) + self.U_var[:,k])*self.S_U[:,k]) + (1.0-self.S_U[:,k])*(self.gamma_U_beta[k]/self.gamma_U_alpha[k])
-			U_squared_k_expected_val = ((np.square(self.U_mu[:,k]) + self.U_var[:,k])*self.S_U[:,k]) + (1.0-self.S_U[:,k])*(self.U_var_s_0[:,k])
-			self.gamma_U_alpha[k] = self.alpha_prior + (self.N/2.0)
-			self.gamma_U_beta[k] = self.beta_prior + np.sum(U_squared_k_expected_val)/2.0
+			U_squared_k_expected_val = np.square(self.U_mu[:,k]) + self.U_var[:,k]
+			self.gamma_U_alpha[k] = 1e-16 + (self.N/2.0)
+			self.gamma_U_beta[k] = 1e-16 + (np.sum(U_squared_k_expected_val)/2.0)
+	def update_gamma_beta(self):
+		# Loop through factors
+		for k in range(self.K):
+			#U_squared_k_expected_val = ((np.square(self.U_mu[:,k]) + self.U_var[:,k])*self.S_U[:,k]) + (1.0-self.S_U[:,k])*(self.gamma_U_beta[k]/self.gamma_U_alpha[k])
+			beta_squared_k_expected_val = np.square(self.beta_mu[k,:]) + self.beta_var[k,:]
+			self.gamma_beta_alpha[k] = 1e-16 + (self.T/2.0)
+			self.gamma_beta_beta[k] = 1e-16 + (np.sum(beta_squared_k_expected_val)/2.0)
 	def update_theta_U(self):
 		# Loop through factors
 		for k in range(self.K):
@@ -585,14 +786,17 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Precompute quantities
 		F_S_squared = np.square(self.F_mu) + self.F_var
-		V_S_squared = np.square(self.V_mu) + self.V_var
-		U_S_squared = ((np.square(self.U_mu) + self.U_var)*self.S_U)
-		U_S = (self.U_mu)*(self.S_U)
+
+		#beta_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, self.beta_mu)
+		#beta_squared_expected_val = generate_expected_value_of_mixture(self.qz, self.qc, np.square(self.beta_mu) + self.beta_var)
+		#V_S_squared = np.square(self.V_mu) + self.V_var
+		#U_S_squared = ((np.square(self.U_mu) + self.U_var))
+		#U_S = (self.U_mu)
 		C_squared = np.square(self.C_mu) + self.C_var
 		# Loop through tests
 		tau_update_data = []
 		for test_index in range(self.T):
-			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index], tau_beta_copy[test_index], self.G[:, test_index], self.Y[:, test_index], self.N, U_S, self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared, C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior))
+			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index], tau_beta_copy[test_index], self.G[:, test_index], self.Y[:, test_index], self.N, self.beta_expected_val[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], self.beta_squared_expected_val[:, test_index], F_S_squared[test_index], C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior))
 		tau_update_data = np.asarray(tau_update_data)
 		self.tau_alpha = tau_update_data[:,0]
 		self.tau_beta = tau_update_data[:,1]
@@ -739,6 +943,27 @@ class EQTL_FACTORIZATION_VI(object):
 			pdb.set_trace()
 		return svi_sample_indices
 		# return np.random.choice(self.N_full, size=self.N, replace=False)
+	def get_theta_prime(self):
+		off_coordinate_mean = self.theta_a/(self.theta_a + self.theta_b)
+		num_rows = off_coordinate_mean.shape[0]
+		on_coordinate_mean = []
+
+		for row_num in range(num_rows):
+			on_coordinate_mean.append(make_dp_betas_on_coordinate(off_coordinate_mean[row_num,:]))
+		return np.asarray(on_coordinate_mean)
+	def get_corpus_theta_prime(self):
+		theta_prime = self.get_theta_prime()
+		num_samples = theta_prime.shape[0]
+		corpus_theta_prime = []
+		for sample_num in range(num_samples):
+			corpus_theta_prime.append(np.dot(theta_prime[sample_num,:], self.qc[sample_num,:,:]))
+		return np.asarray(corpus_theta_prime)
+
+	def get_phi_prime(self):
+		off_coordinate_mean = self.phi_a/(self.phi_a + self.phi_b)
+		on_coordinate_mean = make_dp_betas_on_coordinate(off_coordinate_mean)
+		return on_coordinate_mean
+
 	def initialize_variables(self):
 		print(self.Y.shape)
 		# Initialize array to keep track of ELBO
@@ -748,15 +973,6 @@ class EQTL_FACTORIZATION_VI(object):
 		self.N = self.Y.shape[0]
 		self.T = self.Y.shape[1]
 		self.num_cov = self.cov.shape[1]
-
-		# Initialze U
-		pca = sklearn.decomposition.PCA(n_components=self.K, whiten=True)
-		pca.fit(np.random.randn(self.N, 9999).T)
-		self.U_mu = pca.components_.T
-		for k in range(self.K):
-			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
-		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v) 
-		self.S_U = np.ones((self.N,self.K))
 
 		# Random effects
 		self.z_mapping = {}
@@ -793,13 +1009,35 @@ class EQTL_FACTORIZATION_VI(object):
 			self.alpha_big_mu[sample_num,:] = self.alpha_mu[self.z_mapping[z_label], :]
 			self.alpha_big_var[sample_num,:] = self.alpha_var[self.z_mapping[z_label], :]
 
-		# Intialize V
+		# Intialize beta
 		pca = sklearn.decomposition.PCA(n_components=self.K, whiten=True)
 		pca.fit(np.random.randn(self.T, 9999).T)
-		self.V_mu = pca.components_
+		self.beta_mu = pca.components_
 		for k in range(self.K):
-			self.V_mu[k,:] = ((self.V_mu[k,:]-np.mean(self.V_mu[k,:]))/np.std(self.V_mu[k,:]))
-		self.V_var = np.ones((self.K, self.T))*(1.0/self.gamma_v)
+			self.beta_mu[k,:] = ((self.beta_mu[k,:]-np.mean(self.beta_mu[k,:]))/np.std(self.beta_mu[k,:]))
+		self.beta_var = np.ones((self.K, self.T))
+
+		# Initialize precision weights on beta
+		self.gamma_beta_alpha = np.ones(self.K)
+		self.gamma_beta_beta = np.ones(self.K)
+
+		# Initialize mixture probs to even mix
+		self.qz = (1.0/self.J)*np.ones((self.N, self.T, self.J))
+		self.qc = (1.0/self.K)*np.ones((self.N, self.J, self.K))
+
+	
+		# Initialize topic distributions to expectations given mixture probs
+		# Note this automaticall makes E[theta[:,self.J-1]] = 1, which is necessary for truncated variational approximation
+		self.theta_a = np.ones((self.N, self.J))
+		self.theta_b = np.ones((self.N, self.J))
+		for jj in range(self.J):
+			self.theta_a[:, jj] = self.theta_a[:,jj]*(self.T/self.J)
+			self.theta_b[:, jj] = self.theta_b[:,jj]*(self.T*(self.J-jj-1)/self.J)
+		self.phi_a = np.ones(self.K)
+		self.phi_b = np.ones(self.K)
+		for kk in range(self.K):
+			self.phi_a[kk] = self.N*self.J/self.K
+			self.phi_b[kk] = (self.N*self.J*(self.K - kk - 1))/self.K
 
 		# Initialize C and F
 		#F_betas, C_betas = run_linear_model_for_initialization(self.Y, self.G, self.cov, self.z)
@@ -816,6 +1054,4 @@ class EQTL_FACTORIZATION_VI(object):
 		self.tau_alpha = np.ones(self.T)*self.alpha_prior
 		self.tau_beta = np.ones(self.T)*self.beta_prior
 		
-		# Bernoulli probs
-		self.theta_U_a = np.ones(self.K)*self.a_prior*10
-		self.theta_U_b = np.ones(self.K)*self.b_prior
+
