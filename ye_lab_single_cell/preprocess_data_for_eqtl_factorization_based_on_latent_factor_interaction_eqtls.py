@@ -21,6 +21,8 @@ def extract_eqtl_factorization_tests(test_names_file, cross_tissue_genome_wide_s
 		# Extract relevent fields
 		gene_id = data[1]
 		variant_id = data[0]
+		if gene_id.startswith('HLA'):
+			continue
 		test_name = variant_id + ':' + gene_id
 		if test_name in dicti:
 			print('assumption error')

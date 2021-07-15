@@ -23,6 +23,8 @@ def extract_eqtl_factorization_tests(test_names_file, num_genes):
 			continue
 		gene_id = data[0]
 		variant_id = data[1]
+		if gene_id.startswith('HLA'):
+			continue
 		if gene_id not in gene_to_variants:
 			gene_to_variants[gene_id] = []
 		gene_to_variants[gene_id].append(variant_id)

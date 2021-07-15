@@ -103,64 +103,34 @@ fi
 
 
 
-
 #############################################
 ## Run eqtl factorization!
 #############################################
-sample_overlap_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt"
-expression_training_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_expression.npy"
-genotype_training_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_genotype.npy"
-covariate_file=$eqtl_factorization_input_dir"eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_covariates.txt"
+input_data_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped"
+sample_overlap_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_sample_overlap.txt"
+expression_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_expression.npy"
+genotype_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_genotype.npy"
+covariate_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_covariates.txt"
 num_latent_factors="10"
 lambda_v="1"
-model_name="eqtl_factorization_vi_lda"
-seed="1"
 variance_param="1e-3"
-
-output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_lf_interaction_eqtl_egenes_10.0_none_zscore_capped_tau_prior_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_"
-if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param
-fi
-
-
-sample_overlap_file=$eqtl_factorization_input_dir"eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt"
-expression_training_file=$eqtl_factorization_input_dir"eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_expression.npy"
-genotype_training_file=$eqtl_factorization_input_dir"eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_genotype.npy"
-covariate_file=$eqtl_factorization_input_dir"eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_covariates.txt"
-num_latent_factors="10"
-lambda_v="1"
-model_name="eqtl_factorization_vi"
 seed="1"
-variance_param="1e-3"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+permutation_type="False"
 
-output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_standard_eqtl_egenes_10.0_none_zscore_capped_tau_prior_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_v_50_warmup_"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
 if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ratio_variance_standardization $permutation_type
 fi
 
 
 
-
-
-
-sample_overlap_file=$eqtl_factorization_input_dir"eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt"
-expression_training_file=$eqtl_factorization_input_dir"eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_expression.npy"
-genotype_training_file=$eqtl_factorization_input_dir"eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_genotype.npy"
-covariate_file=$eqtl_factorization_input_dir"eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_covariates.txt"
-num_latent_factors="10"
-lambda_v="1"
-model_name="eqtl_factorization_vi_lda"
-seed="1"
-variance_param="1e-3"
-
-output_stem=$eqtl_factorization_results_dir"eqtl_factorization_results_random_tests_10.0_none_zscore_capped_tau_prior_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_"
-if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param
-fi
 
 #############################################
 ## Visualize eqtl factorization
 #############################################
+if false; then
 module load R/3.5.1
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir
-
+fi

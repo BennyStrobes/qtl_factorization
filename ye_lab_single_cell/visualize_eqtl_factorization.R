@@ -210,7 +210,22 @@ make_factor_distribution_histograms <- function(factors) {
   return(p)
 }
 
+make_pc_variance_explained_line_plot <- function(variance_explained) {
+  num_pcs <- length(variance_explained)
+  variance_explained <- variance_explained[1:num_pcs]
+  df <- data.frame(variance_explained = variance_explained, pc_num = 1:num_pcs)
 
+  # PLOT AWAY
+    line_plot <- ggplot(data=df, aes(x=pc_num, y=variance_explained)) +
+                geom_line() +
+                geom_point() +
+                ylim(0,max(variance_explained) + .002) + 
+                scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
+                labs(x = "Factor number", y = "Fraction of QTL variance explained") + 
+                gtex_v8_figure_theme() 
+
+    return(line_plot)
+}
 
 
 
@@ -228,16 +243,21 @@ sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalizat
 ############################
 # Model Specification
 ############################
-model_stem <- paste0("eqtl_factorization_results_standard_eqtl_egenes_10.0_none_zscore_capped_tau_prior_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_temper_")
+model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_2_var_param_1e-3_ratio_variance_std_True_permute_False_temper_")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "theta_normalized.txt")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 
 eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
+pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
+
+pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
+
+ordering <- order(pve, decreasing=TRUE)
 
 
-print(sample_covariate_file)
-print(eqtl_factorization_loading_file)
+
+
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
@@ -248,17 +268,27 @@ valid_columns <- c(5, 7, 8)
 valid_columns <- c(3,5, 7)
 
 
-print(head(covariates))
 
-#loadings <- loadings[, valid_columns]
+loadings <- loadings[, ordering]
+ordered_pve <- pve[ordering]
 
 covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
-#####################
+head(covariates)
+
+#######################################
+# PVE plot showing fraction of eqtl variance explained through each factor
+#######################################
+output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
+ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
+
+#######################################
 # Make histogram showing distribution of factor values for each factor
+#######################################
 output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
 hist <- make_factor_distribution_histograms(factors)
 ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
@@ -428,6 +458,41 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 #######################################
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_num_cells.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$num_cells, umap_loadings, "Number of cells")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_T8_fraction.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$T8_fraction, umap_loadings, "T8 fraction")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_T4_fraction.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$T4_fraction, umap_loadings, "T4 fraction")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_NK_fraction.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$NK_fraction, umap_loadings, "NK fraction")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_cM_fraction.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$cM_fraction, umap_loadings, "cM fraction")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_B_fraction.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$B_fraction, umap_loadings, "B fraction")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 ######################################

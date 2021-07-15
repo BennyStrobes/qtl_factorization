@@ -164,6 +164,7 @@ def compute_kl_divergence_of_beta(a_prior, b_prior, theta_a, theta_b):
 
 
 def outside_update_U_n(U_mu, U_var, G_slice, Y_slice, K, V_S_expected_val, V_S_squared_expected_val, F_S_expected_val, covariate_predicted_slice, gamma_u, tau_expected_val, alpha_i_expected_val):
+	#for k in np.random.permutation(range(K)):
 	for k in range(K):
 		# Compute relevent expectations
 		U_S_expected_val = U_mu
@@ -186,6 +187,7 @@ def outside_update_U_n(U_mu, U_var, G_slice, Y_slice, K, V_S_expected_val, V_S_s
 	return np.hstack((U_mu, U_var))
 
 def outside_update_V_t(V_mu, V_var, G_slice, Y_slice, K, U_S_expected_val, U_S_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, gamma_v, tau_t_expected_val):
+	#for k in np.random.permutation(range(K)):
 	for k in range(K):
 		# Compute expectations on other components
 		other_components_expected = (U_S_expected_val@V_mu) - U_S_expected_val[:, k]*V_mu[k]
@@ -343,8 +345,8 @@ class EQTL_FACTORIZATION_VI(object):
 			self.update_U()
 			print('V')
 			self.update_V()
-			print('alpha')
-			self.update_alpha()
+			#print('alpha')
+			#self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
@@ -352,8 +354,8 @@ class EQTL_FACTORIZATION_VI(object):
 			print('gammaU')
 			if vi_iter > 5:
 				self.update_gamma_U()
-			print('psi')
-			self.update_psi()
+			#print('psi')
+			#self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
@@ -393,6 +395,7 @@ class EQTL_FACTORIZATION_VI(object):
 				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
 				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
 				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+				
 
 	def update_step_size(self):
 		# Only needs to be done for SVI
@@ -761,7 +764,7 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*1e-13
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
