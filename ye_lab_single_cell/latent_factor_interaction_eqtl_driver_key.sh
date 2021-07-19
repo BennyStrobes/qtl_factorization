@@ -23,9 +23,8 @@ visualize_latent_factor_interaction_eqtl_dir="$6"
 # Prepare input data for latent factor interaction eqtl analysis
 #############################################
 # This first part needs 250GB of memory to run..
-if false; then
 python prepare_latent_factor_interaction_eqtl_data.py $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
-fi
+
 
 #############################################
 # Run latent-factor interaction QTL Analysis
@@ -57,8 +56,9 @@ fi
 
 
 # merge parallel runs
+if false; then
 python merge_parallelized_latent_factor_interaction_eqtl_calls.py $latent_factor_interaction_eqtl_dir"latent_factor_interaction_10.0_none_zscore_eqtl_results_" $num_jobs
-
+fi
 
 
 
@@ -89,8 +89,9 @@ done
 fi
 
 # merge parallel runs
+if false; then
 python merge_parallelized_standard_eqtl_calls.py $latent_factor_interaction_eqtl_dir"standard_eqtl_10.0_none_zscore_eqtl_results_" $num_jobs
-
+fi
 
 #############################################
 # Visualize latent factor interaction results

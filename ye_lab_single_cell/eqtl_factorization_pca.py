@@ -17,10 +17,14 @@ from ppca import PPCA
 def run_pca(rat, K):
 	scaled_rat = scale_allelic_ratios(rat)
 	ppca = PPCA()
-	ppca.fit(data=np.transpose(scaled_rat), d=K, verbose=True)
-	U = ppca.C
-	V = ppca.transform()
-	return U
+	#ppca.fit(data=np.transpose(scaled_rat), d=K, verbose=True)
+	#U = ppca.C
+	#V = ppca.transform()
+	_pca = PCA(n_components=K, svd_solver='arpack')
+	U = _pca.fit_transform(scaled_rat)
+	ve = _pca.explained_variance_ratio_
+	print(ve)
+	return U, ve
 
 # scale each column
 def scale_allelic_ratios(rat):
@@ -41,13 +45,43 @@ def extract_residuals_from_standard_eqtl_model(Y, G, cov, z):
 	F_betas = []
 	C_betas = []
 	residuals = []
+	model_eq = 'y ~ g'
+	for cov_num in range(cov.shape[1]):
+		model_eq = model_eq + ' + x' + str(cov_num)
+	model_eq = model_eq + ' + (1|z)'
+
+	for test_number in range(num_tests):
+		print(test_number)
+		y_vec = Y[:,test_number]
+		g_vec = G[:,test_number]
+		dd = {'y':y_vec, 'z':z, 'g':g_vec}
+		num_covs = cov.shape[1]
+		for cov_num in range(num_covs):
+			dd['x' + str(cov_num)] = cov[:, cov_num]
+		df = pd.DataFrame(dd)
+		model = Lmer(model_eq, data=df)
+		model.fit()
+		residuals.append(model.residuals)
+		#pdb.set_trace()
+	residuals = np.transpose(np.asarray(residuals))
+	return residuals
+
+
+def extract_residuals_from_standard_eqtl_linear_model(Y, G, cov, z):
+	num_tests = Y.shape[1]
+	F_betas = []
+	C_betas = []
+	residuals = []
 	for test_number in range(num_tests):
 		y_vec = Y[:,test_number]
 		g_vec = G[:,test_number]
 		X = np.hstack((np.transpose(np.asmatrix(g_vec)), cov))
+		#pdb.set_trace()
 		#dd = {'y':y_vec, 'g':g_vec, 'z':z}
 		#df = pd.DataFrame(dd)
-		#model = Lmer('y ~ g  + (1|z)', data=df)
+		#model = Lmer('y ~ g + X + (1|z)', data=df)
+		#model.fit()
+		#residuals.append(model.residuals)
 		#pdb.set_trace()
 		reg = LinearRegression(fit_intercept=False).fit(X, np.transpose(np.asmatrix(y_vec)))
 		F_betas.append(reg.coef_[0][0])
@@ -95,18 +129,18 @@ class EQTL_FACTORIZATION_PCA(object):
 		self.z = np.asarray(z)
 		self.cov = cov
 		# Compute residuals from standard eqtl model
-		residuals = extract_residuals_from_standard_eqtl_model(self.Y, self.G, self.cov, self.z)
-
+		residuals = extract_residuals_from_standard_eqtl_linear_model(self.Y, self.G, self.cov, self.z)
 		# Construct genotype residuals
-		geno_residuals = extract_genotype_residuals(residuals, self.G)
+		# geno_residuals = extract_genotype_residuals(residuals, self.G)
 
 
-		residual_loadings = run_pca(residuals, 10)
+		residual_loadings, pve = run_pca(residuals, 10)
 
-		geno_residual_loadings = run_pca(geno_residuals, 10)
+		#geno_residual_loadings = run_pca(geno_residuals, 10)
 
-		np.savetxt(self.output_root + 'temper_U_S_null.txt', residual_loadings, fmt="%s", delimiter='\t')
-		np.savetxt(self.output_root + 'temper_U_S.txt', geno_residual_loadings, fmt="%s", delimiter='\t')
+		np.savetxt(self.output_root + 'temper_U_S.txt', residual_loadings, fmt="%s", delimiter='\t')
+		np.savetxt(self.output_root + 'temper_factor_pve.txt', pve, fmt="%s", delimiter='\t')
+
 		# Run model
 		#divy = self.Y/self.G
 		#_pca = PCA(n_components=self.K, svd_solver='arpack')

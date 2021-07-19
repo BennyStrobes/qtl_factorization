@@ -343,8 +343,8 @@ class EQTL_FACTORIZATION_VI(object):
 			self.update_U()
 			print('V')
 			self.update_V()
-			print('alpha')
-			self.update_alpha()
+			#print('alpha')
+			#self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
@@ -352,8 +352,8 @@ class EQTL_FACTORIZATION_VI(object):
 			print('gammaU')
 			if vi_iter > 5:
 				self.update_gamma_U()
-			print('psi')
-			self.update_psi()
+			#print('psi')
+			#self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
@@ -757,11 +757,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects variances
 		self.psi_alpha = np.ones(self.T)*self.alpha_prior
-		self.psi_beta = np.ones(self.T)*self.beta_prior*.001 # Initialize random effects variance to be samller than residual variance (tau)
+		self.psi_beta = np.ones(self.T)*self.beta_prior*.0001 # Initialize random effects variance to be samller than residual variance (tau)
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*1e-25
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))

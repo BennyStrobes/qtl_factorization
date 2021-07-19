@@ -78,18 +78,6 @@ make_loading_boxplot_plot_by_categorical_covariate <- function(covariates, loadi
 	return(boxplot)
 }
 
-make_scatter_plot_colored_by_categorical_variable <- function(x_var, y_var, color_var, x_axis_label, y_axis_label, color_axis_label, title_label) {
-  df <- data.frame(loading_1=x_var, loading_2=y_var, covariate=factor(color_var))
-  plotter <- ggplot(df) + 
-             geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.001) +
-             gtex_v8_figure_theme() + 
-             guides(colour = guide_legend(override.aes = list(size=2))) +
-             labs(x=x_axis_label, y = y_axis_label, color=color_axis_label, title=title_label) + 
-             guides(colour=guide_legend(nrow=3,byrow=TRUE, override.aes = list(size=2))) +
-             theme(legend.position="bottom") + 
-             theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
-  return(plotter)
-}
 
 
 make_umap_loading_scatter_plot_colored_by_categorical_variable <- function(covariates, umap_loadings, covariate_name) {
@@ -239,42 +227,6 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
     return(line_plot)
 }
 
-make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status <- function(loadings, sle_status, cell_type, loading_num) {
-  df <- data.frame(loadings=loadings, sle_status=factor(sle_status))
-
-  # Wilcoxon rank sum test to investigate difference in distributions
-  healthy_indices = as.character(sle_status) == "Healthy"
-  sle_indices = as.character(sle_status) == "SLE"
-  pvalue = wilcox.test(loadings[healthy_indices], loadings[sle_indices])$p.value
-
-  p <- ggplot(data=df, aes(x=loadings, fill=sle_status)) +
-    #geom_histogram(aes(y=..ncount..),color="#e9ecef", alpha=0.6, position = 'identity') +
-    geom_density( color="#e9ecef", alpha=0.6, position = 'identity') +
-    scale_fill_manual(values=c("#69b3a2", "#404080")) +
-    gtex_v8_figure_theme() +
-    labs(x=paste0("Factor ", loading_num, " loadings"), fill="", title=paste0(cell_type , " / wilcoxon pvalue: ", signif(pvalue, digits = 4)))
-  return(p)
-
-}
-
-make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- function(loadings, cg_cov, sle_status, loading_num) {
-  cell_types <- sort(as.character(unique(cg_cov)))
-
-  plot_arr <- list()
-  for (cell_type_iter in 1:length(cell_types)) {
-    cell_type <- cell_types[cell_type_iter]
-    cell_type_indices = as.character(cg_cov) == cell_type
-    histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loadings[cell_type_indices], sle_status[cell_type_indices], cell_type, loading_num)
-    plot_arr[[cell_type_iter]] <- histy + theme(legend.position="none")
-  }
-  legend <- get_legend(histy)
-  plot_arr[[(cell_type_iter+1)]] = legend
-
-  merged = plot_grid(plotlist=plot_arr, ncol=2)
-
-  return(merged)
-}
-
 
 
 ############################
@@ -283,9 +235,6 @@ make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- functi
 processed_data_dir <- args[1]
 eqtl_results_dir <- args[2]
 visualization_dir <- args[3]
-model_stem <- args[4]
-output_stem <- args[5]
-visualization_dir <- paste0(visualization_dir, output_stem)
 
 ############################
 # Load in files
@@ -298,26 +247,18 @@ gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_
 ############################
 # Model Specification
 ############################
-#model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_2_var_param_1e-3_ratio_variance_std_True_permute_False_temper_")
+model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_lda_results_k_init_20_lambda_v_1_seed_1_var_param_1e-3_ratio_variance_std_True_permute_False_0001_psi_inittemper_")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "theta_normalized.txt")
-eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 
-eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
-pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
-
-pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
-
-ordering <- order(pve, decreasing=TRUE)
-#ordering <- ordering[1:3]
-#print(ordering)
 
 
 
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
-#factors <- read.table(eqtl_factorization_factor_file, header=FALSE)
+
+#loadings <- loadings[,11:20]
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
@@ -330,33 +271,11 @@ expr <- readRDS("expr.rds")
 expr_pcs <- readRDS("expr_pcs.rds")
 
 
-loadings <- loadings[, ordering]
-ordered_pve <- pve[ordering]
 
 covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
-
-#######################################
-# PVE plot showing fraction of eqtl variance explained through each factor
-#######################################
-output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
-pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
-ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
-
-#######################################
-# Make histogram showing distribution of factor values for each factor
-#######################################
-output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
-#hist <- make_factor_distribution_histograms(factors)
-#ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
-
-
-loading_num <- 1
-output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
-histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
-ggsave(histo, file=output_file, width=7.2, height=12, units="in")
 
 
 ######################################
@@ -365,14 +284,6 @@ ggsave(histo, file=output_file, width=7.2, height=12, units="in")
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_ancestry.pdf")
 boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$pop_cov, loadings, "Known ancestry")
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
-
-######################################
-# Make loading boxplot colored by Ancestry
-#######################################
-output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_sle_status.pdf")
-boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$SLE_status, loadings, "SLE status")
-ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
-
 
 ######################################
 # Make loading boxplot colored by Ancestry
@@ -485,9 +396,9 @@ ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
 
 print('UMAP START')
-#umap_loadings = umap(loadings)$layout
-#saveRDS( umap_loadings, "umap_loadings.rds")
-umap_loadings <- readRDS("umap_loadings.rds")
+umap_loadings = umap(loadings)$layout
+saveRDS( umap_loadings, "umap_loadings.rds")
+#umap_loadings <- readRDS("umap_loadings.rds")
 print('UMAP DONE')
 
 
@@ -584,38 +495,6 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ######################################
-# Visualize UMAP scatter plot colored by number of cells
-#######################################
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_batch.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$batch_cov, umap_loadings, "Batch")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-######################################
-# Visualize UMAP scatter plot based on latent factors
-#######################################
-lf_num <- 1
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-lf_num <- 2
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-lf_num <- 3
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-lf_num <- 4
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-######################################
 # Visualize UMAP scatter plot based on expression pcs
 #######################################
 expression_pc_num <- 1
@@ -708,64 +587,6 @@ umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(m
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 marker_gene = "CD8B"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-marker_gene = "ISG15"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-marker_gene = "IFNG"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-marker_gene = "MX1"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-marker_gene = "LAG3"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-marker_gene = "RGS1"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-marker_gene = "NKG7"
-marker_gene_index <- which(gene_names==marker_gene)
-marker_gene_expr_vec <- expr[, marker_gene_index]
-marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-marker_gene = "PRF1"
 marker_gene_index <- which(gene_names==marker_gene)
 marker_gene_expr_vec <- expr[, marker_gene_index]
 marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0

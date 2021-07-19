@@ -307,7 +307,7 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, Y_slice, N, U_S, V_S_t, F
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, a=1, b=1, gamma_v=1.0, max_iter=1000, delta_elbo_threshold=.01, output_root=''):
+	def __init__(self, K=25, alpha=1e-16, beta=1e-16, a=1, b=1, gamma_v=1.0, max_iter=1000, delta_elbo_threshold=.01):
 		self.alpha_prior = alpha
 		self.beta_prior = beta
 		self.a_prior = a 
@@ -317,7 +317,6 @@ class EQTL_FACTORIZATION_VI(object):
 		self.gamma_v = gamma_v
 		self.iter = 0
 		self.delta_elbo_threshold = delta_elbo_threshold
-		self.output_root = output_root
 	def fit(self, G, Y, z, cov):
 		""" Fit the model.
 			Args:
@@ -343,8 +342,8 @@ class EQTL_FACTORIZATION_VI(object):
 			self.update_U()
 			print('V')
 			self.update_V()
-			print('alpha')
-			self.update_alpha()
+			#print('alpha')
+			#self.update_alpha()
 			print('C')
 			self.update_C()
 			print('F')
@@ -352,8 +351,8 @@ class EQTL_FACTORIZATION_VI(object):
 			print('gammaU')
 			if vi_iter > 5:
 				self.update_gamma_U()
-			print('psi')
-			self.update_psi()
+			#print('psi')
+			#self.update_psi()
 			print('tau')
 			self.update_tau()
 			self.iter = self.iter + 1
@@ -374,25 +373,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print(end_time-start_time)
 			print('##############')
 			print('##############')
-			np.savetxt(self.output_root + 'temper_U.txt', (self.U_mu), fmt="%s", delimiter='\t')
-			np.savetxt(self.output_root + 'temper_V.txt', (self.V_mu), fmt="%s", delimiter='\t')
-			# Remove irrelevent factors
-			if np.mod(vi_iter, 5) == 0 and vi_iter > 0:
-				# UPDATE remove irrelevent_factors TO BE IN TERMS OF *_FULL (ie re-learn theta_U on all data)
-				#self.remove_irrelevent_factors()
-				# Order and Filter Factors
-				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_factor_pve.txt', (factor_pve), fmt="%s", delimiter='\t')
-				np.save(self.output_root + 'temper_U_S.npy', self.U_mu)
-				np.save(self.output_root + 'temper_gamma_U.npy', self.gamma_U_alpha/self.gamma_U_beta)
-				np.save(self.output_root + 'temper_V.npy', (self.V_mu))
-				np.save(self.output_root + 'temper_F.npy', (self.F_mu))
-				np.save(self.output_root + 'temper_alpha.npy', self.alpha_mu)
-				np.save(self.output_root + 'temper_tau.npy', (self.tau_alpha/self.tau_beta))
-				np.save(self.output_root + 'temper_psi.npy', (self.psi_alpha/self.psi_beta))
-				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
-				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+
 
 	def update_step_size(self):
 		# Only needs to be done for SVI
@@ -757,11 +738,11 @@ class EQTL_FACTORIZATION_VI(object):
 
 		# Random effects variances
 		self.psi_alpha = np.ones(self.T)*self.alpha_prior
-		self.psi_beta = np.ones(self.T)*self.beta_prior*.001 # Initialize random effects variance to be samller than residual variance (tau)
+		self.psi_beta = np.ones(self.T)*self.beta_prior*.1 # Initialize random effects variance to be samller than residual variance (tau)
 
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
-		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
+		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*1e-12
 		# Convert random effects matrix to samplesXtests instead of groupsXtest
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
