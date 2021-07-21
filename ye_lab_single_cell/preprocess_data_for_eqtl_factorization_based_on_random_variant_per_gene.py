@@ -113,7 +113,7 @@ def generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_facto
 			data = line.split('\t')
 			genotype = np.asarray(data).astype(float)
 			standardized_genotype = (genotype - np.mean(genotype))/np.std(genotype)
-			t.write('\t'.join(standardized_genotype.astype(str)) + '\n')
+			t.write('\t'.join(genotype.astype(str)) + '\n')
 		counter = counter + 1
 
 	f.close()
@@ -193,7 +193,7 @@ save_as_npy_file(eqtl_factorization_expression_file)
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_random_tests_10.0_none_zscore_capped_eqtl_input_unnormalized_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 

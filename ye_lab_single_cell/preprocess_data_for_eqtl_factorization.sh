@@ -18,7 +18,7 @@ num_genes="900"
 
 
 
-
+echo "STARTING"
 python preprocess_data_for_eqtl_factorization_based_on_latent_factor_interaction_eqtls.py $num_genes $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
 
 if false; then

@@ -93,7 +93,6 @@ fi
 if false; then
 sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
 fi
-
 #############################################
 # Prepare data for eQTL factorization 
 #############################################
@@ -109,39 +108,20 @@ fi
 input_data_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped"
 sample_overlap_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_sample_overlap.txt"
 expression_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_expression.npy"
-genotype_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_genotype.npy"
-covariate_file=$eqtl_factorization_input_dir"pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_temp_covariates_50_pcs.txt"
-num_latent_factors="10"
-lambda_v="1"
-variance_param="1e-3"
-seed="1"
-model_name="eqtl_factorization_pca"
-ratio_variance_standardization="False"
-permutation_type="False"
-
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
-sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ratio_variance_standardization $permutation_type
-
-
-
-input_data_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped"
-sample_overlap_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_sample_overlap.txt"
-expression_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_expression.npy"
-genotype_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_genotype.npy"
-covariate_file=$eqtl_factorization_input_dir"pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_temp_covariates_10_pcs.txt"
+genotype_training_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_unnormalized_genotype.npy"
+covariate_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_covariates.txt"
 num_latent_factors="10"
 lambda_v="1"
 variance_param="1e-3"
 seed="1"
 model_name="eqtl_factorization_vi_ard"
-ratio_variance_standardization="False"
+ratio_variance_standardization="Standardize"
 permutation_type="False"
 
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_10_pcs_"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
 if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ratio_variance_standardization $permutation_type
+sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ratio_variance_standardization $permutation_type
 fi
-
 
 
 #############################################
@@ -149,8 +129,8 @@ fi
 #############################################
 if false; then
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_pca_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_ratio_variance_std_False_permute_False_temper_"
-output_stem="pca_standard_eqtl_rv_False_seed_1"
+model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_ratio_variance_std_Standardize_permute_False_temper_"
+output_stem="standard_eqtl_rv_Standardize_permute_False_seed_1"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
 

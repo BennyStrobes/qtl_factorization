@@ -67,35 +67,22 @@ def extract_residuals_from_standard_eqtl_model(Y, G, cov, z):
 	return residuals
 
 
-def extract_residuals_from_standard_eqtl_linear_model(Y, G, cov, z):
+def extract_residuals_from_standard_eqtl_linear_model(Y, G, cov, z, U_mu):
 	num_tests = Y.shape[1]
 	F_betas = []
 	C_betas = []
 	residuals = []
 
-	num_samples = Y.shape[0]
-	num_donors = len(np.unique(z))
-	binary_z = np.zeros((num_samples, (num_donors-1)))
-
-	for itery, z_val in enumerate(z):
-		if z_val == (num_donors-1):
-			continue
-		binary_z[itery, z_val] = 1.0
-
 	for test_number in range(num_tests):
 		print(test_number)
 		y_vec = Y[:,test_number]
 		g_vec = G[:,test_number]
-		#X = np.hstack((np.transpose(np.asmatrix(g_vec)), binary_z, cov))
-		X = np.hstack((binary_z, cov))
-		#pdb.set_trace()
-		#dd = {'y':y_vec, 'g':g_vec, 'z':z}
-		#df = pd.DataFrame(dd)
-		#model = Lmer('y ~ g + X + (1|z)', data=df)
-		#model.fit()
-		#residuals.append(model.residuals)
-		#pdb.set_trace()
-		reg = LinearRegression(fit_intercept=False).fit(X, np.transpose(np.asmatrix(y_vec)))
+		X = np.hstack((np.transpose(np.asmatrix(g_vec)), cov))
+		interaction_terms = np.zeros(U_mu.shape)
+		for term in range(U_mu.shape[1]):
+			interaction_terms[:, term] = U_mu[:, term]*g_vec
+		X2 = np.hstack((X, interaction_terms))
+		reg = LinearRegression(fit_intercept=False).fit(X2, np.transpose(np.asmatrix(y_vec)))
 		F_betas.append(reg.coef_[0][0])
 		C_betas.append(reg.coef_[0][1:])
 		pred_y = reg.predict(X)
@@ -125,9 +112,10 @@ def extract_genotype_residuals(residuals, G):
 	return geno_residuals
 
 class EQTL_FACTORIZATION_PCA(object):
-	def __init__(self, K=25, output_root=''):
+	def __init__(self, K=25, max_iter=100, output_root=''):
 		self.K = K
 		self.output_root = output_root
+		self.max_iter = max_iter
 	def fit(self, G, Y, z, cov):
 		""" Fit the model.
 			Args:
@@ -137,22 +125,22 @@ class EQTL_FACTORIZATION_PCA(object):
 			cov: A covariate matrix of floats with shape [num_samples, num_covariates]  ... we assume this contains an intercept term
 		"""
 		self.G = G
+		self.G_init = np.copy(G)
 		self.Y = Y
 		self.z = np.asarray(z)
 		self.cov = cov
-		# Compute residuals from standard eqtl model
-		pdb.set_trace()
-		residuals = extract_residuals_from_standard_eqtl_linear_model(self.Y, self.G, self.cov, self.z)
-		residual_ratios = residuals/self.G
+		self.N = self.G.shape[0]
+		self.T = self.G.shape[1]
+		self.U_mu = np.zeros((self.N, self.K))
 
-		residual_loadings, pve = run_pca(residual_ratios, 10)
+		for itera in range(self.max_iter):
+
+			# Compute residuals from standard eqtl model
+			residuals = extract_residuals_from_standard_eqtl_linear_model(self.Y, self.G, self.cov, self.z, self.U_mu)
 
 
-		np.savetxt(self.output_root + 'temper_U_S.txt', residual_loadings, fmt="%s", delimiter='\t')
-		np.savetxt(self.output_root + 'temper_factor_pve.txt', pve, fmt="%s", delimiter='\t')
+			residual_loadings, pve, self.G = run_pca(residuals, 10)
 
-		# Run model
-		#divy = self.Y/self.G
-		#_pca = PCA(n_components=self.K, svd_solver='arpack')
-		#svd_loadings = _pca.fit_transform(divy)
-		#np.savetxt(self.output_root + 'temper_U_S.txt', svd_loadings, fmt="%s", delimiter='\t')
+			np.savetxt(self.output_root + 'temper_U_S.txt', residual_loadings, fmt="%s", delimiter='\t')
+			np.savetxt(self.output_root + 'temper_factor_pve.txt', pve, fmt="%s", delimiter='\t')
+

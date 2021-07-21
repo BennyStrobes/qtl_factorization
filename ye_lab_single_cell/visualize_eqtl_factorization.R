@@ -485,9 +485,9 @@ ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
 
 print('UMAP START')
-#umap_loadings = umap(loadings)$layout
-#saveRDS( umap_loadings, "umap_loadings.rds")
-umap_loadings <- readRDS("umap_loadings.rds")
+umap_loadings = umap(loadings)$layout
+saveRDS( umap_loadings, "umap_loadings.rds")
+#umap_loadings <- readRDS("umap_loadings.rds")
 print('UMAP DONE')
 
 

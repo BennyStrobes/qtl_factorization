@@ -350,7 +350,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print('F')
 			self.update_F()
 			print('gammaU')
-			if vi_iter > 5:
+			if vi_iter > 5:  # Used to be -1
 				self.update_gamma_U()
 			print('psi')
 			self.update_psi()

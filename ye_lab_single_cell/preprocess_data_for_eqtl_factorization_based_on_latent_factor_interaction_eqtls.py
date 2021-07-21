@@ -100,7 +100,7 @@ def generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_facto
 			data = line.split('\t')
 			genotype = np.asarray(data).astype(float)
 			standardized_genotype = (genotype - np.mean(genotype))/np.std(genotype)
-			t.write('\t'.join(standardized_genotype.astype(str)) + '\n')
+			t.write('\t'.join(genotype.astype(str)) + '\n')
 		counter = counter + 1
 
 	f.close()
@@ -182,7 +182,7 @@ num_genes = int(sys.argv[1])
 working_dir = sys.argv[2]
 output_dir = sys.argv[3]
 
-
+'''
 num_pc_vec = [10, 50, 150, 200]
 pc_file = '/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/processed_pseudobulk_expression/pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_pca_scores.txt'
 geno_pc_file = '/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/processed_genotype/pseudobulk_sample_covariates_with_genotype_pcs.txt'
@@ -191,8 +191,8 @@ geno_pcs = extract_geno_pcs(geno_pc_file)
 for pc_num in num_pc_vec:
 	output_file = output_dir + 'pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_temp_covariates_' + str(pc_num) + '_pcs.txt'
 	generate_temp_covariate_file(output_file, pcs[:,:pc_num], geno_pcs)
-
 '''
+
 # Input files
 latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'standard_eqtl_10.0_none_zscore_eqtl_results_genome_wide_signficant_bf_fdr_0.2.txt'
 #latent_factor_interaction_eqtl_results_file = working_dir + 'latent_factor_interaction_no_cap_5_eqtl_results_merged_include_nan.txt'
@@ -214,7 +214,7 @@ save_as_npy_file(eqtl_factorization_expression_file)
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_input_unnormalized_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
@@ -266,7 +266,7 @@ save_as_npy_file(eqtl_factorization_expression_file)
 
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'latent_factor_interaction_10.0_none_zscore_eqtl_input_genotype.txt'
-eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_genotype.txt'
+eqtl_factorization_genotype_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_unnormalized_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
@@ -281,4 +281,3 @@ sample_overlap_input_file = working_dir + 'latent_factor_interaction_10.0_none_z
 sample_overlap_output_file = output_dir + 'eqtl_factorization_lf_interaction_10.0_none_zscore_capped_eqtl_input_sample_overlap.txt'
 generate_sample_overlap_file(sample_overlap_input_file, sample_overlap_output_file)
 
-'''
