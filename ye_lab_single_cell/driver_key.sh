@@ -113,14 +113,18 @@ covariate_file=$eqtl_factorization_input_dir$input_data_stem"_eqtl_input_covaria
 num_latent_factors="10"
 lambda_v="1"
 variance_param="1e-3"
+ard_variance_param="1e-16"
+
 seed="1"
 model_name="eqtl_factorization_vi_ard"
-ratio_variance_standardization="Standardize"
+ratio_variance_standardization="True"
 permutation_type="False"
+warmup_iterations="0"
 
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_lambda_v_"$lambda_v"_seed_"$seed"_var_param_"$variance_param"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
 if false; then
-sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ratio_variance_standardization $permutation_type
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
 

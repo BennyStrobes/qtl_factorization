@@ -2,19 +2,7 @@ import numpy as np
 import os
 import sys
 import pdb
-import eqtl_factorization_vi
 import eqtl_factorization_vi_ard
-import eqtl_factorization_pca
-import eqtl_factorization_vi_bernoulli_loading
-import eqtl_factorization_vi_fixed_residual_variance
-import eqtl_factorization_vi_lda
-import eqtl_factorization_vi_lda_gaussian_factors
-import eqtl_factorization_vi_hdp
-import eqtl_factorization_vi_ard_factors_gaussian_loadings
-import eqtl_factorization_vi_gaussian_factors_gaussian_loadings
-import eqtl_factorization_vi_ard_permute_k
-import eqtl_factorization_vi_ard_no_re
-import eqtl_factorization_iterative_pca
 
 
 
@@ -74,9 +62,9 @@ def permute_donor(G, Z):
 	G_donor_perm = G_donor[permy,:]
 	for sample_num in range(num_samples):
 		G_perm[sample_num, :] = G_donor_perm[Z[sample_num], :]
-	return G_perm, G
+	return G_perm
 
-def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ratio_variance_standardization, permutation_type):
+def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations):
 	# Load in expression data (dimension: num_samplesXnum_tests)
 	Y = np.transpose(np.load(expression_training_file))
 	# Load in Genotype data (dimension: num_samplesXnum_tests)
@@ -87,9 +75,19 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# We assume this covariate matrix has an intercept column
 	cov = np.loadtxt(covariate_file)
 
-	if permutation_type == 'True':
-		G, original_G = permute_donor(G, Z)
+	if permutation_type == 'interaction_only':
+		G_fe = np.copy(G)
+		G = permute_donor(G, Z)
+	elif permutation_type == 'fixed_and_interaction':
+		G = permute_donor(G, Z)
+		G_fe = np.copy(G)
+	elif permutation_type == 'False':
+		G_fe = np.copy(G)
+	else:
+		print('permutation type ' + permutation_type + ' currently not implemented')
+
 	G = standardize_columns(G)
+	G_fe = standardize_columns(G_fe)
 
 	# Get number of samples, number of tests, number of individuals
 	num_samples = Y.shape[0]
@@ -97,220 +95,27 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# Standardize variance of ratio between expression and genotype across tests
 	if ratio_variance_standardization == 'True':
 		G = standardize_variance_ratio_between_expression_and_genotype(Y, G)
-	elif ratio_variance_standardization == 'Alt':
-		G = G*100.0
-	elif ratio_variance_standardization == 'Standardize':
-		G = standardize_ratio_between_expression_and_genotype(Y, G)
+		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y, G_fe)
 
 	#####################################
-	# Run model
+	# Run SURGE model
 	#####################################
-	if model_name == 'eqtl_factorization_vi':
-		eqtl_vi = eqtl_factorization_vi.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
 	if model_name == 'eqtl_factorization_vi_ard':
-		eqtl_vi = eqtl_factorization_vi_ard.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=400, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_ard_no_re':
-		eqtl_vi = eqtl_factorization_vi_ard_no_re.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=400, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_ard_permute_k':
-		eqtl_vi = eqtl_factorization_vi_ard_permute_k.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=200, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_ard_factors_gaussian_loadings':
-		eqtl_vi = eqtl_factorization_vi_ard_factors_gaussian_loadings.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_ard_factors_gaussian_loadings_variance_weighted':
-		eqtl_vi = eqtl_factorization_vi_ard_factors_gaussian_loadings.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, gamma_v=lambda_v, output_root=output_root)
-		num_tests = Y.shape[1]
-		for test_num in range(num_tests):
-			test_sdev = np.std(Y[:, test_num]/G[:,test_num])
-			G[:, test_num] = G[:, test_num]*test_sdev
-		G = G/np.std(G)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_gaussian_factors_gaussian_loadings':
-		eqtl_vi = eqtl_factorization_vi_gaussian_factors_gaussian_loadings.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_lda':
-		eqtl_vi = eqtl_factorization_vi_lda.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, delta_0=.5, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_lda_gaussian_factors':
-		eqtl_vi = eqtl_factorization_vi_lda_gaussian_factors.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, delta_0=.5, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_hdp':
-		eqtl_vi = eqtl_factorization_vi_hdp.EQTL_FACTORIZATION_VI(K=num_latent_factors, J=num_latent_factors-5, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, delta_0=1.0, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	if model_name == 'eqtl_factorization_vi_fixed_residual_variance':
-		eqtl_vi = eqtl_factorization_vi_fixed_residual_variance.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=800, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', [eqtl_vi.tau_alpha/eqtl_vi.tau_beta], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
-	elif model_name == 'eqtl_factorization_pca':
-		eqtl_pca = eqtl_factorization_pca.EQTL_FACTORIZATION_PCA(K=num_latent_factors, output_root=output_root)
-		eqtl_pca.fit(G=G, Y=Y, z=Z, cov=cov)
-	elif model_name == 'eqtl_factorization_iterative_pca':
-		eqtl_pca = eqtl_factorization_iterative_pca.EQTL_FACTORIZATION_PCA(K=num_latent_factors, output_root=output_root)
-		eqtl_pca.fit(G=G, Y=Y, z=Z, cov=cov)
-	elif model_name == 'eqtl_factorization_vi_bernoulli_loading':
-		eqtl_vi = eqtl_factorization_vi_bernoulli_loading.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, a=1, b=1, max_iter=300, gamma_v=lambda_v, output_root=output_root)
-		eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
-		# Order and Filter Factors
-		theta_U = eqtl_vi.theta_U_a/(eqtl_vi.theta_U_b + eqtl_vi.theta_U_a)
-		ordered_indices = np.argsort(-theta_U)
-		num_indices = sum(theta_U > .01)
-		ordered_filtered_indices = ordered_indices[:num_indices]
-		# Save to output file
-		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu)[ordered_filtered_indices, :], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu*eqtl_vi.S_U)[:,ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'theta_U.txt', theta_U[ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'S.txt', (eqtl_vi.S_U)[:, ordered_filtered_indices], fmt="%s", delimiter='\t')
-		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
+		eqtl_vi = eqtl_factorization_vi_ard.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=400, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
+		eqtl_vi.fit(G=G, G_fe=G_fe, Y=Y, z=Z, cov=cov)
 
-
-
+		# Save to output file
+		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'gamma_U.txt', eqtl_vi.gamma_U_alpha/eqtl_vi.gamma_U_beta, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'alpha.txt', eqtl_vi.alpha_mu, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'psi.txt', (eqtl_vi.psi_alpha/eqtl_vi.psi_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'elbo.txt', np.asarray(eqtl_vi.elbo), fmt="%s", delimiter='\n')
+		np.savetxt(output_root + 'factor_genetic_pve.txt', (eqtl_vi.factor_genetic_pve), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'factor_pve.txt', (eqtl_vi.factor_pve), fmt="%s", delimiter='\t')
 
 
 
@@ -331,13 +136,15 @@ model_name = sys.argv[7]
 seed = int(sys.argv[8])
 output_root = sys.argv[9]
 variance_param = float(sys.argv[10])
-ratio_variance_standardization = sys.argv[11]
-permutation_type = sys.argv[12]
+ard_variance_param = float(sys.argv[11])
+ratio_variance_standardization = sys.argv[12]
+permutation_type = sys.argv[13]
+warmup_iterations = int(sys.argv[14])
 
 
 np.random.seed(seed)
 
 
-train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ratio_variance_standardization, permutation_type)
+train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations)
 
 
