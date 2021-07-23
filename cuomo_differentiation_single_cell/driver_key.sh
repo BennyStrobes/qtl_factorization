@@ -31,8 +31,10 @@ processed_genotype_dir=$root_directory"processed_genotype/"
 processed_expression_dir=$root_directory"processed_expression/"
 # Directory containing visualizations of processed gene expression
 visualize_processed_expression_dir=$root_directory"visualize_processed_expression/"
-
-
+# Directory containing standard eqtl input data
+standard_eqtl_input_dir=$root_directory"standard_eqtl_input_data/"
+# Directory containing standard eqtl results
+standard_eqtl_results_dir=$root_directory"standard_eqtl_results/"
 
 
 
@@ -47,9 +49,16 @@ fi
 ################################
 # Preprocess gene expression data
 #################################
+if false; then
 sh preprocess_expression.sh $normalized_expression_file $meta_data_file $processed_genotype_dir $gene_annotation_file $genotype_pc_file $cell_state_file $processed_expression_dir $visualize_processed_expression_dir
+fi
 
 
+
+################################
+# Run standard eQTL analysis
+#################################
+sh run_standard_eqtl_analysis.sh $processed_expression_dir $processed_genotype_dir $gene_annotation_file $standard_eqtl_input_dir $standard_eqtl_results_dir
 
 
 
