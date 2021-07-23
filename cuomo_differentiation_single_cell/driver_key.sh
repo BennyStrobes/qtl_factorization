@@ -47,9 +47,8 @@ fi
 ################################
 # Preprocess gene expression data
 #################################
-if false; then
 sh preprocess_expression.sh $normalized_expression_file $meta_data_file $processed_genotype_dir $gene_annotation_file $genotype_pc_file $cell_state_file $processed_expression_dir $visualize_processed_expression_dir
-fi
+
 
 
 

@@ -61,7 +61,7 @@ def make_cell_to_individual_mapping(meta_data_file, cell_to_individual_mapping_f
 	f.close()
 	t.close()
 
-def recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file):
+def recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file, cell_state_file):
 	# Extract mapping from indi id to first n genotype pcs
 	n_pcs = 3
 	mapping = {}
@@ -79,6 +79,26 @@ def recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, val
 		donor_id = data[0].split('"')[1]
 		mapping[donor_id] = data[1:(1+n_pcs)]
 	f.close()
+	cell_state_mapping = {}
+	f = open(cell_state_file)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			cell_state_names = np.asarray(data[1:])
+			continue
+		cell_id = data[0]
+		cell_states = np.asarray(data[1:])
+		# quick error checking
+		if len(cell_states) != len(cell_state_names):
+			print('assumption eororor')
+		if cell_id in cell_state_mapping:
+			print('assumption eroror')
+			pdb.set_trace()
+		cell_state_mapping[cell_id] = cell_states
+	f.close()
 	# Stream covariate file
 	f = open(meta_data_file)
 	t = open(recreated_cell_covariates_file, 'w')
@@ -89,11 +109,12 @@ def recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, val
 		data = line.split('\t')
 		if head_count == 0:
 			head_count = head_count + 1
-			t.write('cell_name_header\t' + '\t'.join(data) + '\tgenotype_pc1\tgenotype_pc2\tgenotype_pc3' + '\n')
+			t.write('cell_name_header\t' + '\t'.join(data) + '\tgenotype_pc1\tgenotype_pc2\tgenotype_pc3' + '\t' + '\t'.join(cell_state_names) + '\n')
 			continue
 		if data[85] in valid_individuals:
 			genotype_pcs = mapping[data[85]]
-			t.write('\t'.join(data) + '\t' + '\t'.join(genotype_pcs) + '\n')
+			cell_states = cell_state_mapping[data[0]]
+			t.write('\t'.join(data) + '\t' + '\t'.join(genotype_pcs) + '\t' + '\t'.join(cell_states) + '\n')
 			valid_cells.append(True)
 		else:
 			valid_cells.append(False)
@@ -147,9 +168,9 @@ def get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_
 		scanpy.pp.highly_variable_genes(adata)
 		indices = adata.var['highly_variable']
 	elif method == 'scran_approach':
-		#temp_expr = np.loadtxt(recreated_normalized_gene_expression_gene_symbols_file, dtype=str,delimiter='\t', comments='**')
-		#np.savetxt('experiment_temp.txt', experiment, fmt="%s", delimiter='\n')
-		#np.savetxt('expr_temp.txt', temp_expr[1:,1:], fmt="%s", delimiter='\t')
+		temp_expr = np.loadtxt(recreated_normalized_gene_expression_gene_symbols_file, dtype=str,delimiter='\t', comments='**')
+		np.savetxt('experiment_temp.txt', experiment, fmt="%s", delimiter='\n')
+		np.savetxt('expr_temp.txt', temp_expr[1:,1:], fmt="%s", delimiter='\t')
 		os.system('Rscript get_scran_hvg.R expr_temp.txt experiment_temp.txt')
 		num_genes = 1000
 		scran_hvg_data = np.loadtxt('hvg.txt',dtype=str,delimiter='\t')
@@ -259,30 +280,30 @@ valid_individuals = get_dictionary_list_of_individuals_that_we_have_genotype_for
 # Create mapping from cell-id to individual id
 # And filter cells to those for which we have genotype data for
 cell_to_individual_mapping_file = processed_expression_dir + 'cell_individual_mapping.txt'
-#make_cell_to_individual_mapping(meta_data_file, cell_to_individual_mapping_file, valid_individuals)
+make_cell_to_individual_mapping(meta_data_file, cell_to_individual_mapping_file, valid_individuals)
 
 
 ###############################
 # Re-create cell covariates
 # And filter cells to those for which we have genotype data for
 recreated_cell_covariates_file = processed_expression_dir + 'cell_covariates.txt'
-#valid_cell_indices = recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file)
+valid_cell_indices = recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file, cell_state_file)
 
 ###############################
 # Re-create expression data
 recreated_normalized_gene_expression_file = processed_expression_dir + 'normalized_expression_all_genotyped_cells.txt'
-#recreate_expression(normalized_expression_file, recreated_normalized_gene_expression_file, valid_cell_indices)
+recreate_expression(normalized_expression_file, recreated_normalized_gene_expression_file, valid_cell_indices)
 
 
 ###############################
 # Re-create expression data
 recreated_normalized_gene_expression_gene_symbols_file = processed_expression_dir + 'normalized_expression_gene_symbols_all_genotyped_cells.txt'
-#filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expression_file, recreated_normalized_gene_expression_gene_symbols_file)
+filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expression_file, recreated_normalized_gene_expression_gene_symbols_file)
+
 
 ###############################
 # Limit to highly variable genes
 hvg_methods = ['scran', 'scanpy']
-hvg_methods = ['scran']
 
 for hvg_method in hvg_methods:
 	highly_variable_gene_indices = get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, recreated_cell_covariates_file, hvg_method + '_approach')

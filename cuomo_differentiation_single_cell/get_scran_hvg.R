@@ -14,9 +14,9 @@ batch_file <- args[2]
 
 batch <- read.table(batch_file)
 
-#log_counts <- as.matrix(read.table(expr_file, header=FALSE, sep="\t"))
-#saveRDS(log_counts, "scran_input_log_counts.rds")
-log_counts <- readRDS("scran_input_log_counts.rds")
+log_counts <- as.matrix(read.table(expr_file, header=FALSE, sep="\t"))
+saveRDS(log_counts, "scran_input_log_counts.rds")
+#log_counts <- readRDS("scran_input_log_counts.rds")
 
 sce <- SingleCellExperiment(list(logcounts=log_counts))
 
