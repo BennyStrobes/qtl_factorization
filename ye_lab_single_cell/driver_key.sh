@@ -114,7 +114,7 @@ num_latent_factors="10"
 lambda_v="1"
 variance_param="1e-3"
 ard_variance_param="1e-16"
-
+if false; then
 seed="1"
 model_name="eqtl_factorization_vi_ard"
 ratio_variance_standardization="True"
@@ -123,20 +123,71 @@ warmup_iterations="0"
 
 
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
-if false; then
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+seed="1"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+permutation_type="False"
+warmup_iterations="6"
+
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+
+seed="1"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="False"
+permutation_type="False"
+warmup_iterations="0"
+
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+seed="1"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="False"
+permutation_type="False"
+warmup_iterations="6"
+
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+
+seed="1"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+permutation_type="interaction_only"
+warmup_iterations="0"
+
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+seed="1"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+permutation_type="fixed_and_interaction"
+warmup_iterations="0"
+
+
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
-
 
 #############################################
 ## Visualize eqtl factorization
 #############################################
 if false; then
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_1_var_param_1e-3_ratio_variance_std_Standardize_permute_False_temper_"
-output_stem="standard_eqtl_rv_Standardize_permute_False_seed_1"
+model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_seed_1_warmup_0_ratio_variance_std_True_permute_False_temper_"
+output_stem="standard_eqtl_rv_True_permute_False_seed_1"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
+
 
 if false; then
 module load R/3.5.1

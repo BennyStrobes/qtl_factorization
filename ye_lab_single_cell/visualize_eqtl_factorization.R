@@ -321,13 +321,13 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-#expr <- read.table(gene_expr_file, header=FALSE)
-#saveRDS( expr, "expr.rds")
-expr <- readRDS("expr.rds")
+expr <- read.table(gene_expr_file, header=FALSE)
+saveRDS( expr, "expr.rds")
+#expr <- readRDS("expr.rds")
 
-#expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-#saveRDS(expr_pcs, "expr_pcs.rds")
-expr_pcs <- readRDS("expr_pcs.rds")
+expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+saveRDS(expr_pcs, "expr_pcs.rds")
+#expr_pcs <- readRDS("expr_pcs.rds")
 
 
 loadings <- loadings[, ordering]
