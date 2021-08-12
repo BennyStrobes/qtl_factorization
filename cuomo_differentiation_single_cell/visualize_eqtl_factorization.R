@@ -275,6 +275,83 @@ make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- functi
   return(merged)
 }
 
+make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
+  loadings <- as.matrix(loadings)
+
+
+  valid_covariates <- c(7, 8, 10, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 31, 32, 33, 38, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 69,71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81,83, 85, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103)
+  covariate_type <- c("cat", "cat", "cat", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real", "real","real","real","real","real","real","real","real","real","real","real","real","real","real","real","real", "cat", "real", "real", "real","real","real","real","real","real","real","real","real","real","cat", "cat", "real","real","real","real","real","real","real","real","real","real","real","real","real","real","real","real","real")
+
+
+  #print(summary(covariates))
+
+  #print(length(valid_covariates))
+  #print(length(covariate_type))
+
+  num_cov = length(valid_covariates)
+
+  cov_names <- colnames(covariates)[valid_covariates]
+
+  #print(cov_names)
+  #print(length(valid_covariates))
+  #print(length(covariate_type))
+  num <- length(cov_names)
+  # print(cov_names)
+
+
+
+  covs <- covariates[,valid_covariates]
+
+
+  # Initialize PVE heatmap
+  factor_colnames <- paste0("Factor", 1:(dim(loadings)[2]))
+  factor_rownames <- colnames(covs)
+  pve_map <- matrix(0, dim(covs)[2], dim(loadings)[2])
+  colnames(pve_map) <- factor_colnames
+  rownames(pve_map) <- colnames(covs)
+
+
+    # Loop through each PC, COV Pair and take correlation
+    num_pcs <- dim(loadings)[2]
+    num_covs <- dim(covs)[2]
+    for (num_pc in 1:num_pcs) {
+        for (num_cov in 1:num_covs) {
+            pc_vec <- loadings[,num_pc]
+            cov_vec <- covs[,num_cov]
+            #print(paste0(num_pc, " - ", num_cov))
+            if (covariate_type[num_cov] == "cat") {
+            #print(cov_vec[1:10])
+              lin_model <- lm(pc_vec ~ factor(cov_vec))
+          } else {
+            lin_model <- lm(pc_vec ~ cov_vec)
+          }
+            pve_map[num_cov, num_pc] <- summary(lin_model)$adj.r.squared
+        }
+    }
+    
+    ord <- hclust( dist(scale(pve_map), method = "euclidean"), method = "ward.D" )$order
+
+    melted_mat <- melt(pve_map)
+    colnames(melted_mat) <- c("Covariate", "Loading","PVE")
+
+    melted_mat$Covariate = factor(melted_mat$Covariate, levels=rownames(pve_map)[ord])
+    melted_mat$Loading = factor(melted_mat$Loading, levels=factor_colnames)
+   #  Use factors to represent covariate and pc name
+    # melted_mat$Covariate 
+    # melted_mat$Covariate <- factor(melted_mat$Covariate, levels = rownames(pve_map)[ord])
+    #melted_mat$PC <- substr(as.character(melted_mat$PC),3,5)
+    #melted_mat$PC <- factor(melted_mat$PC, levels=paste0("", 1:(length(unique(melted_mat$PC)))))
+
+    
+    #levels(melted_mat$PC) = paste0("PC", 1:(length(levels(melted_mat$PC))))
+    #  PLOT!
+    heatmap <- ggplot(data=melted_mat, aes(x=Covariate, y=Loading)) + geom_tile(aes(fill=PVE)) + scale_fill_gradient2(midpoint=-.05, guide="colorbar")
+    heatmap <- heatmap + labs(y="",fill="VE")
+    heatmap <- heatmap + theme(text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8),  axis.text.x = element_text(angle = 90,hjust=1, vjust=.5)) 
+    # Save File
+    return(heatmap)
+}
+
 
 
 ############################
@@ -322,6 +399,13 @@ loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
 
 #factors <- factors[ordering,]
+
+#######################################
+# Covariate-loading heatmap
+#######################################
+output_file <- paste0(visualization_dir, "covariate_loading_correlation_heatmap.pdf")
+heatmap <- make_covariate_loading_correlation_heatmap(covariates, loadings)
+ggsave(heatmap, file=output_file, width=7.2, height=5.5, units="in")
 
 
 #######################################

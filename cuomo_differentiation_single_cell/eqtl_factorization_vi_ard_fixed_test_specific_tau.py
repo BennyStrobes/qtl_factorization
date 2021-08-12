@@ -293,7 +293,7 @@ def outside_update_F_t(F_mu, F_var, G_slice, G_fe_slice, Y_slice, U_S_expected_v
 
 	return np.hstack((F_mu, F_var))
 
-def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U_S, V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior):
+def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U_S, V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior, tau_prior_t, scaling_factor):
 	# Compute Relevent expectations
 	squared_factor_terms = U_S_squared@V_S_t_squared
 	factor_terms = U_S@V_S_t
@@ -319,8 +319,10 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U
 	resid = resid + (covariate_terms*covariate_terms - cov_squared@np.square(C_t))
 
 	# Make Updates
-	new_alpha = alpha_prior + (N/2.0) + 0.0
-	new_beta = beta_prior + (np.sum(resid)/2.0) + 0.0
+	#new_alpha = alpha_prior + (N/2.0) + 0.0
+	#new_beta = beta_prior + (np.sum(resid)/2.0) + 0.0
+	new_alpha = (tau_prior_t*N*scaling_factor) + (N/2.0) 
+	new_beta = (N*scaling_factor) + (np.sum(resid)/2.0) 
 
 	tau_alpha = new_alpha
 	tau_beta = new_beta
@@ -329,10 +331,12 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, output_root=''):
+	def __init__(self, K=25, alpha=1e-16, beta=1e-16, tau_prior=np.ones(100), ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, output_root=''):
 		# Prior on gamma distributions defining variances
 		self.alpha_prior = alpha
 		self.beta_prior = beta
+
+		self.tau_prior = tau_prior
 		# Prior on gamma distribution defining ARD variance
 		self.ard_alpha_prior = ard_alpha
 		self.ard_beta_prior = ard_beta
@@ -395,8 +399,8 @@ class EQTL_FACTORIZATION_VI(object):
 				self.update_gamma_U()
 			print('psi update')
 			self.update_psi()
-			print('tau update')
-			self.update_tau()
+			#print('tau update')
+			#self.update_tau()
 			self.iter = self.iter + 1
 
 
@@ -635,7 +639,7 @@ class EQTL_FACTORIZATION_VI(object):
 		# Loop through tests
 		tau_update_data = []
 		for test_index in range(self.T):
-			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index], tau_beta_copy[test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.N, U_S, self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared, C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior))
+			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index], tau_beta_copy[test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.N, U_S, self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared, C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior, self.tau_prior[test_index], 1.0))
 		tau_update_data = np.asarray(tau_update_data)
 		self.tau_alpha = tau_update_data[:,0]
 		self.tau_beta = tau_update_data[:,1]
@@ -849,8 +853,8 @@ class EQTL_FACTORIZATION_VI(object):
 
 		self.cov_squared = np.square(self.cov)
 		# Variances
-		self.tau_alpha = np.ones(self.T)*self.alpha_prior
-		self.tau_beta = np.ones(self.T)*self.beta_prior
+		self.tau_alpha = self.tau_prior
+		self.tau_beta = np.ones(self.T)
 		self.print_diagnostic_data()
 	def print_diagnostic_data(self):
 		print(str(self.N) + ' samples detected')

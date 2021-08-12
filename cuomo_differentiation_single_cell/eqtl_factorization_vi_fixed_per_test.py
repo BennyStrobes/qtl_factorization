@@ -199,7 +199,7 @@ def outside_update_U_n(U_mu, U_var, G_slice, G_fe_slice, Y_slice, K, V_S_expecte
 		# Compute expectations on other components
 		other_components_expected = (U_S_expected_val@V_S_expected_val) - U_S_expected_val[k]*V_S_expected_val[k,:]
 		# Update variance of q(U|s=1)
-		a_term = np.sum(tau_expected_val*np.square(G_slice)*V_S_squared_expected_val[k,:]) + gamma_u[k]
+		a_term = np.sum(tau_expected_val*np.square(G_slice)*V_S_squared_expected_val[k,:]) + gamma_u
 		U_var[k] = 1.0/a_term
 		# Update mean of q(U|s=1)
 		resid = Y_slice - covariate_predicted_slice - alpha_i_expected_val - G_fe_slice*F_S_expected_val - G_slice*other_components_expected
@@ -329,19 +329,20 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, output_root=''):
+	def __init__(self,test_num, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, output_root=''):
 		# Prior on gamma distributions defining variances
 		self.alpha_prior = alpha
 		self.beta_prior = beta
+		self.current_test_num = test_num
 		# Prior on gamma distribution defining ARD variance
 		self.ard_alpha_prior = ard_alpha
 		self.ard_beta_prior = ard_beta
 		# Maximum allowed iterations
 		self.max_iter = max_iter
 		# Number of latent factors
-		self.K = K
+		self.K = 1
 		# Variance prior placed on elements of V
-		self.gamma_v = gamma_v
+		self.gamma_v = gamma_v + 10000.0
 		# Initialize iteration number
 		self.iter = 0
 		# Threshold on elbo change (for convergence detection)
@@ -375,84 +376,49 @@ class EQTL_FACTORIZATION_VI(object):
 		# Loop through VI iterations
 		for vi_iter in range(self.max_iter):
 			print('Variational Inference iteration: ' + str(vi_iter))
+
+			##################
+			#pred_expr = np.dot(np.ones((self.N,1)),[self.F_mu])*self.G_fe + np.dot(self.cov,self.C_mu) + self.alpha_big_mu
+			#resid_expr = self.Y- pred_expr
+			#ratio = (np.var(resid_expr/self.G, axis=0)/np.var(self.Y/self.G, axis=0))/np.var(resid_expr,axis=0)
 			#########################
+
 			start_time = time.time()
 			# Update parameter estimaters via coordinate ascent
-			self.update_V()
-
 			print('U update')
 			self.update_U()
-			print('V update')
+			#print('V update')
+			#self.update_V()
 			print('alpha update')
 			self.update_alpha()
 			print('C update')
 			self.update_C()
 			print('F update')
 			self.update_F()
-			# Only run gammaU update after X warmup iterations
-			if vi_iter >= self.warmup_iterations: 
-				print('gammaU update')
-				self.update_gamma_U()
 			print('psi update')
 			self.update_psi()
 			print('tau update')
 			self.update_tau()
 			self.iter = self.iter + 1
-
-
-
 			####################
 			# Compute ELBO after update
 			self.update_elbo()
 			current_elbo = self.elbo[len(self.elbo)-1]
 			delta_elbo = (current_elbo - self.elbo[len(self.elbo)-2])
 			print('delta ELBO: ' + str(delta_elbo))
-			####################
-			# Print gamma parameter
-			print('Gamma parameters: ')
-			print(self.gamma_U_alpha/self.gamma_U_beta)
-			#####################
-			# Compute Genetic PVE
-			self.shared_genetic_pve, self.factor_genetic_pve = self.compute_variance_explained_of_factors('genetic_pve')
-			self.shared_pve, self.factor_pve = self.compute_variance_explained_of_factors('pve')
-			print('Shared PVE: ')
-			print(self.shared_pve)
-			print('Factor PVE: ')
-			print(self.factor_pve)
 			#####################
 			# Print runtime
 			end_time = time.time()
 			print('Iteration runtime: ' + str(end_time-start_time))
 			print('##############')
 			print('##############')
-
-			# Print temporary results to output every X iterations
-			if np.mod(vi_iter, 5) == 0 and vi_iter > 0:
-				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_factor_genetic_pve.txt', (self.factor_genetic_pve), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_factor_pve.txt', (self.factor_pve), fmt="%s", delimiter='\t')
-				np.save(self.output_root + 'temper_U_S.npy', self.U_mu)
-				np.save(self.output_root + 'temper_gamma_U.npy', self.gamma_U_alpha/self.gamma_U_beta)
-				np.save(self.output_root + 'temper_V.npy', (self.V_mu))
-				np.save(self.output_root + 'temper_F.npy', (self.F_mu))
-				np.save(self.output_root + 'temper_alpha.npy', self.alpha_mu)
-				np.save(self.output_root + 'temper_tau.npy', (self.tau_alpha/self.tau_beta))
-				np.save(self.output_root + 'temper_psi.npy', (self.psi_alpha/self.psi_beta))
-				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
-				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+			if delta_elbo < self.delta_elbo_threshold:
+				break
 	def print_logo(self):
 		print('*********************************************************')
 		print('SURGE Training')
 		print('Single cell Unsupervised Regulation of Gene Expression')
 		print('*********************************************************')
-	def get_residual_expression(self):
-		F_terms = np.dot(np.ones((self.N,1)),[self.F_mu])
-		covariate_terms = np.dot(self.cov, self.C_mu)
-		interaction_terms = np.dot(self.U_mu, self.V_mu)*self.G
-		pred_expr = self.alpha_big_mu + covariate_terms + self.G*F_terms + interaction_terms
-		resid_expr1 = self.Y - pred_expr
-		return resid_expr1		
 	def update_step_size(self):
 		# Only needs to be done for SVI
 		if self.SVI == True:
@@ -535,7 +501,7 @@ class EQTL_FACTORIZATION_VI(object):
 		U_var_copy = np.copy(self.U_var)
 		covariate_predicted = np.dot(self.cov, self.C_mu)
 		U_update_data = []
-		gamma_u = self.gamma_U_alpha/self.gamma_U_beta
+		gamma_u = 0.0
 
 		for sample_index in range(self.N):
 			U_update_data.append(outside_update_U_n(U_mu_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.G_fe[sample_index,:], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.alpha_big_mu[sample_index, :]))
@@ -642,16 +608,15 @@ class EQTL_FACTORIZATION_VI(object):
 
 	def update_elbo(self):
 		data_likelihood_term = self.compute_elbo_log_likelihood_term()
-		kl_V_S = self.compute_kl_divergence_of_V_S()
+		#kl_V_S = self.compute_kl_divergence_of_V_S()
 		kl_U_S = self.compute_kl_divergence_of_U_S()
 		kl_F_S = self.compute_kl_divergence_of_F_S()
 		kl_tau = self.compute_kl_divergence_of_tau()
 		kl_psi = self.compute_kl_divergence_of_psi()
-		kl_theta_u = self.compute_kl_divergence_of_gamma_u()
 		kl_C = self.compute_kl_divergence_of_C()
 		kl_alpha = self.compute_kl_divergence_of_alpha()
 
-		kl_divergence = kl_V_S + kl_U_S + kl_F_S + kl_tau + kl_theta_u + kl_C + kl_psi + kl_alpha
+		kl_divergence = kl_U_S + kl_F_S + kl_tau + kl_C + kl_psi + kl_alpha
 
 		elbo = data_likelihood_term - kl_divergence
 		self.elbo.append(elbo)
@@ -710,7 +675,8 @@ class EQTL_FACTORIZATION_VI(object):
 	def compute_kl_divergence_of_U_S(self):
 		W_mu = np.transpose(self.U_mu)
 		W_var = np.transpose(self.U_var)
-		kl_divergence = compute_kl_divergence_of_gaussian(W_mu, W_var, self.gamma_U_alpha, self.gamma_U_beta, self.K)
+		expected_gamma = 0.0
+		kl_divergence = compute_kl_divergence_of_gaussian_fixed_variance(W_mu, W_var, expected_gamma, self.K)
 		return kl_divergence
 	def compute_elbo_log_likelihood_term(self):
 		# Compute expectation of log of gamma variables
@@ -790,8 +756,9 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_mu = pca.components_.T
 		for k in range(self.K):
 			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
-		self.U_var = np.ones((self.N, self.K))*(1.0/1.0)
-		self.gamma_U_alpha = np.ones(self.K)*self.gamma_v
+		self.U_mu = self.U_mu*0.0
+		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v)
+		self.gamma_U_alpha = np.ones(self.K)
 		self.gamma_U_beta = np.ones(self.K)
 		#self.S_U = np.ones((self.N,self.K))
 
@@ -823,7 +790,7 @@ class EQTL_FACTORIZATION_VI(object):
 		# Random effects
 		self.alpha_mu = np.zeros((self.I, self.T))
 		self.alpha_var = (np.zeros((self.I, self.T)) + 1.0)*.01
-		# Convert random effects matrix to samplesXtests instead of groupsXtest
+		# Convert random effects matrix to samplesXtests instead of groupsXtesft
 		self.alpha_big_mu = np.zeros((self.N, self.T))
 		self.alpha_big_var = np.zeros((self.N, self.T))
 		for sample_num, z_label in enumerate(self.z):
@@ -836,7 +803,9 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_mu = pca.components_
 		for k in range(self.K):
 			self.V_mu[k,:] = ((self.V_mu[k,:]-np.mean(self.V_mu[k,:]))/np.std(self.V_mu[k,:]))
-		self.V_var = np.ones((self.K, self.T))*(1.0/1.0)
+		self.V_mu = self.V_mu*0.0
+		self.V_mu[0, self.current_test_num] = 1.0
+		self.V_var = np.ones((self.K, self.T))*(1.0/self.gamma_v)*1e-150
 
 		# Initialize C and F
 		F_betas, C_betas, residual_varz = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)

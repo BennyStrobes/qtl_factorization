@@ -23,18 +23,17 @@ def run_linear_model_for_initialization(Y, G, cov, z):
 	for test_number in range(num_tests):
 		y_vec = Y[:,test_number]
 		g_vec = G[:,test_number]
-		X = np.hstack((np.transpose(np.asmatrix(g_vec)), cov))
+		X = np.copy(cov)
 		#dd = {'y':y_vec, 'g':g_vec, 'z':z}
 		#df = pd.DataFrame(dd)
 		#model = Lmer('y ~ g  + (1|z)', data=df)
 		#pdb.set_trace()
 		reg = LinearRegression(fit_intercept=False).fit(X, np.transpose(np.asmatrix(y_vec)))
-		F_betas.append(reg.coef_[0][0])
-		C_betas.append(reg.coef_[0][1:])
+		C_betas.append(reg.coef_[0][0:])
 		pred_y = reg.predict(X)[:,0]
 		resid_y = y_vec - pred_y
 		residual_varz.append(np.var(resid_y))
-	return np.asarray(F_betas), np.asarray(C_betas), np.asarray(residual_varz)
+	return np.asarray(C_betas), np.asarray(residual_varz)
 
 def run_linear_mixed_model_for_initialization(Y, G, cov, z):
 	num_tests = Y.shape[1]
@@ -378,17 +377,14 @@ class EQTL_FACTORIZATION_VI(object):
 			#########################
 			start_time = time.time()
 			# Update parameter estimaters via coordinate ascent
-			self.update_V()
-
 			print('U update')
 			self.update_U()
 			print('V update')
+			self.update_V()
 			print('alpha update')
 			self.update_alpha()
 			print('C update')
 			self.update_C()
-			print('F update')
-			self.update_F()
 			# Only run gammaU update after X warmup iterations
 			if vi_iter >= self.warmup_iterations: 
 				print('gammaU update')
@@ -644,14 +640,13 @@ class EQTL_FACTORIZATION_VI(object):
 		data_likelihood_term = self.compute_elbo_log_likelihood_term()
 		kl_V_S = self.compute_kl_divergence_of_V_S()
 		kl_U_S = self.compute_kl_divergence_of_U_S()
-		kl_F_S = self.compute_kl_divergence_of_F_S()
 		kl_tau = self.compute_kl_divergence_of_tau()
 		kl_psi = self.compute_kl_divergence_of_psi()
 		kl_theta_u = self.compute_kl_divergence_of_gamma_u()
 		kl_C = self.compute_kl_divergence_of_C()
 		kl_alpha = self.compute_kl_divergence_of_alpha()
 
-		kl_divergence = kl_V_S + kl_U_S + kl_F_S + kl_tau + kl_theta_u + kl_C + kl_psi + kl_alpha
+		kl_divergence = kl_V_S + kl_U_S + kl_tau + kl_theta_u + kl_C + kl_psi + kl_alpha
 
 		elbo = data_likelihood_term - kl_divergence
 		self.elbo.append(elbo)
@@ -839,10 +834,10 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_var = np.ones((self.K, self.T))*(1.0/1.0)
 
 		# Initialize C and F
-		F_betas, C_betas, residual_varz = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)
-		self.F_mu = F_betas
+		C_betas, residual_varz = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)
+		self.F_mu = np.zeros(self.T)
 		#self.F_mu = np.zeros(self.T)
-		self.F_var = np.ones(self.T)
+		self.F_var = np.zeros(self.T)
 		self.C_mu = np.transpose(C_betas)
 		#self.C_mu = np.zeros(self.C_mu.shape)
 		self.C_var = np.ones(self.C_mu.shape)

@@ -20,6 +20,8 @@ def run_linear_model_for_initialization(Y, G, cov, z):
 	F_betas = []
 	C_betas = []
 	residual_varz = []
+	resids = []
+	predz = []
 	for test_number in range(num_tests):
 		y_vec = Y[:,test_number]
 		g_vec = G[:,test_number]
@@ -33,37 +35,13 @@ def run_linear_model_for_initialization(Y, G, cov, z):
 		C_betas.append(reg.coef_[0][1:])
 		pred_y = reg.predict(X)[:,0]
 		resid_y = y_vec - pred_y
+		predz.append(pred_y)
 		residual_varz.append(np.var(resid_y))
-	return np.asarray(F_betas), np.asarray(C_betas), np.asarray(residual_varz)
+		resids.append(resid_y)
+	resids = np.transpose(np.asarray(resids))
+	predz = np.transpose(np.asarray(predz))
+	return np.asarray(F_betas), np.asarray(C_betas), np.asarray(residual_varz), predz
 
-def run_linear_mixed_model_for_initialization(Y, G, cov, z):
-	num_tests = Y.shape[1]
-	F_betas = []
-	C_betas = []
-	residuals = []
-	model_eq = 'y ~ g'
-	for cov_num in range(cov.shape[1]):
-		model_eq = model_eq + ' + x' + str(cov_num)
-	model_eq = model_eq + ' + (1|z)'
-	# 119, 103
-	for test_number in range(num_tests):
-		print(test_number)
-		y_vec = Y[:,test_number]
-		g_vec = G[:,test_number]
-		dd = {'y':y_vec, 'z':z, 'g':g_vec}
-		num_covs = cov.shape[1]
-		for cov_num in range(num_covs):
-			dd['x' + str(cov_num)] = cov[:, cov_num]
-		df = pd.DataFrame(dd)
-		model = Lmer(model_eq, data=df)
-		model.fit()
-		pdb.set_trace()
-		residuals.append(model.residuals)
-		print(np.mean(model.residuals/g_vec)/np.std(model.residuals/g_vec))
-		print('\n')
-		# no_re_pred = np.dot(cov[:,1:],model.coefs['Estimate'][2:]) + model.coefs['Estimate'][0] + model.coefs['Estimate'][1]*g_vec
-	residuals = np.transpose(np.asarray(residuals))
-	return residuals
 
 def compute_kl_divergence_of_gaussian_bernoulli(S, W_mu, W_var, W_var_s_0, gamma_expected, theta_a, theta_b, K):
 	num_feat = W_mu.shape[1]
@@ -207,7 +185,7 @@ def outside_update_U_n(U_mu, U_var, G_slice, G_fe_slice, Y_slice, K, V_S_expecte
 		U_mu[k] = U_var[k]*b_term
 	return np.hstack((U_mu, U_var))
 
-def outside_update_V_t(V_mu, V_var, G_slice, G_fe_slice, Y_slice, K, U_S_expected_val, U_S_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, gamma_v, tau_t_expected_val, test_index):
+def outside_update_V_t(V_mu, V_var, G_slice, G_fe_slice, Y_slice, K, U_S_expected_val, U_S_squared_expected_val, F_S_t_expected_val, covariate_predicted_slice, alpha_t_mu, gamma_v, tau_t_expected_val):
 	for k in range(K):
 		# Compute expectations on other components
 		other_components_expected = (U_S_expected_val@V_mu) - U_S_expected_val[:, k]*V_mu[k]
@@ -372,34 +350,54 @@ class EQTL_FACTORIZATION_VI(object):
 		self.update_elbo()
 		print('##############')
 		print('##############')
+		pred_Y = self.get_pred_Y_wo_interaction()
+		resid = self.Y - pred_Y
+		test_means = np.mean(resid/self.G,axis=0)
+		print(max(test_means))
+		print(min(test_means))
+		print(test_means[119])
+		print(test_means[103])
 		# Loop through VI iterations
 		for vi_iter in range(self.max_iter):
 			print('Variational Inference iteration: ' + str(vi_iter))
-			#########################
 			start_time = time.time()
 			# Update parameter estimaters via coordinate ascent
-			self.update_V()
-
-			print('U update')
-			self.update_U()
-			print('V update')
+			print('tau update')
+			self.update_tau()
 			print('alpha update')
 			self.update_alpha()
+			print('psi update')
+			self.update_psi()
 			print('C update')
 			self.update_C()
 			print('F update')
 			self.update_F()
+			print('tau update')
+			self.update_tau()	
+			#######################
+			pred_Y = self.get_pred_Y_wo_interaction()
+			resid = self.Y - pred_Y
+			test_means = np.mean(resid/self.G,axis=0)
+			print('mean')
+			print(max(test_means))
+			print(min(test_means))
+			print(test_means[119])
+			print(test_means[103])
+			test_means = np.std(resid/self.G,axis=0)
+			print('std')
+			print(max(test_means))
+			print(min(test_means))
+			print(test_means[119])
+			print(test_means[103])
+			print('U update')
+			self.update_U()
+			print('V update')
+			self.update_V()
 			# Only run gammaU update after X warmup iterations
 			if vi_iter >= self.warmup_iterations: 
 				print('gammaU update')
 				self.update_gamma_U()
-			print('psi update')
-			self.update_psi()
-			print('tau update')
-			self.update_tau()
 			self.iter = self.iter + 1
-
-
 
 			####################
 			# Compute ELBO after update
@@ -441,18 +439,14 @@ class EQTL_FACTORIZATION_VI(object):
 				np.save(self.output_root + 'temper_C.npy', (self.C_mu))
 				np.savetxt(self.output_root + 'temper_iter.txt', np.asmatrix(vi_iter), fmt="%s", delimiter='\t')
 				np.savetxt(self.output_root + 'temper_elbo.txt', np.asarray(self.elbo), fmt="%s", delimiter='\n')
+	def get_pred_Y_wo_interaction(self):
+		pred_Y = self.G*np.dot(np.ones((self.N,1)),[self.F_mu]) + np.dot(self.cov, self.C_mu) + self.alpha_big_mu
+		return pred_Y
 	def print_logo(self):
 		print('*********************************************************')
 		print('SURGE Training')
 		print('Single cell Unsupervised Regulation of Gene Expression')
 		print('*********************************************************')
-	def get_residual_expression(self):
-		F_terms = np.dot(np.ones((self.N,1)),[self.F_mu])
-		covariate_terms = np.dot(self.cov, self.C_mu)
-		interaction_terms = np.dot(self.U_mu, self.V_mu)*self.G
-		pred_expr = self.alpha_big_mu + covariate_terms + self.G*F_terms + interaction_terms
-		resid_expr1 = self.Y - pred_expr
-		return resid_expr1		
 	def update_step_size(self):
 		# Only needs to be done for SVI
 		if self.SVI == True:
@@ -517,7 +511,7 @@ class EQTL_FACTORIZATION_VI(object):
 		V_update_data = []
 
 		for test_index in range(self.T):
-			V_update_data.append(outside_update_V_t(V_mu_copy[:, test_index], V_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.K, U_S_expected_val, U_S_squared_expected_val, self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], self.gamma_v, tau_expected_val[test_index], test_index))
+			V_update_data.append(outside_update_V_t(V_mu_copy[:, test_index], V_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.K, U_S_expected_val, U_S_squared_expected_val, self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], self.gamma_v, tau_expected_val[test_index]))
 
 		# Convert to array
 		V_update_data = np.asarray(V_update_data).T
@@ -790,8 +784,9 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_mu = pca.components_.T
 		for k in range(self.K):
 			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
-		self.U_var = np.ones((self.N, self.K))*(1.0/1.0)
-		self.gamma_U_alpha = np.ones(self.K)*self.gamma_v
+		self.U_mu = self.U_mu*0.0
+		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v) 
+		self.gamma_U_alpha = np.ones(self.K)
 		self.gamma_U_beta = np.ones(self.K)
 		#self.S_U = np.ones((self.N,self.K))
 
@@ -836,15 +831,13 @@ class EQTL_FACTORIZATION_VI(object):
 		self.V_mu = pca.components_
 		for k in range(self.K):
 			self.V_mu[k,:] = ((self.V_mu[k,:]-np.mean(self.V_mu[k,:]))/np.std(self.V_mu[k,:]))
-		self.V_var = np.ones((self.K, self.T))*(1.0/1.0)
+		self.V_var = np.ones((self.K, self.T))*(1.0/self.gamma_v)
 
 		# Initialize C and F
-		F_betas, C_betas, residual_varz = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)
+		F_betas, C_betas, residual_varz, predicted_init = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)
 		self.F_mu = F_betas
-		#self.F_mu = np.zeros(self.T)
 		self.F_var = np.ones(self.T)
 		self.C_mu = np.transpose(C_betas)
-		#self.C_mu = np.zeros(self.C_mu.shape)
 		self.C_var = np.ones(self.C_mu.shape)
 
 		self.cov_squared = np.square(self.cov)
