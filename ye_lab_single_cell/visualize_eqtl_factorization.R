@@ -126,8 +126,8 @@ make_pseudobulk_covariate_loading_correlation_heatmap <- function(covariates, lo
   loadings <- as.matrix(loadings)
 
 
-  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30)
-  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32)
+  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
 
   #print(summary(covariates))
 
@@ -321,13 +321,13 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-expr <- read.table(gene_expr_file, header=FALSE)
-saveRDS( expr, "expr.rds")
-#expr <- readRDS("expr.rds")
+#expr <- read.table(gene_expr_file, header=FALSE)
+#saveRDS( expr, "expr.rds")
+expr <- readRDS("expr.rds")
 
-expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-saveRDS(expr_pcs, "expr_pcs.rds")
-#expr_pcs <- readRDS("expr_pcs.rds")
+#expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+#saveRDS(expr_pcs, "expr_pcs.rds")
+expr_pcs <- readRDS("expr_pcs.rds")
 
 
 loadings <- loadings[, ordering]
@@ -524,6 +524,14 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 #######################################
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sle_status.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$SLE_status, umap_loadings, "SLE Status")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_log_donor_isg_score.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(log(covariates$donor_isg_score), umap_loadings, "log(Donor ISG score)")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 ######################################

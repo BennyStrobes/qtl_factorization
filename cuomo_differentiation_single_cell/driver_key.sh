@@ -87,14 +87,14 @@ lambda_v="1"
 variance_param="1e-3"
 ard_variance_param="1e-16"
 seed="1"
-model_name="eqtl_factorization_vi_ard_fixed_test_specific_tau"
+model_name="eqtl_factorization_vi_ard"
 ratio_variance_standardization="True"
 permutation_type="False"
-warmup_iterations="5000"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+warmup_iterations="5"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_filter_out_heteroskedastic_"
+if false; then
 sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-
-
+fi
 if false; then
 model_name="eqtl_factorization_vi_no_factorization"
 ratio_variance_standardization="False"
@@ -152,15 +152,12 @@ output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_resul
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
-
-
 if false; then
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_scran_1000_hvg_eqtl_factorization_vi_ard_no_F_results_k_init_5_seed_1_warmup_5000_ratio_variance_std_True_permute_False_temper_"
-output_stem="standard_eqtl_rv_True_permute_False_seed_1_k_5_warmup_5000_no_F_"
+model_stem="eqtl_factorization_standard_eqtl_scran_1000_hvg_eqtl_factorization_vi_ard_results_k_init_5_seed_1_warmup_5_ratio_variance_std_True_permute_False_filter_out_heteroskedastic_temper_"
+output_stem="standard_eqtl_rv_True_permute_False_seed_1_k_5_warmup_5_heteroskedastic_filter_"
 Rscript visualize_eqtl_factorization.R $processed_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
-
 
 
 if false; then

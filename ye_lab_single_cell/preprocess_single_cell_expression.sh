@@ -14,6 +14,7 @@ genotyped_individuals_file="$5"
 processed_pseudobulk_expression_dir="$6"
 visualize_processed_pseudobulk_expression_dir="$7"
 regress_out_batch="$8"
+isg_score_file="$9"
 
 module load R/3.6.1
 module load python/3.7.4-anaconda
@@ -34,7 +35,7 @@ cluster_resolution="10.0"
 module load R/3.6.1
 module load python/3.7.4-anaconda
 # Generate pseudobulk expression
-python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $regress_out_batch
+python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $regress_out_batch $isg_score_file
 
 
 if false; then

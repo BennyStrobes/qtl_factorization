@@ -20,6 +20,8 @@ genotype_id_mapping_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/impu
 # File containing genotyped individuals
 genotyped_individuals_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/genotyped_individuals.txt"
 
+# File containing isg scores for each individual
+isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/isg_scores.csv"
 
 ######################
 # Output directories
@@ -70,11 +72,12 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 regress_out_batch="True"
 if false; then
-sbatch preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file
 fi
+
 regress_out_batch="False"
 if false; then
-sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file
 fi
 
 ######################
@@ -114,7 +117,6 @@ num_latent_factors="10"
 lambda_v="1"
 variance_param="1e-3"
 ard_variance_param="1e-16"
-if false; then
 seed="1"
 model_name="eqtl_factorization_vi_ard"
 ratio_variance_standardization="True"
@@ -122,8 +124,18 @@ permutation_type="False"
 warmup_iterations="0"
 
 
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_remove_heteroskedastic_points_"
+sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+
+model_name="eqtl_factorization_vi_no_factorization"
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_"
+if false; then
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+fi
+
+
+if false; then
 
 seed="1"
 model_name="eqtl_factorization_vi_ard"
@@ -183,8 +195,8 @@ fi
 #############################################
 if false; then
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_seed_1_warmup_0_ratio_variance_std_True_permute_False_temper_"
-output_stem="standard_eqtl_rv_True_permute_False_seed_1"
+model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_seed_1_warmup_0_ratio_variance_std_True_permute_False_remove_heteroskedastic_points_temper_"
+output_stem="standard_eqtl_rv_True_permute_False_seed_1_remove_het"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
 

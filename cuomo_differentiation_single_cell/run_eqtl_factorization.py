@@ -253,12 +253,19 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		G = standardize_variance_ratio_between_expression_and_genotype(Y_resid, G)
 		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y_resid, G_fe)	
 
-	#valid_indices = np.asarray([True]*Y.shape[1])
-	#valid_indices[103] = False
-	#valid_indices[119] = False
-	#Y = Y[:, valid_indices]
-	#G = G[:, valid_indices]
-	#G_fe = G_fe[:, valid_indices]
+	valid_indices = np.asarray([True]*Y.shape[1])
+	corrz1_arr = []
+	corrz2_arr = []
+	for test_num in range(num_tests):
+		corrz1 = np.abs(np.corrcoef(np.abs(Y[:, test_num]), G[:, test_num])[0,1])
+		corrz2 = np.abs(np.corrcoef(np.abs(Y_resid[:, test_num]), G[:, test_num])[0,1])
+		corrz1_arr.append(corrz1)
+		corrz2_arr.append(corrz2)
+		if corrz1 > .2:
+			valid_indices[test_num] = False
+	Y = Y[:, valid_indices]
+	G = G[:, valid_indices]
+	G_fe = G_fe[:, valid_indices]
 
 
 	#####################################

@@ -138,7 +138,7 @@ def get_mode_of_string_list(arr):
 	return mode_value
 
 # Extract covariates of pseudobulk samples from cell level covariates file
-def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata_obs, cluster_assignments, pseudobulk_covariate_file):
+def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata_obs, cluster_assignments, pseudobulk_covariate_file, donor_to_isg_score):
 	# Create mapping from cell type to index position of those cell types
 	unique_cell_types = np.unique(adata_obs['cg_cov'])
 	num_cell_types = len(unique_cell_types)
@@ -152,7 +152,7 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 	t.write('pseudobulk_sample\tind_cov\tAge\tSex\tpop_cov\tStatus\tSLE_status\tnum_cells\tbatch_cov\tcg_cov_mode\tct_cov_mode')
 	for cell_type in unique_cell_types:
 		t.write('\t' + cell_type + '_fraction')
-	t.write('\tavg_n_genes_by_counts\tavg_log1p_n_genes_by_counts\ttotal_counts\tlog_total_counts\tavg_total_counts\tavg_log_total_counts\tavg_pct_counts_in_top_50_genes\tavg_pct_counts_in_top_100_genes\tavg_pct_counts_in_top_200_genes')
+	t.write('\tavg_n_genes_by_counts\tavg_log1p_n_genes_by_counts\ttotal_counts\tlog_total_counts\tavg_total_counts\tavg_log_total_counts\tavg_pct_counts_in_top_50_genes\tavg_pct_counts_in_top_100_genes\tavg_pct_counts_in_top_200_genes\tdonor_isg_score')
 	t.write('\n')
 
 	count = 0
@@ -265,7 +265,10 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 
 		# avg pct_counts in top 200 genes
 		avg_pct_counts_in_top_200_genes = np.mean(adata.obs['pct_counts_in_top_200_genes'][pseudobulk_sample_indices])
-		t.write('\t' + str(avg_pct_counts_in_top_200_genes) + '\n')	
+		t.write('\t' + str(avg_pct_counts_in_top_200_genes))
+
+		# Donor isg score
+		t.write('\t' + str(donor_to_isg_score[donor_id]) + '\n')
 	t.close()
 
 
@@ -328,7 +331,17 @@ def normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, 
 	pca_ve_file = pb_expression_output_root + 'pca_pve.txt'
 	generate_pca_scores_and_variance_explained(pseudobulk_expression_file, num_pcs, pca_file, pca_ve_file)
 
-
+def create_donor_to_isg_score_mapping(isg_score_file):
+	f = open(isg_score_file)
+	mapping = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split(',')
+		donor_id = data[0]
+		score = float(data[1])
+		mapping[donor_id] = score
+	f.close()
+	return mapping
 
 #####################
 # Command line args
@@ -338,11 +351,16 @@ processed_pseudobulk_expression_dir = sys.argv[2]  # Output dir
 genotyped_individuals_file = sys.argv[3]  # File containing list of which individuals are genotyped
 cluster_resolution = float(sys.argv[4])
 regress_out_batch = sys.argv[5]  # Hyperparameter
+isg_score_file = sys.argv[6]
 
 # Load in processed-SC Ann-Data file
 input_h5py_file = processed_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_2.h5ad'
 #adata = sc.read_h5ad(input_h5py_file)
 
+#################
+# Create mapping from donor id to isg score
+################
+donor_to_isg_score = create_donor_to_isg_score_mapping(isg_score_file)
 
 
 ##################
@@ -402,6 +420,7 @@ if np.array_equal(raw_ordered_genes, raw_ordered_genes2) == False:
 	print('assumption error')
 	pdb.set_trace()
 
+'''
 #####################
 # Get raw pseudobulk expression
 #####################
@@ -421,10 +440,11 @@ np.savetxt(gene_names_file, raw_ordered_genes, fmt="%s", delimiter='\t')
 sample_names_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_names.txt'
 np.savetxt(sample_names_file, ordered_pseudobulk_samples, fmt="%s", delimiter='\t')
 # Generate pseudobulk covaraite file
+'''
 pseudobulk_covariate_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_covariates.txt'
-print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file)
+print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file, donor_to_isg_score)
 
-
+'''
 
 
 #####################
@@ -481,4 +501,4 @@ num_pcs = 200
 # output root
 pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
-
+'''
