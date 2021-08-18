@@ -115,7 +115,7 @@ cov = np.ones((num_samples, 1))
 
 
 
-eqtl_vi = eqtl_factorization_ard_no_alpha.EQTL_FACTORIZATION_VI(K=3, alpha=1e-3, beta=1e-3, a=1, b=1, max_iter=400, gamma_v=1)
+eqtl_vi = eqtl_factorization_ard_no_alpha.EQTL_FACTORIZATION_VI(K=3, alpha=1e-3, beta=1e-3, a=1, b=1, max_iter=20, gamma_v=1)
 eqtl_vi.fit(G=G, Y=Y, z=Z, cov=cov)
 
 test_tau = (eqtl_vi.tau_alpha/eqtl_vi.tau_beta)[0]

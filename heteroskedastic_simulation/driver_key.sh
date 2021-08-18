@@ -12,7 +12,7 @@ output_root="/work-zfs/abattle4/bstrober/qtl_factorization/heteroskedastic_simul
 simulation_results_dir=$output_root"simulation_results/"
 visualization_dir=$output_root"visualization/"
 
-
+if false; then
 num_samples="2000"
 num_tests="100"
 version="heteroskedasticity"
@@ -24,8 +24,9 @@ for af in "${af_array[@]}"; do
 		python run_simulation.py $num_samples $num_tests $af $seed $version $output_file
 	done
 done
+fi
 
-
+if false; then
 num_samples="2000"
 num_tests="100"
 af=".1"
@@ -36,3 +37,7 @@ for seed in "${seed_array[@]}"; do
 	output_file=$simulation_results_dir"results_af_"$af"_version_"$version"_seed_"$seed"_"
 	python run_simulation.py $num_samples $num_tests $af $seed $version $output_file
 done
+fi
+
+module load R/3.5.1
+Rscript visualize_simulation_results.R $simulation_results_dir $visualization_dir
