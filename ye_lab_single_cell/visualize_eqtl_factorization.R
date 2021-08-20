@@ -600,6 +600,13 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ancestry.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$pop_cov, umap_loadings, "Known Ancestry")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
 # Visualize UMAP scatter plot based on latent factors
 #######################################
 lf_num <- 1
