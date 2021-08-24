@@ -152,7 +152,7 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 	t.write('pseudobulk_sample\tind_cov\tAge\tSex\tpop_cov\tStatus\tSLE_status\tnum_cells\tbatch_cov\tcg_cov_mode\tct_cov_mode')
 	for cell_type in unique_cell_types:
 		t.write('\t' + cell_type + '_fraction')
-	t.write('\tavg_n_genes_by_counts\tavg_log1p_n_genes_by_counts\ttotal_counts\tlog_total_counts\tavg_total_counts\tavg_log_total_counts\tavg_pct_counts_in_top_50_genes\tavg_pct_counts_in_top_100_genes\tavg_pct_counts_in_top_200_genes\tdonor_isg_score')
+	t.write('\tavg_n_genes_by_counts\tavg_log1p_n_genes_by_counts\ttotal_counts\tlog_total_counts\tavg_total_counts\tavg_log_total_counts\tavg_pct_counts_in_top_50_genes\tavg_pct_counts_in_top_100_genes\tavg_pct_counts_in_top_200_genes\tdonor_isg_score\tavg_cell_isg_score')
 	t.write('\n')
 
 	count = 0
@@ -268,7 +268,11 @@ def print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samp
 		t.write('\t' + str(avg_pct_counts_in_top_200_genes))
 
 		# Donor isg score
-		t.write('\t' + str(donor_to_isg_score[donor_id]) + '\n')
+		t.write('\t' + str(donor_to_isg_score[donor_id]))
+
+		# Cell isg score
+		avg_cell_id_score = np.mean(adata.obs['cell_isg_score'][pseudobulk_sample_indices])
+		t.write('\t' + str(avg_cell_id_score) + '\n')
 	t.close()
 
 
@@ -343,6 +347,28 @@ def create_donor_to_isg_score_mapping(isg_score_file):
 	f.close()
 	return mapping
 
+def create_cell_id_to_isg_score_mapping(isg_score_file):
+	f = open(isg_score_file)
+	head_count = 0
+	mapping = {}
+	for line in f:
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		line = line.rstrip()
+		data = line.split(',')
+		donor_id = data[0]
+		score = float(data[1])
+		mapping[donor_id] = score
+	f.close()
+	return mapping
+
+def get_ordered_cell_isg_scores(cell_id_to_isg_score, cell_ids):
+	cell_isg_scores = []
+	for cell_id in cell_ids:
+		cell_isg_scores.append(cell_id_to_isg_score[cell_id])
+	return np.asarray(cell_isg_scores)
+
 #####################
 # Command line args
 #####################
@@ -352,6 +378,7 @@ genotyped_individuals_file = sys.argv[3]  # File containing list of which indivi
 cluster_resolution = float(sys.argv[4])
 regress_out_batch = sys.argv[5]  # Hyperparameter
 isg_score_file = sys.argv[6]
+cell_isg_score_file = sys.argv[7]
 
 # Load in processed-SC Ann-Data file
 input_h5py_file = processed_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_2.h5ad'
@@ -361,7 +388,11 @@ input_h5py_file = processed_expression_dir + 'scran_normalization_regress_batch_
 # Create mapping from donor id to isg score
 ################
 donor_to_isg_score = create_donor_to_isg_score_mapping(isg_score_file)
-
+#################
+# Create mapping from cell id to isg score
+################
+cell_id_to_isg_score = create_cell_id_to_isg_score_mapping(cell_isg_score_file)
+print('done')
 
 ##################
 # Perform cell clustering seperately in each individual
@@ -378,6 +409,8 @@ adata = sc.read_h5ad(temp_h5_output_file)
 # Add cell id to covariate file
 #######################
 adata.obs['cell_id'] = adata.obs.index
+ordered_cell_isg_scores = get_ordered_cell_isg_scores(cell_id_to_isg_score, adata.obs['cell_id'])
+adata.obs['cell_isg_score'] = ordered_cell_isg_scores
 
 
 #######################

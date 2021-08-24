@@ -4,6 +4,8 @@ import sys
 import pdb
 import eqtl_factorization_vi_ard
 import eqtl_factorization_vi_ard_heteroskedastic
+import eqtl_factorization_vi_ard_heteroskedastic_full_component_update
+import eqtl_factorization_vi_ard_full_component_update
 import eqtl_factorization_vi_ard_no_F
 import eqtl_factorization_vi_ard_alt_init
 import eqtl_factorization_vi_no_factorization
@@ -240,12 +242,22 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	G = standardize_columns(G)
 	G_fe = standardize_columns(G_fe)
 
+	valid_columns = np.asarray([True]*Y.shape[1])
+	num_tests = Y.shape[1]
+	for test_num in range(num_tests):
+		if np.sum(G[:, test_num] == 0.0) > 0.0:
+			valid_columns[test_num] = False
+	Y = Y[:, valid_columns]
+	G = G[:, valid_columns]
+	G_fe = G_fe[:, valid_columns]
+
+	'''
 	remove_ratio_outliers_bool = 'False'
 	if remove_ratio_outliers_bool == 'True':
 		Y, G, G_fe, Y_resid = remove_ratio_outliers(Y, G, G_fe, Z, cov)
 	elif remove_ratio_outliers_bool == 'False':
 		Y_resid = get_lmm_residual_expression(Y, G, G_fe, Z, cov)
-
+	'''
 	# Get number of samples, number of tests, number of individuals
 	num_samples = Y.shape[0]
 	num_tests = Y.shape[1]
@@ -253,32 +265,43 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	if ratio_variance_standardization == 'True':
 		G = standardize_variance_ratio_between_expression_and_genotype(Y, G)
 		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y, G_fe)
+	'''
 	elif ratio_variance_standardization == 'True_residuals':
 		G = standardize_variance_ratio_between_expression_and_genotype(Y_resid, G)
 		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y_resid, G_fe)	
-
 	'''
+
 	valid_indices = np.asarray([True]*Y.shape[1])
 	corrz1_arr = []
-	corrz2_arr = []
 	for test_num in range(num_tests):
 		corrz1 = np.abs(np.corrcoef(np.abs(Y[:, test_num]), G[:, test_num])[0,1])
-		corrz2 = np.abs(np.corrcoef(np.abs(Y_resid[:, test_num]), G[:, test_num])[0,1])
 		corrz1_arr.append(corrz1)
-		corrz2_arr.append(corrz2)
-		if corrz1 > .2:
+		if corrz1 > .5:
 			valid_indices[test_num] = False
 	Y = Y[:, valid_indices]
 	G = G[:, valid_indices]
 	G_fe = G_fe[:, valid_indices]
-	'''
-
-
 	#####################################
 	# Run SURGE model
 	#####################################
 	if model_name == 'eqtl_factorization_vi_ard':
 		eqtl_vi = eqtl_factorization_vi_ard.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=600, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
+		eqtl_vi.fit(G=G, G_fe=G_fe, Y=Y, z=Z, cov=cov)
+
+		# Save to output file
+		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'gamma_U.txt', eqtl_vi.gamma_U_alpha/eqtl_vi.gamma_U_beta, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'alpha.txt', eqtl_vi.alpha_mu, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'psi.txt', (eqtl_vi.psi_alpha/eqtl_vi.psi_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'elbo.txt', np.asarray(eqtl_vi.elbo), fmt="%s", delimiter='\n')
+		np.savetxt(output_root + 'factor_genetic_pve.txt', (eqtl_vi.factor_genetic_pve), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'factor_pve.txt', (eqtl_vi.factor_pve), fmt="%s", delimiter='\t')
+	elif model_name == 'eqtl_factorization_vi_ard_full_component_update':
+		eqtl_vi = eqtl_factorization_vi_ard_full_component_update.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=600, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
 		eqtl_vi.fit(G=G, G_fe=G_fe, Y=Y, z=Z, cov=cov)
 
 		# Save to output file
@@ -311,6 +334,22 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		np.savetxt(output_root + 'factor_pve.txt', (eqtl_vi.factor_pve), fmt="%s", delimiter='\t')
 	elif model_name == 'eqtl_factorization_vi_ard_heteroskedastic':
 		eqtl_vi = eqtl_factorization_vi_ard_heteroskedastic.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=600, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
+		eqtl_vi.fit(G=G, G_fe=G_fe, G_raw=G_raw, Y=Y, z=Z, cov=cov)
+
+		# Save to output file
+		np.savetxt(output_root + 'U_S.txt', (eqtl_vi.U_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'gamma_U.txt', eqtl_vi.gamma_U_alpha/eqtl_vi.gamma_U_beta, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'V.txt', (eqtl_vi.V_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'F.txt', (eqtl_vi.F_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'alpha.txt', eqtl_vi.alpha_mu, fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'tau.txt', (eqtl_vi.tau_alpha/eqtl_vi.tau_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'psi.txt', (eqtl_vi.psi_alpha/eqtl_vi.psi_beta), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'C.txt', (eqtl_vi.C_mu), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'elbo.txt', np.asarray(eqtl_vi.elbo), fmt="%s", delimiter='\n')
+		np.savetxt(output_root + 'factor_genetic_pve.txt', (eqtl_vi.factor_genetic_pve), fmt="%s", delimiter='\t')
+		np.savetxt(output_root + 'factor_pve.txt', (eqtl_vi.factor_pve), fmt="%s", delimiter='\t')
+	elif model_name == 'eqtl_factorization_vi_ard_heteroskedastic_full_component_update':
+		eqtl_vi = eqtl_factorization_vi_ard_heteroskedastic_full_component_update.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=600, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
 		eqtl_vi.fit(G=G, G_fe=G_fe, G_raw=G_raw, Y=Y, z=Z, cov=cov)
 
 		# Save to output file

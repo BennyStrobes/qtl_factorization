@@ -395,7 +395,7 @@ class EQTL_FACTORIZATION_VI(object):
 			print('F update')
 			self.update_F()
 			# Only run gammaU update after X warmup iterations
-			if vi_iter >= self.warmup_iterations: 
+			if vi_iter >= (self.warmup_iterations): 
 				print('gammaU update')
 				self.update_gamma_U()
 			print('psi update')

@@ -30,6 +30,9 @@ genotyped_individuals_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/im
 # File containing isg scores for each individual
 isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/isg_scores.csv"
 
+# File containing isg scores for each cell
+cell_isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/cell_isg_scores.csv"
+
 ######################
 # Output directories
 ######################
@@ -79,12 +82,12 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 ######################
 regress_out_batch="True"
 if false; then
-sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file $cell_isg_score_file
 fi
 
 regress_out_batch="False"
 if false; then
-sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file $cell_isg_score_file
 fi
 
 ######################
@@ -203,11 +206,10 @@ fi
 ## Visualize eqtl factorization
 #############################################
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_0_ratio_variance_std_False_permute_False_round_genotype_temper_"
-output_stem="standard_eqtl_heteroskedastic_rv_False_permute_False_seed_1_0_warmup_lambda_1_"
-if false; then
+model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_0_ratio_variance_std_True_permute_False_round_genotype_temper_"
+output_stem="standard_eqtl_heteroskedastic_rv_True_permute_False_seed_1_0_warmup_lambda_1_"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-fi
+
 
 
 

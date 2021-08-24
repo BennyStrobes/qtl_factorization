@@ -13,7 +13,6 @@ gtex_v8_figure_theme <- function() {
 	return(theme(plot.title = element_text(face="plain",size=11), text = element_text(size=11),axis.text=element_text(size=11), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=11), legend.title = element_text(size=11)))
 }
 
-
 make_loading_boxplot_for_one_factor_by_categorical_covariate <- function(covariate, loadings, factor_number, covariate_name) {
   df <- data.frame(loading=loadings, covariate=factor(covariate))
 
@@ -91,6 +90,18 @@ make_scatter_plot_colored_by_categorical_variable <- function(x_var, y_var, colo
   return(plotter)
 }
 
+make_loading_vs_loading_scatter_colored_by_categorical_covariate <- function(loadings1, loadings2, covariates, loading1_name, loading2_name, covariate_name) {
+  df <- data.frame(loading_1=loadings1, loading_2=loadings2, covariate=factor(covariates))
+  plotter <- ggplot(df) + 
+             geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.01) +
+             gtex_v8_figure_theme() + 
+             guides(colour = guide_legend(override.aes = list(size=2))) +
+             labs(x=loading1_name, y = loading2_name, color=covariate_name) + 
+             guides(colour=guide_legend(nrow=3,byrow=TRUE, override.aes = list(size=2))) +
+             theme(legend.position="bottom") + 
+             theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
+  return(plotter)
+}
 
 make_umap_loading_scatter_plot_colored_by_categorical_variable <- function(covariates, umap_loadings, covariate_name) {
 	df <- data.frame(loading_1=umap_loadings[,1], loading_2=umap_loadings[,2], covariate=factor(covariates))
@@ -105,6 +116,18 @@ make_umap_loading_scatter_plot_colored_by_categorical_variable <- function(covar
 	return(plotter)
 }
 
+
+make_loading_vs_loading_scatter_colored_by_real_valued_covariate <- function(loadings1, loadings2, covariates, loading1_name, loading2_name, covariate_name) {
+  df <- data.frame(loading_1=loadings1, loading_2=loadings2, covariate=(covariates))
+  plotter <- ggplot(df) + 
+             geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.01) +
+             gtex_v8_figure_theme() + 
+             labs(x=loading1_name, y = loading2_name, color=covariate_name) + 
+             scale_color_gradient(low="pink",high="blue") +
+             theme(legend.position="bottom") + 
+             theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
+  return(plotter)
+}
 
 make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covariates, umap_loadings, covariate_name) {
 	df <- data.frame(loading_1=umap_loadings[,1], loading_2=umap_loadings[,2], covariate=covariates)
@@ -231,7 +254,7 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
     line_plot <- ggplot(data=df, aes(x=pc_num, y=variance_explained)) +
                 geom_line() +
                 geom_point() +
-                ylim(0,max(variance_explained) + .002) + 
+                ylim(0,max(variance_explained) + (max(variance_explained)*.1)) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
                 labs(x = "Factor number", y = "Fraction of QTL variance explained") + 
                 gtex_v8_figure_theme() 
@@ -352,7 +375,37 @@ make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
     return(heatmap)
 }
 
+make_loading_expression_pc_scatter_for_each_factor <- function(expression_pc, loading, factor_number, x_axis_label) {
+  df <- data.frame(expression_pc=expression_pc, loading=loading)
+  print(factor_number)
+  print(cor(expression_pc, loading)*cor(expression_pc, loading))
 
+  plotter <- ggplot(df, aes(x=expression_pc, y=loading)) + 
+             geom_point(size=.001, alpha=.35) +
+             gtex_v8_figure_theme() + 
+             labs(x=x_axis_label, y = paste0("Loading ", factor_number)) + 
+             theme(legend.text = element_text(size=8), legend.title = element_text(size=8)) +
+             geom_smooth()
+  return(plotter)
+
+}
+
+
+loading_expression_pc1_scatter_with_row_for_every_factor <- function(expression_pc, loadings, x_axis_label) {
+  num_factors <- dim(loadings)[2]
+
+  plot_arr <- list()
+
+  for (factor_num in 1:num_factors) {
+    factor_boxplot <- make_loading_expression_pc_scatter_for_each_factor(expression_pc, loadings[, factor_num], factor_num, x_axis_label)
+    plot_arr[[factor_num]] <- factor_boxplot
+  }
+
+  merged = plot_grid(plotlist=plot_arr, ncol=1)
+
+
+  return(merged)
+}
 
 ############################
 # Command line args
@@ -422,7 +475,34 @@ output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
 #hist <- make_factor_distribution_histograms(factors)
 #ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
+######################################
+# Make loading boxplot with row for every factor colored by batch
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_plate.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$plate_id, loadings, "Plate ID")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
+
+######################################
+# Make loading vs loading scatter plot colored by real-valued covariate
+#######################################
+output_file <- paste0(visualization_dir, "loading1_vs_loading2_colored_by_g1_s_transition.pdf")
+scatter <- make_loading_vs_loading_scatter_colored_by_real_valued_covariate(loadings[,1], loadings[,2], covariates$G1_S_transition, "Loading 1", "Loading 2", "G1-S transition")
+ggsave(scatter, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading vs loading scatter plot colored by categorical covariate
+#######################################
+output_file <- paste0(visualization_dir, "loading1_vs_loading2_colored_by_day.pdf")
+scatter <- make_loading_vs_loading_scatter_colored_by_categorical_covariate(loadings[,1], loadings[,2], covariates$day, "Loading 1", "Loading 2", "Differentiation day")
+ggsave(scatter, file=output_file, width=7.2, height=5.5, units="in")
+
+######################################
+# Make loading boxplot with row for every factor colored by batch
+#######################################
+output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_factor_colored_by_day.pdf")
+boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$day, loadings, "Plate ID")
+ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
 ######################################
 # Make loading boxplot colored by Differentiation day
@@ -430,5 +510,59 @@ output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_day.pdf")
 boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$day, loadings, "Differentiation day")
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+
+
+output_file <- paste0(visualization_dir, "loading_by_pseudotime_scatter_with_row_for_every_factor.pdf")
+scatter_plot <-loading_expression_pc1_scatter_with_row_for_every_factor(covariates$PC1_top500hvgs, loadings[,1:2], "PC1")
+ggsave(scatter_plot, file=output_file, width=7.2, height=10.5, units="in")
+
+
+
+
+print('UMAP START')
+umap_loadings = umap(loadings)$layout
+saveRDS( umap_loadings, "umap_loadings.rds")
+#umap_loadings <- readRDS("umap_loadings.rds")
+print('UMAP DONE')
+
+
+######################################
+# Visualize UMAP scatter plot colored by individual
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_donor.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$donor, umap_loadings, "Known individual")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_day.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$day, umap_loadings, "day")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_experiment.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$experiment, umap_loadings, "experiment")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_plate.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$plate_id, umap_loadings, "plate")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_pc1_top500hvgs.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(covariates$PC1_top500hvgs, umap_loadings, "PC1")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
 
 

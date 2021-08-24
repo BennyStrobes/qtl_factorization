@@ -126,8 +126,8 @@ make_pseudobulk_covariate_loading_correlation_heatmap <- function(covariates, lo
   loadings <- as.matrix(loadings)
 
 
-  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32)
-  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
+  valid_covariates <- c(2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33)
+  covariate_type <- c("cat", "num", "cat", "cat", "cat", "cat", "num", "cat", "cat", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num", "num")
 
   #print(summary(covariates))
 
@@ -676,6 +676,13 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expres
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_avg_cell_isg_score.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable((covariates$avg_cell_isg_score), umap_loadings, "avg cell ISG score")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_log_avg_cell_isg_score.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(log(covariates$avg_cell_isg_score - min(covariates$avg_cell_isg_score) + 1), umap_loadings, "log(avg cell ISG score)")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 ######################################
 # Visualize UMAP scatter plot based on marker genes
 #######################################

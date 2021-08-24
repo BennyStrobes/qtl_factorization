@@ -161,18 +161,18 @@ def get_experiment_variable_from_cell_covariate_file(cell_covariates_file):
 		experiments.append(data[index])
 	return np.asarray(experiments)
 
-def get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, cell_covariates_file, method):
+def get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, cell_covariates_file, method, num_genes):
 	experiment = get_experiment_variable_from_cell_covariate_file(cell_covariates_file)
 	if method == 'scanpy_approach':
 		adata = scanpy.read(recreated_normalized_gene_expression_gene_symbols_file).transpose()
-		scanpy.pp.highly_variable_genes(adata)
+		scanpy.pp.highly_variable_genes(adata, n_top_genes=num_genes)
 		indices = adata.var['highly_variable']
 	elif method == 'scran_approach':
 		temp_expr = np.loadtxt(recreated_normalized_gene_expression_gene_symbols_file, dtype=str,delimiter='\t', comments='**')
 		np.savetxt('experiment_temp.txt', experiment, fmt="%s", delimiter='\n')
 		np.savetxt('expr_temp.txt', temp_expr[1:,1:], fmt="%s", delimiter='\t')
 		os.system('Rscript get_scran_hvg.R expr_temp.txt experiment_temp.txt')
-		num_genes = 1000
+		#num_genes = 1000
 		scran_hvg_data = np.loadtxt('hvg.txt',dtype=str,delimiter='\t')
 		hvg_bio = scran_hvg_data[1:,2].astype(float)
 		indices = hvg_bio > sorted(hvg_bio,reverse=True)[num_genes]
@@ -303,27 +303,31 @@ filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expre
 
 ###############################
 # Limit to highly variable genes
-hvg_methods = ['scran', 'scanpy']
+hvg_methods = ['scran', 'scanpy', 'scran', 'scanpy', 'scran', 'scanpy', 'scran', 'scanpy']
+num_genes_arr = [1000, 1000, 2000, 2000, 3000, 3000, 4000, 4000]
 
-for hvg_method in hvg_methods:
-	highly_variable_gene_indices = get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, recreated_cell_covariates_file, hvg_method + '_approach')
-	recreated_normalized_hvg_gene_expression_file = processed_expression_dir + 'normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells.txt'
+for i, hvg_method in enumerate(hvg_methods):
+	num_genes = num_genes_arr[i]
+	full_hvg_method = hvg_method + '_' + str(num_genes)
+
+	highly_variable_gene_indices = get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, recreated_cell_covariates_file, hvg_method + '_approach', num_genes)
+	recreated_normalized_hvg_gene_expression_file = processed_expression_dir + 'normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells.txt'
 	filter_to_highly_variable_genes(recreated_normalized_gene_expression_file, recreated_normalized_hvg_gene_expression_file, highly_variable_gene_indices)
 
 
 	###############################
 	# Standardize expression data
-	standardized_gene_expression_file = processed_expression_dir + 'standardized_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells.txt'
+	standardized_gene_expression_file = processed_expression_dir + 'standardized_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells.txt'
 	standardize_expression(recreated_normalized_hvg_gene_expression_file, standardized_gene_expression_file)
 
-	standardized_10_cap_gene_expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells.txt'
+	standardized_10_cap_gene_expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells.txt'
 	standardize_expression_capped(recreated_normalized_hvg_gene_expression_file, standardized_10_cap_gene_expression_file, 10)
 
 	###############################
 	# Run PCA on standardized expression data
 	num_pcs=200
-	pca_loading_file = processed_expression_dir + 'standardized_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells_pca_loadings.txt'
-	pca_pve_file = processed_expression_dir + 'standardized_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells_pca_pve.txt'
+	pca_loading_file = processed_expression_dir + 'standardized_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells_pca_loadings.txt'
+	pca_pve_file = processed_expression_dir + 'standardized_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells_pca_pve.txt'
 	generate_pca_scores_and_variance_explained(standardized_gene_expression_file, num_pcs, pca_loading_file, pca_pve_file)
 
 
@@ -331,6 +335,6 @@ for hvg_method in hvg_methods:
 	###############################
 	# Run PCA on standardized expression data
 	num_pcs=200
-	pca_loading_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells_pca_loadings.txt'
-	pca_pve_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + hvg_method + '_hvg_all_genotyped_cells_pca_pve.txt'
+	pca_loading_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells_pca_loadings.txt'
+	pca_pve_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells_pca_pve.txt'
 	generate_pca_scores_and_variance_explained(standardized_10_cap_gene_expression_file, num_pcs, pca_loading_file, pca_pve_file)

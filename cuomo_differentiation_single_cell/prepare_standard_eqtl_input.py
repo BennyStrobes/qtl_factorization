@@ -345,7 +345,7 @@ processed_genotype_dir = sys.argv[2]
 gene_annotation_file = sys.argv[3]
 standard_eqtl_input_dir = sys.argv[4]
 
-
+'''
 # Input files
 genotype_file = processed_genotype_dir + 'genotype_missing_removed.txt'
 expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scran_hvg_all_genotyped_cells.txt'
@@ -364,4 +364,63 @@ distance=100000
 
 generate_eqtl_input_files(distance, gene_annotation_file, genotype_file, expression_file, cell_info_file, pc_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, eqtl_sample_overlap_file, eqtl_covariate_file)
 
+# Input files
+genotype_file = processed_genotype_dir + 'genotype_missing_removed.txt'
+expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scanpy_hvg_all_genotyped_cells.txt'
+cell_info_file = processed_expression_dir + 'cell_covariates.txt'
+pc_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scanpy_hvg_all_genotyped_cells_pca_loadings.txt'
+
+# Output files
+output_prefix = 'scanpy_hvg_'
+eqtl_variant_gene_pairs_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_variant_gene_pairs.txt'
+eqtl_expression_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_expression.txt'
+eqtl_genotype_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_genotype.txt'
+eqtl_sample_overlap_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_sample_overlap.txt'
+eqtl_covariate_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_covariates.txt'
+
+distance=100000
+
+generate_eqtl_input_files(distance, gene_annotation_file, genotype_file, expression_file, cell_info_file, pc_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, eqtl_sample_overlap_file, eqtl_covariate_file)
+'''
+
+# Input files
+num_genes_arr = [1000, 2000, 3000, 4000]
+for num_genes in num_genes_arr:
+	genotype_file = processed_genotype_dir + 'genotype_missing_removed.txt'
+	expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scran_' + str(num_genes) + '_hvg_all_genotyped_cells.txt'	
+	cell_info_file = processed_expression_dir + 'cell_covariates.txt'
+	pc_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scran_' + str(num_genes) + '_hvg_all_genotyped_cells_pca_loadings.txt'
+
+	# Output files
+	output_prefix = 'scran_' + str(num_genes) + '_hvg_'
+	eqtl_variant_gene_pairs_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_variant_gene_pairs.txt'
+	eqtl_expression_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_expression.txt'
+	eqtl_genotype_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_genotype.txt'
+	eqtl_sample_overlap_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_sample_overlap.txt'
+	eqtl_covariate_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_covariates.txt'
+
+	distance=100000
+
+	generate_eqtl_input_files(distance, gene_annotation_file, genotype_file, expression_file, cell_info_file, pc_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, eqtl_sample_overlap_file, eqtl_covariate_file)
+
+
+# Input files
+num_genes_arr = [1000, 2000, 3000, 4000]
+for num_genes in num_genes_arr:
+	genotype_file = processed_genotype_dir + 'genotype_missing_removed.txt'
+	expression_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scanpy_' + str(num_genes) + '_hvg_all_genotyped_cells.txt'	
+	cell_info_file = processed_expression_dir + 'cell_covariates.txt'
+	pc_file = processed_expression_dir + 'standardized_10_cap_normalized_expression_scanpy_' + str(num_genes) + '_hvg_all_genotyped_cells_pca_loadings.txt'
+
+	# Output files
+	output_prefix = 'scanpy_' + str(num_genes) + '_hvg_'
+	eqtl_variant_gene_pairs_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_variant_gene_pairs.txt'
+	eqtl_expression_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_expression.txt'
+	eqtl_genotype_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_genotype.txt'
+	eqtl_sample_overlap_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_sample_overlap.txt'
+	eqtl_covariate_file = standard_eqtl_input_dir + output_prefix + 'eqtl_input_covariates.txt'
+
+	distance=100000
+
+	generate_eqtl_input_files(distance, gene_annotation_file, genotype_file, expression_file, cell_info_file, pc_file, eqtl_variant_gene_pairs_file, eqtl_expression_file, eqtl_genotype_file, eqtl_sample_overlap_file, eqtl_covariate_file)
 

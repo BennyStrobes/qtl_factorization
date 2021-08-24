@@ -11,6 +11,7 @@
 standard_eqtl_input_dir="$1"
 standard_eqtl_results_dir="$2"
 eqtl_factorization_input_dir="$3"
+processed_expression_dir="$4"
 
 
-python preprocess_data_for_eqtl_factorization_based_on_standard_eqtls.py $standard_eqtl_input_dir $standard_eqtl_results_dir $eqtl_factorization_input_dir
+python preprocess_data_for_eqtl_factorization_based_on_standard_eqtls.py $standard_eqtl_input_dir $standard_eqtl_results_dir $eqtl_factorization_input_dir $processed_expression_dir

@@ -17,11 +17,10 @@ cell_state_file="$6"
 processed_expression_dir="$7"
 visualize_processed_expression_dir="$8"
 
-if false; then
 module load R/3.6.1
 module load python/3.7.4-anaconda
 python preprocess_expression.py $normalized_expression_file $meta_data_file $processed_genotype_dir $gene_annotation_file $genotype_pc_file $cell_state_file $processed_expression_dir
-fi
+
 
 if false; then
 module load R/3.5.1
