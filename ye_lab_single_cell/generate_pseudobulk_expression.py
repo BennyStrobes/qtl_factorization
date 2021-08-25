@@ -377,12 +377,15 @@ processed_pseudobulk_expression_dir = sys.argv[2]  # Output dir
 genotyped_individuals_file = sys.argv[3]  # File containing list of which individuals are genotyped
 cluster_resolution = float(sys.argv[4])
 regress_out_batch = sys.argv[5]  # Hyperparameter
-isg_score_file = sys.argv[6]
-cell_isg_score_file = sys.argv[7]
+num_hvg = sys.argv[6]
+isg_score_file = sys.argv[7]
+cell_isg_score_file = sys.argv[8]
+
 
 # Load in processed-SC Ann-Data file
-input_h5py_file = processed_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_2.h5ad'
-#adata = sc.read_h5ad(input_h5py_file)
+input_h5py_file = processed_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_2.h5ad'
+adata = sc.read_h5ad(input_h5py_file)
+
 
 #################
 # Create mapping from donor id to isg score
@@ -392,17 +395,16 @@ donor_to_isg_score = create_donor_to_isg_score_mapping(isg_score_file)
 # Create mapping from cell id to isg score
 ################
 cell_id_to_isg_score = create_cell_id_to_isg_score_mapping(cell_isg_score_file)
-print('done')
 
 ##################
 # Perform cell clustering seperately in each individual
 ##################
-#adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
+adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
 
 # Save in temporary adata object
-temp_h5_output_file = processed_pseudobulk_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_with_individual_leiden_clusters_' + str(cluster_resolution) + '.h5ad'
-#adata.write(temp_h5_output_file)
-adata = sc.read_h5ad(temp_h5_output_file)
+temp_h5_output_file = processed_pseudobulk_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_with_individual_leiden_clusters_' + str(cluster_resolution) + '.h5ad'
+adata.write(temp_h5_output_file)
+#adata = sc.read_h5ad(temp_h5_output_file)
 
 
 #######################
@@ -416,8 +418,8 @@ adata.obs['cell_isg_score'] = ordered_cell_isg_scores
 #######################
 # Create cell type summary output file of clustering file
 #######################
-clustering_ct_summary_file = processed_pseudobulk_expression_dir + 'scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_cell_type_summary.txt'
-# print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
+clustering_ct_summary_file = processed_pseudobulk_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_cell_type_summary.txt'
+print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
 
 
 
@@ -436,15 +438,7 @@ ordered_pseudobulk_samples = extract_ordered_list_of_pseudobulk_samples(adata, g
 #####################
 adata2 = adata.raw.to_adata()
 
-'''
-### NO LONGER USED!!!
-sc.pp.highly_variable_genes(adata2)
-# Get genes expressed in at least XX% of cells
-min_fraction_of_cells = .01
-sc.pp.filter_genes(adata2, min_cells=(adata2.X.shape[0])*min_fraction_of_cells)
-# And genes that are highly variable
-adata2 = adata2[:, adata2.var.highly_variable]
-'''
+
 
 # Make sure filtered genes line up (I know, this is all a little hacky..)
 raw_ordered_genes = np.vstack((adata.var.index, adata.var[adata.var.columns[0]])).T
@@ -453,7 +447,7 @@ if np.array_equal(raw_ordered_genes, raw_ordered_genes2) == False:
 	print('assumption error')
 	pdb.set_trace()
 
-'''
+
 #####################
 # Get raw pseudobulk expression
 #####################
@@ -466,15 +460,14 @@ else:
 #####################
 # Save data to output
 #####################	
-gene_names_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_gene_names.txt'
+gene_names_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_gene_names.txt'
 np.savetxt(gene_names_file, raw_ordered_genes, fmt="%s", delimiter='\t')
 
 # Sample names
-sample_names_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_names.txt'
+sample_names_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_names.txt'
 np.savetxt(sample_names_file, ordered_pseudobulk_samples, fmt="%s", delimiter='\t')
 # Generate pseudobulk covaraite file
-'''
-pseudobulk_covariate_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_covariates.txt'
+pseudobulk_covariate_file = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_sample_covariates.txt'
 print_pseudobulk_covariate_file_from_cell_covariates(ordered_pseudobulk_samples, adata.obs, cluster_assignments, pseudobulk_covariate_file, donor_to_isg_score)
 
 '''
@@ -507,7 +500,7 @@ num_pcs = 200
 pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
 
-
+'''
 #####################
 # Normalize expression and generate expression pcs
 #####################	
@@ -518,10 +511,10 @@ gene_level_normalization = 'zscore'
 # number of pcs
 num_pcs = 200
 # output root
-pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
+pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
 
-
+'''
 #####################
 # Normalize expression and generate expression pcs
 #####################	

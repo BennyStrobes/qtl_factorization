@@ -46,12 +46,12 @@ fi
 #########################
 # Output dosage matrix for each chromosome
 ########################
+if false; then
 for chrom_num in $(seq 1 22); do 
 	echo $chrom_num
 	chromosome_dosage_prefix=$processed_genotype_dir"clues_immvar_chrom_"$chrom_num
-	if false; then
 	vcftools --gzvcf $donor_site_filtered_merged_vcf --chr $chrom_num --extract-FORMAT-info DS --out $chromosome_dosage_prefix
-	fi
+	
 	chromosome_frq_prefix=$processed_genotype_dir"clues_immvar_chrom_"$chrom_num
 	vcftools --gzvcf $donor_site_filtered_merged_vcf --freq --chr $chrom_num --out $chromosome_frq_prefix
 
@@ -60,8 +60,7 @@ for chrom_num in $(seq 1 22); do
 	chromosome_dosage2_file=$processed_genotype_dir"clues_immvar_chrom_"$chrom_num".DS2.FORMAT"
 	python generate_chromosome_level_dosage_genotype_file.py $chromosome_frq_file $chromosome_dosage_file $chromosome_dosage2_file
 done
-
-
+fi
 
 
 #########################
@@ -91,9 +90,8 @@ fi
 # Tidy up genotype PCs (at indiviudal level and cell level)
 genotype_pcs_file=$donor_site_filtered_merged_independent_plink_stem".eigenvec"
 module load python/3.7.4-anaconda
-if false; then
 python add_genotype_pcs_to_cell_covariates_file.py $cell_covariates_file $sc_rna_seq_individual_file $genotype_pcs_file $processed_genotype_dir
-fi
+
 
 
 #########################
