@@ -1095,48 +1095,94 @@ tissues, tissues_alt = get_tissues(tissues_file)
 # Extract file of sample names
 sample_name_file = processed_data_dir + 'sample_names.txt'
 sample_names, sample_to_index, individual_covariates = get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_individual_information_file)
+num_samples = len(sample_names)
 
-#print_individual_id_file_and_tissue_file(sample_names, processed_data_dir + 'individual_id.txt', processed_data_dir + 'sample_tissue_names.txt')
+print_individual_id_file_and_tissue_file(sample_names, processed_data_dir + 'individual_id.txt', processed_data_dir + 'sample_tissue_names.txt')
 
-#xcell_covariates, xcell_covariate_names = get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file)
+xcell_covariates, xcell_covariate_names = get_xcell_covariates(sample_names, tissues, tissues_alt, gtex_tpm_dir, sample_to_index, gtex_xcell_enrichment_file)
 
 sample_covariate_file = processed_data_dir + 'sample_covariates.txt'
-#print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, sample_covariate_file)
+print_sample_covariates(sample_names, individual_covariates, xcell_covariates, xcell_covariate_names, sample_covariate_file)
 
-#print_sample_surveyed_covariates(sample_names, gtex_individual_information_file, processed_data_dir + 'sample_surveyed_covariates.txt')
+print_sample_surveyed_covariates(sample_names, gtex_individual_information_file, processed_data_dir + 'sample_surveyed_covariates.txt')
 
 technical_covariate_file = processed_data_dir + 'sample_technical_covariates.txt'
-#print_sample_technical_covariates(tissues, tissues_alt, sample_names, gtex_tpm_dir, gtex_sample_information_file, technical_covariate_file)
+print_sample_technical_covariates(tissues, tissues_alt, sample_names, gtex_tpm_dir, gtex_sample_information_file, technical_covariate_file)
 
 # We are going to limit analysis to genes tested in all tissues
-#genes_tested_in_all_tissues = get_genes_tested_in_all_tissues(tissues, gtex_expression_dir)
+genes_tested_in_all_tissues = get_genes_tested_in_all_tissues(tissues, gtex_expression_dir)
 
 
 # Generate TPM expression matrix
 tpm_expression_matrix_file = processed_data_dir + 'cross_tissue_tpm.txt'
-#generate_tpm_expression_matrix(tissues, tissues_alt, sample_names, genes_tested_in_all_tissues, gtex_tpm_dir, tpm_expression_matrix_file)
+generate_tpm_expression_matrix(tissues, tissues_alt, sample_names, genes_tested_in_all_tissues, gtex_tpm_dir, tpm_expression_matrix_file)
 
 # Quantile normalize and standardize TPM expression matrix
 standardized_tpm_expression_matrix_file = processed_data_dir + 'cross_tissue_tpm_standardized.txt'
-#standardize_expression(tpm_expression_matrix_file, standardized_tpm_expression_matrix_file)
+standardize_expression(tpm_expression_matrix_file, standardized_tpm_expression_matrix_file)
 
 
 # Extract covariates (expression pcs)
-num_expression_pcs = 80
+if num_samples < 150:
+	num_expression_pcs = 15
+if num_samples >= 150 and num_samples < 250:
+	num_expression_pcs = 30
+elif num_samples >= 250 and num_samples < 350:
+	num_expression_pcs = 45
+elif num_samples >= 350 and num_samples < 1000:
+	num_expression_pcs = 60
+elif num_samples >= 1000:
+	num_expression_pcs = 80
+else:
+	print('asssumption erororor')
+	pdb.set_trace()
+print(str(num_expression_pcs) + ' expression pcs selected because there are ' + str(num_samples) + ' samples')
 covariate_file = processed_data_dir + 'covariates.txt'
 extract_covariates(standardized_tpm_expression_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
 
 
 
 # Limit to genes in our analysis
-#valid_genes = get_genes_we_have_expression_data_for(standardized_tpm_expression_matrix_file)
+valid_genes = get_genes_we_have_expression_data_for(standardized_tpm_expression_matrix_file)
 
 # Limit to variants we have genoytpe data for
-#valid_variants = get_variants_we_have_genotype_data_for(gtex_genotype_dir)
+valid_variants = get_variants_we_have_genotype_data_for(gtex_genotype_dir)
 
 tss_distance_thresh=50000.0
 all_tests_file = processed_data_dir + 'all_tests_unordered.txt'
-#extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, valid_genes, valid_variants, all_tests_file)
+extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, valid_genes, valid_variants, all_tests_file)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+########################
+# OLD: No longer used
+########################
+
+
 
 
 

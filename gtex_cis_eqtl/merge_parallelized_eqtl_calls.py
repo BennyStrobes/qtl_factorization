@@ -15,9 +15,13 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 			head_count = head_count + 1
 			t.write(line + '\tnum_snps_in_gene\tfdr\n')
 			continue
-		gene_id = data[0]
-		variant_id = data[1]
-		pvalue = float(data[7])
+		if len(data) != 5:
+			print('assumption error')
+			continue
+		gene_id = data[1]
+		variant_id = data[0]
+		pvalue = float(data[4])
+
 		if gene_id not in genes:
 			genes[gene_id] = (variant_id, pvalue, 1, line)
 		else:
@@ -70,6 +74,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		return
 	# Open output (merged result) file handle
 	t = open(output_root + 'merged' + suffix, 'w')
+	t.write('variant_id\tgene_id\tbeta\tstderr\tpvalue\n')
 	# Loop through parrallelized jobs
 	for job_number in range(total_jobs):
 		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
@@ -91,7 +96,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			t.write(line + '\n')
 		f.close()
 		# Delete file from single job
-		#os.system ('rm ' + file_name)
+		#os.system('rm ' + file_name)
 	t.close()
 
 
@@ -100,7 +105,9 @@ output_root = sys.argv[1]
 total_jobs = int(sys.argv[2])
 
 
-
+merged_file = output_root + 'merged.txt'
 merge_parallelized_results(output_root, ".txt", total_jobs)
 
-merged_file = output_root + 'merged.txt'
+fdr = .05
+fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)

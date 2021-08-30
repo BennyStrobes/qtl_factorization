@@ -278,7 +278,7 @@ covariate_file = output_dir + 'covariates.txt'
 
 # Re-order variant gene pairs file
 all_variant_gene_pairs_file = output_dir + 'all_tests.txt'
-#order_variant_gene_pairs_file_by_chromosome(all_unordered_variant_gene_pairs_file, all_variant_gene_pairs_file)
+order_variant_gene_pairs_file_by_chromosome(all_unordered_variant_gene_pairs_file, all_variant_gene_pairs_file)
 
 
 
@@ -292,20 +292,48 @@ generate_eqtl_covariate_input_data(covariate_file, eqtl_covariate_file)
 
 # Extract expression data for eqtl analysis
 eqtl_expression_file = output_dir + 'cross_tissue_eqtl_expression_input.txt'
-#generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_samples, expression_file, eqtl_expression_file)
+generate_eqtl_expression_input_data(all_variant_gene_pairs_file, ordered_samples, expression_file, eqtl_expression_file)
 
 
 # Extract genotype data for eqtl analysis
 eqtl_genotype_file = output_dir + 'cross_tissue_eqtl_genotype_input.txt'
-#generate_eqtl_genotype_input_data(all_variant_gene_pairs_file, ordered_samples, gtex_genotype_dir, eqtl_genotype_file)
+generate_eqtl_genotype_input_data(all_variant_gene_pairs_file, ordered_samples, gtex_genotype_dir, eqtl_genotype_file)
 
 
-# Already generated data
-residual_expression_file = output_dir + 'cross_tissue_tpm_technical_covariate_residuals.txt'
-residual_expression_covariate_file = output_dir + 'residual_expression_covariates.txt'
 
-# Extract array of ordered samples (according to already generated covariate file)
-#ordered_samples = extract_ordered_samples_according_to_covariate_file(residual_expression_covariate_file)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#######################
+# Old: no longer used
+########################
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Extract expression data for eqtl analysis

@@ -180,9 +180,9 @@ make_umap_loading_scatter_plot_colored_by_real_valued_vector <- function(umap_lo
 	return(plotter)
 }
 
-make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loading_file) {
+make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loadings) {
 	#tissues <- read.table(tissue_file, header=FALSE)
-	loadings <- read.table(loading_file, header=FALSE)
+	#loadings <- read.table(loading_file, header=FALSE)
 	#df <- data.frame(loading_1=loadings$V1, loading_2=loadings$V2, tissue=factor(tissues$V1))
 	covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 
@@ -202,12 +202,12 @@ make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loading_fil
 
 	df <- data.frame(loading=loading_vec, race=factor(race_vec), latent_factor=factor(factor_vec, levels=as.character(1:num_factors)))
 
-	df = df[(df$race==1) | (df$race==2),]
+	df = df[(df$race==3) | (df$race==2),]
 
 	ancestry <- c()
 	num_samples = length(df$race)
 	for (sample_num in 1:num_samples) {
-		if (df$race[sample_num] == 1) {
+		if (df$race[sample_num] == 3) {
 			ancestry <- c(ancestry, "European Ancestry")
 		} else {
 			ancestry <- c(ancestry, "African Ancestry")
@@ -253,9 +253,9 @@ make_loading_boxplot_plot_by_cm_proportion <- function(sample_covariate_file, lo
 	return(boxplot)
 }
 
-make_loading_boxplot_plot_by_sex <- function(sample_covariate_file, loading_file) {
+make_loading_boxplot_plot_by_sex <- function(sample_covariate_file, loadings) {
 	#tissues <- read.table(tissue_file, header=FALSE)
-	loadings <- read.table(loading_file, header=FALSE)
+	#loadings <- read.table(loading_file, header=FALSE)
 	#df <- data.frame(loading_1=loadings$V1, loading_2=loadings$V2, tissue=factor(tissues$V1))
 	covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 
@@ -282,9 +282,9 @@ make_loading_boxplot_plot_by_sex <- function(sample_covariate_file, loading_file
 	return(boxplot)
 }
 
-make_loading_boxplot_plot_by_cohort <- function(sample_covariate_file, loading_file) {
+make_loading_boxplot_plot_by_cohort <- function(sample_covariate_file, loadings) {
 	#tissues <- read.table(tissue_file, header=FALSE)
-	loadings <- read.table(loading_file, header=FALSE)
+	#loadings <- read.table(loading_file, header=FALSE)
 	#df <- data.frame(loading_1=loadings$V1, loading_2=loadings$V2, tissue=factor(tissues$V1))
 	covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 
@@ -343,9 +343,9 @@ make_loading_boxplot_plot_by_age <- function(sample_covariate_file, loading_file
 	}
 }
 
-make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loading_file) {
+make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loadings) {
 	#tissues <- read.table(tissue_file, header=FALSE)
-	loadings <- read.table(loading_file, header=FALSE)
+	#loadings <- read.table(loading_file, header=FALSE)
 	#df <- data.frame(loading_1=loadings$V1, loading_2=loadings$V2, tissue=factor(tissues$V1))
 
 	loading_vec <- c()
@@ -374,6 +374,38 @@ make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loading_f
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
 				gtex_v8_figure_theme() + 
 				scale_fill_manual(values=colors) + 
+	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
+	        	theme(legend.position="bottom") +
+	           	guides(fill=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=.1))) + 
+	           	theme(legend.text=element_text(size=9))
+
+	return(boxplot)
+}
+
+
+make_loading_boxplot_plot_by_tissue_non_color <- function(tissues, loading_file) {
+	#tissues <- read.table(tissue_file, header=FALSE)
+	loadings <- read.table(loading_file, header=FALSE)
+	#df <- data.frame(loading_1=loadings$V1, loading_2=loadings$V2, tissue=factor(tissues$V1))
+
+	loading_vec <- c()
+	tissue_vec <- c()
+	factor_vec <- c()
+
+	num_factors <- dim(loadings)[2]
+
+	for (factor_number in 1:num_factors) {
+		loading_vec <- c(loading_vec, loadings[,factor_number])
+		tissue_vec <- c(tissue_vec, as.character(tissues))
+		factor_vec <- c(factor_vec, rep(as.character(factor_number), length(tissues)))
+	}
+
+
+	df <- data.frame(loading=loading_vec, tissue=factor(tissue_vec), latent_factor=factor(factor_vec, levels=as.character(1:num_factors)))
+
+
+	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
+				gtex_v8_figure_theme() + 
 	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
 	        	theme(legend.position="bottom") +
 	           	guides(fill=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=.1))) + 
@@ -881,6 +913,16 @@ make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_t
 	return(plotter)
 }
 
+loading_by_genotype_pc1_colored_by_race <- function(loading,race, genotype_pc) {
+	df <- data.frame(loading=loading, race=race, genotype_pc=genotype_pc)
+	plotter <- ggplot(df, aes(x=loading, y=genotype_pc, color=race)) + 
+	           geom_point() +
+	           gtex_v8_figure_theme() + 
+	           labs(x="loading 1", y="genotype PC1", color="Known Ancestry")
+}
+
+
+
 
 make_loading_boxplot_plot_by_batch_for_single_factor <- function(technical_covariate_file, loading_file, loading_num) {
 	loadings <- read.table(loading_file, header=FALSE)
@@ -915,12 +957,15 @@ make_loading_boxplot_plot_by_individual_for_single_factor <- function(indi_names
 
 }
 
-explore_relationship_between_surveyed_covariates_and_eqtl_factors <- function(surveyed_covariate_file, loading_file) {
-	loadings <- read.table(loading_file, header=FALSE)
+explore_relationship_between_surveyed_covariates_and_eqtl_factors <- function(surveyed_covariate_file, loadings) {
+	#loadings <- read.table(loading_file, header=FALSE)
 	covs <- read.table(surveyed_covariate_file, header=TRUE)
+
+	print(summary(covs))
 	covs <- covs[,2:(dim(covs)[2])]
-	factor_num <- 10
+	factor_num <- 2
 	num_covs = dim(covs)[2]
+	vec <- c()
 	for (cov_num in 1:num_covs) {
 		cov_vec <- covs[, cov_num]
 		loading_vec <- loadings[,factor_num]
@@ -928,20 +973,22 @@ explore_relationship_between_surveyed_covariates_and_eqtl_factors <- function(su
 		valid_samples <- cov_vec == 0.0 | cov_vec == 1
 		lin_model <- lm(loading_vec[valid_samples] ~ cov_vec[valid_samples])
 		print(paste0(cov_num, "    ", summary(lin_model)$adj.r.squared))
+		vec <- c(vec, summary(lin_model)$adj.r.squared)
 	}
+	print(max(vec))
 	#print(summary(covs))
 }
 
-explore_relationship_between_sample_covariates_and_eqtl_factors <- function(sample_covariate_file, loading_file) {
-	loadings <- read.table(loading_file, header=FALSE)
+explore_relationship_between_sample_covariates_and_eqtl_factors <- function(sample_covariate_file, loadings) {
+	#loadings <- read.table(loading_file, header=FALSE)
 	covs <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 	covs <- covs[,2:(dim(covs)[2])]
-	factor_num <- 8
+	factor_num <- 2
 	num_covs = dim(covs)[2]
 	loading_vec <- loadings[, factor_num]
 	print(colnames(covs))
 
-	for (cov_num in 1:num_covs) {
+	for (cov_num in 2:num_covs) {
 		cov_vec <- covs[, cov_num]
 		loading_vec <- loadings[,factor_num]
 
@@ -950,12 +997,12 @@ explore_relationship_between_sample_covariates_and_eqtl_factors <- function(samp
 	}
 }
 
-explore_relationship_between_muscle_age_and_eqtl_factors <- function(sample_covariate_file, loading_file) {
-	loadings <- read.table(loading_file, header=FALSE)
+explore_relationship_between_muscle_age_and_eqtl_factors <- function(sample_covariate_file, loadings) {
+	#loadings <- read.table(loading_file, header=FALSE)
 	covs <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 	covs <- covs[,2:(dim(covs)[2])]
 
-	factor_num <- 2
+	factor_num <- 1
 	loading_vec <- loadings[, factor_num]
 
 	muscle_tissue_binary = 1.0*(as.character(covs$tissue_type) == "Muscle_Skeletal")
@@ -967,11 +1014,13 @@ explore_relationship_between_muscle_age_and_eqtl_factors <- function(sample_cova
 }
 
 
-explore_relationship_between_technical_covariates_and_eqtl_factors <- function(surveyed_covariate_file, loading_file, indi_names) {
-	loadings <- read.table(loading_file, header=FALSE)
+explore_relationship_between_technical_covariates_and_eqtl_factors <- function(surveyed_covariate_file, loadings, indi_names) {
+	#loadings <- read.table(loading_file, header=FALSE)
 	covs <- read.table(surveyed_covariate_file, header=TRUE, sep="\t")
 	covs <- covs[,2:(dim(covs)[2])]
-	factor_num <- 8
+	print(summary(covs))
+	#factor_num <- 8
+	factor_num <- 2
 	num_covs = dim(covs)[2]
 	loading_vec <- loadings[, factor_num]
 	indi_names <- factor(indi_names)
@@ -991,10 +1040,9 @@ explore_relationship_between_technical_covariates_and_eqtl_factors <- function(s
 }
 
 #Make heatmap showing correlation of loadings between models
-make_eqtl_factor_expression_pc_correlation_heatmap <- function(eqtl_factor_loading_file, expression_pc_file, x_axis_label, y_axis_label) {
+make_eqtl_factor_expression_pc_correlation_heatmap <- function(loadings, expression_pc_file, x_axis_label, y_axis_label) {
 
 	# Load in loading matrices
-	loadings <- read.table(eqtl_factor_loading_file, header=FALSE)
 	pcs <- read.table(expression_pc_file, header=TRUE)
 	# Remove sample name column from pcs
 	pcs <- pcs[,2:(dim(pcs)[2])]
@@ -1032,6 +1080,127 @@ make_eqtl_factor_expression_pc_correlation_heatmap <- function(eqtl_factor_loadi
 
 }
 
+make_pc_variance_explained_line_plot <- function(variance_explained) {
+  num_pcs <- length(variance_explained)
+  variance_explained <- variance_explained[1:num_pcs]
+  df <- data.frame(variance_explained = variance_explained, pc_num = 1:num_pcs)
+
+  # PLOT AWAY
+    line_plot <- ggplot(data=df, aes(x=pc_num, y=variance_explained)) +
+                geom_line() +
+                geom_point() +
+                ylim(0,max(variance_explained) + .002) + 
+                scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
+                labs(x = "Factor number", y = "Fraction of QTL variance explained") + 
+                gtex_v8_figure_theme() 
+
+    return(line_plot)
+}
+make_loading_boxplot_for_one_factor_by_race_and_tissue_type <- function(race,tissue_names, loadings, factor_number) {
+  df <- data.frame(loading=loadings, race=factor(race), tissue=tissue_names)
+
+  df = df[(df$race==3) | (df$race==2),]
+
+  	ancestry <- c()
+	num_samples = length(df$race)
+	for (sample_num in 1:num_samples) {
+		if (df$race[sample_num] == 3) {
+			ancestry <- c(ancestry, "European Ancestry")
+		} else {
+			ancestry <- c(ancestry, "African Ancestry")
+		}
+	}
+	df$ancestry = factor(ancestry)
+
+  boxplot <- ggplot(df, aes(x=tissue, y=loading, fill=ancestry)) + geom_boxplot(outlier.size = .00001) +
+        gtex_v8_figure_theme() + 
+            labs(x="", y = paste0("Sample loading (", factor_number,")"), fill="") +
+            theme(legend.position="top") +
+            guides(colour = guide_legend(override.aes = list(size=2)))
+     
+   return(boxplot)
+
+}
+
+
+make_loading_boxplot_plot_with_row_for_every_factor_by_race_and_tissue_type<- function(race, tissue_names, loadings) {
+  loading_vec <- c()
+  covariate_vec <- c()
+  num_factors <- dim(loadings)[2]
+
+  plot_arr <- list()
+
+  legend <- get_legend(make_loading_boxplot_for_one_factor_by_race_and_tissue_type(race, tissue_names, loadings[,num_factors], num_factors))
+
+  plot_arr[[1]] = legend
+
+  for (factor_num in 1:(num_factors-1)) {
+    factor_boxplot <- make_loading_boxplot_for_one_factor_by_race_and_tissue_type(race, tissue_names, loadings[,factor_num], factor_num) + theme(axis.text.x=element_blank()) + theme(legend.position="none")
+    plot_arr[[(1+factor_num)]] <- factor_boxplot
+  }
+
+  plot_arr[[(1+num_factors)]] <- make_loading_boxplot_for_one_factor_by_race_and_tissue_type(race, tissue_names, loadings[,num_factors], num_factors) + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + theme(legend.position="none")
+
+
+
+  merged = plot_grid(plotlist=plot_arr, ncol=1, rel_heights=c(.6,1,1,1,1,1,2.9))
+
+
+  return(merged)
+}
+
+make_loading_by_cell_type_scatter <- function(loading_vec, cell_type_vec, loading_num, cell_type_name) {
+  df <- data.frame(loading=loading_vec, cell_type_prop=cell_type_vec)
+  lm1 = lm(loading~cell_type_prop, data=df)
+  r_squared = summary(lm1)$adj.r.squared
+  print(r_squared)
+
+plotter <- ggplot(df, aes(x=loading, y=cell_type_vec)) + 
+           geom_point() +
+           gtex_v8_figure_theme() + 
+           labs(x=paste0("Loading ", loading_num), y=cell_type_name, title=paste0("Adjusted r squard: ", r_squared))
+    return(plotter)
+
+}
+make_loading_by_lm_cell_type_scatter <- function(loading_vec, loading_number, covariates) {
+	lm1 = lm(loading_vec~Adipocytes+Epithelial_cells+Hepatocytes+Keratinocytes+Myocytes+Neurons+Neutrophils, data=covariates) #Create the linear regression
+	p <- predict(lm1, covariates)
+  df <- data.frame(loading=loading_vec, cell_type_prop=p)
+
+  r_squared = summary(lm1)$adj.r.squared
+
+plotter <- ggplot(df, aes(x=loading, y=cell_type_prop)) + 
+           geom_point() +
+           gtex_v8_figure_theme() + 
+           labs(x=paste0("Loading ", loading_number), y="cell-type proportion lm", title=paste0("Adjusted r squard: ", r_squared))
+    return(plotter)
+
+}
+
+make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, covariates) {
+	lm1 = lm(loading_vec~Adipocytes+Epithelial_cells+Hepatocytes+Keratinocytes+Myocytes+Neurons+Neutrophils, data=covariates) #Create the linear regression
+	print(summary(lm1))
+
+ }
+
+
+loading_by_various_cell_types_scatters <- function(loading_vec, loading_number, covariates) {
+	adipo_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Adipocytes, loading_number, "Adipocytes")
+	epi_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Epithelial_cells, loading_number, "Epithelial")
+	hep_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Hepatocytes, loading_number, "Hepatocytes")
+	ker_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Keratinocytes, loading_number, "Keratinocytes")
+	myo_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Myocytes, loading_number, "Myocytes")
+	nuer_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Neurons, loading_number, "Neurons")
+	neut_scatter <- make_loading_by_cell_type_scatter(loading_vec, covariates$Neutrophils, loading_number, "Neutrophils")
+	pred_scatter <- make_loading_by_lm_cell_type_scatter(loading_vec, loading_number, covariates)
+
+	#pred_scatter <- make_loading_cell_type_pvalue_plot(loading_vec, loading_number, covariates)
+
+	merged = plot_grid(adipo_scatter, epi_scatter, hep_scatter, ker_scatter, myo_scatter, nuer_scatter, neut_scatter, pred_scatter, ncol=2)
+
+	return(merged)
+}
+
 
 
 
@@ -1040,27 +1209,32 @@ eqtl_results_dir <- args[2]
 visualization_dir <- args[3]
 tissue_colors_file <- args[4]
 
-
 # Read in tissue colors and names
 tissue_colors = read.table(tissue_colors_file, header = T, stringsAsFactors = F, sep = "\t")
+
+
 # slight mislabeling
 for (tiss_num in 1:length(tissue_colors$tissue_id)) {
-	if (tissue_colors$tissue_id[tiss_num] == "Brain_Spinal_cord_cervical_c1") {
+	if (tissue_colors$tissue_id[tiss_num] == "Brain_Spinal_cord_cervical_c-1") {
 		tissue_colors$tissue_id[tiss_num] = "Brain_Spinal_cord_cervical_c.1"
 	}
-	if (tissue_colors$tissue_id[tiss_num] == "Cells_EBVtransformed_lymphocytes") {
+	if (tissue_colors$tissue_id[tiss_num] == "Cells_EBV-transformed_lymphocytes") {
 		tissue_colors$tissue_id[tiss_num] = "Cells_EBV.transformed_lymphocytes"
 	}
 }
 
 
+
 ############################
 # Load in files
 ############################
-tissue_10_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_names.txt")
-tissue_10_sample_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_covariates.txt")
-tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_surveyed_covariates.txt")
-tissue_10_technical_covariate_file <- paste0(processed_data_dir, "tissues_subset_whole_blood_sample_technical_covariates.txt")
+stem <- "tissues_subset_whole_blood"
+tissue_10_file <- paste0(processed_data_dir, stem, "_sample_names.txt")
+tissue_10_sample_covariate_file <- paste0(processed_data_dir, stem, "_sample_covariates.txt")
+tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, stem, "_sample_surveyed_covariates.txt")
+tissue_10_technical_covariate_file <- paste0(processed_data_dir, stem, "_sample_technical_covariates.txt")
+tissue_10_expression_pcs_file <- paste0(processed_data_dir, stem, "_covariates.txt")
+#tissue_10_residual_expression_pcs_file <- paste0(processed_data_dir, "tissues_subset_10_v2_residual_expression_covariates_120_pc.txt")
 
 tissue_10_names <- get_tissue_names(tissue_10_file)
 tissue_10_indi_names <- get_indi_names(tissue_10_file)
@@ -1069,46 +1243,37 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 ############################
 # Model Specification
 ############################
-tissue_10_model_stem <- paste0("tissues_subset_whole_blood_lf_interaction_egenes_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_no_RE_temper_")
+tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_tests_temper_")
 tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
-
-
-
-
-############################
-# Load in files
-############################
-tissue_10_file <- paste0(processed_data_dir, "tissues_subset_10_sample_names.txt")
-tissue_10_sample_covariate_file <- paste0(processed_data_dir, "tissues_subset_10_sample_covariates.txt")
-tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, "tissues_subset_10_sample_surveyed_covariates.txt")
-tissue_10_technical_covariate_file <- paste0(processed_data_dir, "tissues_subset_10_sample_technical_covariates.txt")
-tissue_10_expression_pcs_file <- paste0(processed_data_dir, "tissues_subset_10_covariates.txt")
-tissue_10_residual_expression_pcs_file <- paste0(processed_data_dir, "tissues_subset_10_residual_expression_covariates_120_pc.txt")
-
-tissue_10_names <- get_tissue_names(tissue_10_file)
-tissue_10_indi_names <- get_indi_names(tissue_10_file)
-
-
-############################
-# Model Specification
-############################
-tissue_10_model_stem <- paste0("tissues_subset_10_lf_interaction_egenes_eqtl_factorization_vi_results_k_init_20_lambda_v_1_seed_1_non_resid_temper_")
-tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S_subset.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
+pve_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "factor_pve.txt")
+pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
+ordering <- order(pve, decreasing=TRUE)
+#ordering <- ordering[1:8]
 
 
 
-
+loadings <- read.table(tissue_10_loading_file, header=FALSE)
+loadings <- loadings[, ordering]
+ordered_pve <- pve[ordering]
 
 ############################
 # Start making plots!!
 ############################
 
-#explore_relationship_between_surveyed_covariates_and_eqtl_factors(tissue_10_surveyed_covariate_file, tissue_10_loading_file)
-#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, tissue_10_loading_file, tissue_10_indi_names)
-#explore_relationship_between_sample_covariates_and_eqtl_factors(tissue_10_sample_covariate_file, tissue_10_loading_file)
-#explore_relationship_between_muscle_age_and_eqtl_factors(tissue_10_sample_covariate_file, tissue_10_loading_file)
+
+# Load in loading matrices
+pcs <- read.table(tissue_10_expression_pcs_file, header=TRUE)
+# Remove sample name column from pcs
+pcs <- pcs[,2:(dim(pcs)[2])]
+
+#explore_relationship_between_surveyed_covariates_and_eqtl_factors(tissue_10_surveyed_covariate_file, loadings)
+#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, loadings, tissue_10_indi_names)
+#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, pcs, tissue_10_indi_names)
+
+#explore_relationship_between_sample_covariates_and_eqtl_factors(tissue_10_sample_covariate_file, loadings)
+#explore_relationship_between_muscle_age_and_eqtl_factors(tissue_10_sample_covariate_file, loadings)
 
 #####################
 # Make histogram showing distribution of factor values for each factor
@@ -1117,17 +1282,18 @@ output_file <- paste0(visualization_dir, tissue_10_model_stem, "factor_distribut
 #ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
 
+#######################################
+# PVE plot showing fraction of eqtl variance explained through each factor
+#######################################
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl_variance_explained_lineplot.pdf")
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
+ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
+
 
 #####################
 # Make heatmap correlation eqtl factorization loadings with expression pcs
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "expression_pc_eqtl_factorization_loading_correlation_heatmap.pdf")
-heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(tissue_10_loading_file, tissue_10_expression_pcs_file, "eQTL Factorization Loadings", "Expression PC Loadings")
-ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
-
-#####################
-# Make heatmap correlation eqtl factorization loadings with expression pcs
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "residual_expression_pc_eqtl_factorization_loading_correlation_heatmap.pdf")
-heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(tissue_10_loading_file, tissue_10_residual_expression_pcs_file, "eQTL Factorization Loadings", "Residual Expression PC Loadings")
+heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "eQTL Factorization Loadings", "Expression PC Loadings")
 ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 
 
@@ -1135,26 +1301,26 @@ ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 ######################
 # Make box plot for each Race, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "race_colored_loading_boxplot.pdf")
-boxplot_race <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, tissue_10_loading_file)
+boxplot_race <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot_race, file=output_file, width=7.2, height=5.5, units="in")
 
 
 ######################
 # Make box plot for each Cohort, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "cohort_colored_loading_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_cohort(tissue_10_sample_covariate_file, tissue_10_loading_file)
+boxplot <- make_loading_boxplot_plot_by_cohort(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
 # Make box plot for each Sex, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "sex_colored_loading_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_sex(tissue_10_sample_covariate_file, tissue_10_loading_file)
+boxplot <- make_loading_boxplot_plot_by_sex(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
 # Make box plot for each tissue, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "tissue_colored_loading_boxplot.pdf")
-boxplot_tissue <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, tissue_10_loading_file)
+boxplot_tissue <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, loadings)
 ggsave(boxplot_tissue, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
@@ -1165,26 +1331,37 @@ race_legend <- get_legend(boxplot_race)
 merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race + theme(legend.position="none"), tissue_legend, race_legend, ncol=2, rel_heights=c(1,.5), rel_widths=c(1, .8), labels = c('a', 'b', '', ''))
 ggsave(merged, file=output_file, width=13.2, height=5.5, units="in")
 
+##################
+covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
 
-######################
-# Make box plot for single loading stratefied by batch
-loading_num <- 8
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "batch_colored_loading_", loading_num, "_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_batch_for_single_factor(tissue_10_technical_covariate_file, tissue_10_loading_file, loading_num)
-ggsave(boxplot, file=output_file, width=11.2, height=5.5, units="in")
-
-######################
-# Make box plot for single loading stratefied by Individual
-loading_num <- 8
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "individual_colored_loading_", loading_num, "_boxplot.pdf")
-boxplot <- make_loading_boxplot_plot_by_individual_for_single_factor(tissue_10_indi_names, tissue_10_loading_file, loading_num)
-ggsave(boxplot, file=output_file, width=11.2, height=5.5, units="in")
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_by_genotype_pc1_colored_by_race.pdf")
+boxplots <- loading_by_genotype_pc1_colored_by_race(loadings[,1],factor(covariates$race), pcs$genotype_PC0)
+ggsave(boxplots, file=output_file, width=7.2, height=5.5, units="in")
 
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments
-covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
-loadings <- read.table(tissue_10_loading_file, header=FALSE)
+loading_number <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_by_various_cell_types_scatter_plots.pdf")
+boxplots <- loading_by_various_cell_types_scatters(loadings[,loading_number], loading_number, covariates)
+ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
+
+##################
+# Make scatter plot showing correlation between loadings and cell type enrichments
+loading_number <- 2
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_by_various_cell_types_scatter_plots.pdf")
+boxplots <- loading_by_various_cell_types_scatters(loadings[,loading_number], loading_number, covariates)
+ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
+
+
+
+##################
+# Make scatter plot showing correlation between loadings and cell type enrichments
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "line_per_factor_loadings_boxplot_seperated_by_ancestry_and_tissue.pdf")
+boxplots <- make_loading_boxplot_plot_with_row_for_every_factor_by_race_and_tissue_type(covariates$race, tissue_10_names, loadings[,1:6])
+ggsave(boxplots, file=output_file, width=7.2, height=11.5, units="in")
+
+
 
 cell_type_name = "Neurons"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
@@ -1210,6 +1387,12 @@ cell_type_name = "Adipocytes"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
 scatters <- make_cell_type_loadings_scatters(loadings, covariates$Adipocytes, cell_type_name, tissue_10_names, tissue_colors)
 ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+cell_type_name = "Neutrophils"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, covariates$Neutrophils, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
 
 cell_type_name = "Age"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
@@ -1239,7 +1422,52 @@ scatters <- make_cell_type_loadings_scatters(loadings, covariates$height, cell_t
 ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
 
+cell_type_name = "genotype_pc1"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, pcs$genotype_PC0, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
+
+cell_type_name = "genotype_pc2"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
+scatters <- make_cell_type_loadings_scatters(loadings, pcs$genotype_PC1, cell_type_name, tissue_10_names, tissue_colors)
+ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
+
+##################
+# Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
+valid_tissues <- c("Muscle_Skeletal")
+loading_num <- 1
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_age_scatter_for_muscle_skeletal.pdf")
+pituitary_3_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$age, "Age", "Muscle_Skeletal", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(pituitary_3_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+##################
+# Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
+valid_tissues <- c("Pituitary")
+loading_num <- 6
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_6_neuron_scatter_for_pituitary.pdf")
+pituitary_3_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Neurons, "Neurons", "Pituitary", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(pituitary_3_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+##################
+# Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
+valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
+loading_num <- 5
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_5_Epithelial_scatter_for_digestive_samples.pdf")
+intestine_5_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
+ggsave(intestine_5_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+
+valid_tissues <- c("Colon_Sigmoid", "Small_Intestine_Terminal_Ileum", "Stomach")
+loading_num1 <- 4
+loading_num2 <- 5
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_4_loading_5_scatter_colored_by_Epithelial_for_digestive_samples.pdf")
+ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_tissue(loadings[, loading_num1], loadings[, loading_num2],  covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num1), paste0("Loading ", loading_num2), tissue_10_names, valid_tissues)
+ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+if (FALSE) {
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments for samples from subset of tissues
 valid_tissues <- c("Pituitary")
@@ -1307,7 +1535,7 @@ ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_sa
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 
-
+}
 
 
 
