@@ -18,6 +18,8 @@ input_data_dir=$root_dir"input_data/"
 processed_data_dir=$root_dir"processed_data/"
 # Directory containing eqtl results on simulated data
 eqtl_results_dir=$root_dir"eqtl_results/"
+# Directory containing interaction eqtl results
+interaction_eqtl_dir=$root_dir"interaction_eqtls/"
 # Directory containing visualizations
 visualization_expression_dir=$root_dir"visualize_expression/"
 # Directory containing visualizations of standard eqtl approachees
@@ -105,7 +107,7 @@ fi
 
 
 #####################
-## Single tissue case
+## Preprocess data in a single tissue
 #####################
 tissues_file=$input_data_dir"tissues_subset_colon_transverse.txt"
 output_dir=$processed_data_dir"tissues_subset_colon_transverse_"
@@ -115,6 +117,15 @@ if false; then
 sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir
 fi
 
+#############################################
+## Run interaction eqtl analysis with cell-type proportions
+#############################################
+input_data_stem="tissues_subset_colon_transverse_"
+eqtl_input_dir=$processed_data_dir$input_data_stem
+output_stem=$interaction_eqtl_dir"xcell_interaction_"$input_data_stem
+if false; then
+sh run_interaction_eqtl_analysis_with_cell_type_proportions.sh $eqtl_input_dir $output_stem
+fi
 
 
 #############################################
@@ -160,6 +171,34 @@ sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_fi
 fi
 
 
+#############################################
+## Run interaction eqtl analysis with SURGE-latent factors
+#############################################
+# Model parameters
+input_data_stem="tissues_subset_colon_transverse_"
+num_latent_factors="10"
+lambda_v="1"
+variance_param="1e-3"
+ard_variance_param="1e-16"
+seed="2"
+model_name="eqtl_factorization_vi_ard_full_component_update"
+ratio_variance_standardization="True"
+permutation_type="False"
+warmup_iterations="0"
+
+# Eqtl input dir
+eqtl_input_dir=$processed_data_dir$input_data_stem
+
+# Surge output files
+surge_latent_factors_file=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_temper_U_S.txt"
+factor_pve_file=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_temper_factor_pve.txt"
+# Latent factor to test for interaction eqtl analysis
+latent_factor_num="1"  # Base 1
+# Output root
+output_stem=$interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_"
+if false; then
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
+fi
 
 
 if false; then

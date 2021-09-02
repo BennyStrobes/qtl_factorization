@@ -18,16 +18,35 @@ run_eqtl_lmm <- function(expr, geno, covariates, groups) {
 }
 
 run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
-	fit_full <- lm(expr ~ geno + covariates + lfs:geno)
-	fit_null <- lm(expr ~ geno + covariates)
-	obj <- lrtest(fit_null, fit_full)
-	aggregate_pvalue <- obj[[5]][2]
+	fit_full <- lm(expr ~ geno + covariates + lfs + lfs:geno)
+	#fit_null <- lm(expr ~ geno + covariates + lfs)
+	#print(summary(fit_full))
+	#obj <- lrtest(fit_null, fit_full)
+	#print(obj)
+	#aggregate_pvalue <- obj[[5]][2]
 	num_cov = dim(covariates)[2]
+	coefficient_betas = data.frame(coef(summary(fit_full)))[,1]
 	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
-	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
-	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
+	lf_interaction_coefficient = coefficient_betas[(4+num_cov):length(coefficient_betas)]
+	lf_interaction_pvalue = coefficient_pvalues[(4+num_cov):length(coefficient_pvalues)]
+
+	return(list(eqtl_pvalue=lf_interaction_pvalue, coefficient=lf_interaction_coefficient))
 }
 
+pass_maf_filter <- function(geno, thresh) {
+	booly = TRUE
+	num_samples = length(geno)
+	af = sum(geno)/(2.0*num_samples)
+	if (af > .5) {
+		maf = 1.0 - af
+	} else {
+		maf = af
+	}
+	if (maf < thresh) {
+		booly = FALSE
+	}
+	return(booly)
+}
 
 pass_genotype_filter <- function(geno, thresh) {
 	rounded_geno <- round(geno)
@@ -83,6 +102,7 @@ lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1
 
 num_lfs <- dim(lfs)[2]
+print(num_lfs)
 
 output_file <- paste0(output_root, "results.txt")
 sink(output_file)
@@ -112,11 +132,11 @@ while(!stop) {
 		line_info <- strsplit(line_test,'\t')[[1]]
 		ensamble_id = line_info[1]
 		rs_id = line_info[2]
-		if (pass_genotype_filter(geno, .05)) {
+		if (pass_maf_filter(geno, .05)) {
 			tryCatch(
 			{
 				lm_results = run_lf_interaction_eqtl_lm(expr, geno, covariates, lfs)
-				new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lm_results$eqtl_pvalue, "\t", paste0(lm_results$coefficient_pvalues, collapse=","), "\n")
+				new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lm_results$eqtl_pvalue, "\t", paste0(lm_results$coefficient, collapse=","), "\n")
         		cat(new_line)
         	},
         	error = function(e) {
