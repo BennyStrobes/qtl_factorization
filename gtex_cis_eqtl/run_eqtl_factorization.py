@@ -226,7 +226,6 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	cov = np.loadtxt(covariate_file)
 
 	G_raw = np.copy(G)
-
 	if permutation_type == 'interaction_only':
 		G_fe = np.copy(G)
 		G = permute_donor(G, Z)
@@ -240,10 +239,11 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	G = standardize_columns(G)
 	G_fe = standardize_columns(G_fe)
 
+
 	valid_columns = np.asarray([True]*Y.shape[1])
 	num_tests = Y.shape[1]
 	for test_num in range(num_tests):
-		if np.sum(G[:, test_num] == 0.0) > 0.0:
+		if np.sum(G[:, test_num] == 0.0) > 0.0 or np.sum(G_fe[:, test_num] == 0.0) > 0.0:
 			valid_columns[test_num] = False
 		if get_maf(G_raw[:, test_num]) < .05:
 			valid_columns[test_num] = False
@@ -302,7 +302,7 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		np.savetxt(output_root + 'factor_genetic_pve.txt', (eqtl_vi.factor_genetic_pve), fmt="%s", delimiter='\t')
 		np.savetxt(output_root + 'factor_pve.txt', (eqtl_vi.factor_pve), fmt="%s", delimiter='\t')
 	elif model_name == 'eqtl_factorization_vi_ard_full_component_update':
-		eqtl_vi = eqtl_factorization_vi_ard_full_component_update.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=2000, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
+		eqtl_vi = eqtl_factorization_vi_ard_full_component_update.EQTL_FACTORIZATION_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=3000, gamma_v=lambda_v, warmup_iterations=warmup_iterations, output_root=output_root)
 		eqtl_vi.fit(G=G, G_fe=G_fe, Y=Y, z=Z, cov=cov)
 
 		# Save to output file

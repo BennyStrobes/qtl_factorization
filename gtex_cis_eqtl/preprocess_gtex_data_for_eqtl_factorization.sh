@@ -109,7 +109,7 @@ fi
 # Prepare data for eQTL factorization 
 #############################################
 num_genes="2000"
-python preprocess_gtex_data_based_on_latent_factor_interaction_eqtls_for_eqtl_factorization.py $output_dir $num_genes
+python preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes
 
 
 

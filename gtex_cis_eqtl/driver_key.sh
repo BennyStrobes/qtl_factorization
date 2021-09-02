@@ -75,13 +75,13 @@ seed="2"
 model_name="eqtl_factorization_vi_ard_full_component_update"
 ratio_variance_standardization="True"
 permutation_type="False"
-warmup_iterations="0"
+warmup_iterations="3000"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
 if false; then
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
-num_latent_factors="10"
+num_latent_factors="50"
 lambda_v="1"
 variance_param="1e-3"
 ard_variance_param="1e-16"
@@ -89,7 +89,7 @@ seed="2"
 model_name="eqtl_factorization_vi_ard_full_component_update"
 ratio_variance_standardization="True"
 permutation_type="False"
-warmup_iterations="0"
+warmup_iterations="3000"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
 if false; then
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
@@ -107,10 +107,10 @@ fi
 #####################
 ## Single tissue case
 #####################
-tissues_file=$input_data_dir"tissues_subset_whole_blood.txt"
-output_dir=$processed_data_dir"tissues_subset_whole_blood_"
-output_visualization_dir=$visualization_expression_dir"tissues_subset_whole_blood_"
-output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_whole_blood_"
+tissues_file=$input_data_dir"tissues_subset_colon_transverse.txt"
+output_dir=$processed_data_dir"tissues_subset_colon_transverse_"
+output_visualization_dir=$visualization_expression_dir"tissues_subset_colon_transverse_"
+output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_colon_transverse_"
 if false; then
 sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir
 fi
@@ -118,44 +118,9 @@ fi
 
 
 #############################################
-## Run eqtl factorization!
+## Run eqtl factorization in a single tissue
 #############################################
 if false; then
-input_data_stem="tissues_subset_whole_blood_"
-sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
-expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
-genotype_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_genotype.npy"
-covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covariate_w_intercept_input.txt"
-num_latent_factors="10"
-lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
-ratio_variance_standardization="True"
-permutation_type="False"
-warmup_iterations="3000"
-output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-
-input_data_stem="tissues_subset_heart_left_ventricle_"
-sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
-expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
-genotype_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_genotype.npy"
-covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covariate_w_intercept_input.txt"
-num_latent_factors="10"
-lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
-ratio_variance_standardization="True"
-permutation_type="False"
-warmup_iterations="3000"
-output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-
-
 input_data_stem="tissues_subset_colon_transverse_"
 sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
 expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
@@ -168,48 +133,37 @@ ard_variance_param="1e-16"
 seed="2"
 model_name="eqtl_factorization_vi_ard_full_component_update"
 ratio_variance_standardization="True"
+
+# No permutation, ard prior
+permutation_type="False"
+warmup_iterations="0"
+output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+
+# No permutation, ard prior
 permutation_type="False"
 warmup_iterations="3000"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 
-
-input_data_stem="tissues_subset_breast_"
-sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
-expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
-genotype_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_genotype.npy"
-covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covariate_w_intercept_input.txt"
-num_latent_factors="10"
-lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
-ratio_variance_standardization="True"
-permutation_type="False"
-warmup_iterations="3000"
+# Permutation where you permute only interaction genotype term
+permutation_type="interaction_only"
+warmup_iterations="0"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 
-input_data_stem="tissues_subset_stomach_"
-sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
-expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
-genotype_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_genotype.npy"
-covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covariate_w_intercept_input.txt"
-num_latent_factors="10"
-lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
-ratio_variance_standardization="True"
-permutation_type="False"
-warmup_iterations="3000"
+# Permutation where you permute both genotype interaction term and genotype fixed effect term
+permutation_type="fixed_and_interaction"
+warmup_iterations="0"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
-module load R/3.5.1
-Rscript visualize_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file
 
+
+
+if false; then
+module load R/3.5.1
+Rscript visualize_single_tissue_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file
+fi
 

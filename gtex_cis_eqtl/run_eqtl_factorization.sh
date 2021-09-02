@@ -3,7 +3,7 @@
 #SBATCH
 #SBATCH --time=30:00:00
 #SBATCH --partition=shared
-#SBATCH --mem=20GB
+#SBATCH --mem=5GB
 
 #SBATCH --nodes=1
 
