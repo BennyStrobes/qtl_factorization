@@ -521,6 +521,7 @@ def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expre
 	########################
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
+	print('variant gene pairs')
 	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
 
 	########################
@@ -574,7 +575,7 @@ latent_factor_interaction_eqtl_dir = sys.argv[4]  # Output dir
 # Input files
 ###################
 # Pseudobulk gene names 
-gene_id_file = processed_expression_dir + 'pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_gene_names.txt'
+gene_id_file = processed_expression_dir + 'pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_gene_names.txt'
 
 
 ###################
@@ -597,8 +598,8 @@ if len(np.unique(ensamble_ids)) != len(ensamble_ids):
 # Extract latent factor eqtl input data
 ###################
 # Max distance between variant and gene tss
-distance=10000
-num_covariate_pcs = 30
+distance=50000
+num_covariate_pcs = 10
 num_lf_pcs = 20
 
 # Input files

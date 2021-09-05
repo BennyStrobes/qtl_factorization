@@ -42,3 +42,11 @@ for cell_type in "${cell_types[@]}"; do
 	sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $cell_type_context_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
 done
 fi
+
+if false; then
+for cell_type in "${cell_types[@]}"; do
+	echo $cell_type
+	qtl_output_root=$output_stem$cell_type"_interaction_eqtl_results_"
+	python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+done
+fi

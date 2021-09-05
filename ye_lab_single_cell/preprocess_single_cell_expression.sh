@@ -40,6 +40,7 @@ module load python/3.7.4-anaconda
 # Generate pseudobulk expression
 python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $cluster_type $regress_out_batch $num_hvg $isg_score_file $cell_isg_score_file
 
+if false; then
 cluster_resolution="10.0"
 num_hvg="4000"
 module load R/3.6.1
@@ -53,7 +54,7 @@ module load R/3.6.1
 module load python/3.7.4-anaconda
 # Generate pseudobulk expression
 python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $cluster_type $regress_out_batch $num_hvg $isg_score_file $cell_isg_score_file
-
+fi
 
 
 if false; then

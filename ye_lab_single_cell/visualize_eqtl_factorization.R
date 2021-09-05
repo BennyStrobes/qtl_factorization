@@ -118,6 +118,55 @@ make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covar
 	return(plotter)
 }
 
+######################################
+# Make correlation heatmap correlating covariates with loadings
+#######################################
+make_pseudobulk_pc_loading_correlation_heatmap <- function(expr_pcs, loadings) {
+  loadings <- as.matrix(loadings)
+  expr_pcs <- as.matrix(expr_pcs)[,1:30]
+
+
+
+  # Initialize PVE heatmap
+  factor_colnames <- paste0("Factor", 1:(dim(loadings)[2]))
+  factor_rownames <- paste0("Expression_pc", 1:(dim(expr_pcs)[2]))
+  pve_map <- matrix(0, dim(expr_pcs)[2], dim(loadings)[2])
+  colnames(pve_map) <- factor_colnames
+  rownames(pve_map) <- factor_rownames
+
+
+    # Loop through each PC, COV Pair and take correlation
+    num_pcs <- dim(loadings)[2]
+    num_expr_pcs <- dim(expr_pcs)[2]
+    for (num_pc in 1:num_pcs) {
+        for (num_expr_pc in 1:num_expr_pcs) {
+            pc_vec <- loadings[,num_pc]
+            expr_pc_vec <- expr_pcs[,num_expr_pc]
+            #print(paste0(num_pc, " - ", num_cov))
+            lin_model <- lm(pc_vec ~ expr_pc_vec)
+            pve_map[num_expr_pc, num_pc] <- summary(lin_model)$adj.r.squared
+        }
+    }
+    
+    ord <- hclust( dist(scale(pve_map), method = "euclidean"), method = "ward.D" )$order
+
+    melted_mat <- melt(pve_map)
+    colnames(melted_mat) <- c("Expression_PC", "SURGE_PC","PVE")
+
+    melted_mat$Expression_PC = factor(melted_mat$Expression_PC, levels=factor_rownames)
+    melted_mat$SURGE_PC = factor(melted_mat$SURGE_PC, levels=factor_colnames)
+
+    
+    #levels(melted_mat$PC) = paste0("PC", 1:(length(levels(melted_mat$PC))))
+    #  PLOT!
+    heatmap <- ggplot(data=melted_mat, aes(x=Expression_PC, y=SURGE_PC)) + geom_tile(aes(fill=PVE)) + scale_fill_gradient2(midpoint=-.05, guide="colorbar")
+    heatmap <- heatmap + labs(y="",fill="VE")
+    heatmap <- heatmap + theme(text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8),  axis.text.x = element_text(angle = 90,hjust=1, vjust=.5)) 
+    # Save File
+    return(heatmap)
+}
+
+
 
 ######################################
 # Make correlation heatmap correlating covariates with loadings
@@ -329,6 +378,17 @@ expr <- readRDS("expr.rds")
 #saveRDS(expr_pcs, "expr_pcs.rds")
 expr_pcs <- readRDS("expr_pcs.rds")
 
+#umap_expr_pcs = umap(expr_pcs[,1:30])$layout
+#saveRDS(umap_expr_pcs, "umap_expr_pcs.rds")
+umap_expr_pcs <- readRDS("umap_expr_pcs.rds")
+
+#print(dim(expr))
+#umap_expr= umap(expr)$layout
+#saveRDS(umap_expr, "umap_expr.rds")
+#umap_expr <- readRDS("umap_expr.rds")
+print("DONE")
+
+
 
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
@@ -337,6 +397,35 @@ covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
+
+
+#######################################
+# Expression UMAP scatter colored by surge factor loadings
+#######################################
+surge_num <- 1
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 2
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 3
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 4
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+
 
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
@@ -432,9 +521,16 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 # PCA-covariate heatmap for pseudobulk data
 ##########################
 heatmap <- make_pseudobulk_covariate_loading_correlation_heatmap(covariates, loadings)
-output_file <- paste0(visualization_dir, "eqtl_factorization_covariate_pca_pve_heatmap.pdf")
+output_file <- paste0(visualization_dir, "eqtl_factorization_covariate_pve_heatmap.pdf")
 ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
+
+##########################
+# PCA-covariate heatmap for pseudobulk data
+##########################
+heatmap <- make_pseudobulk_pc_loading_correlation_heatmap(expr_pcs, loadings)
+output_file <- paste0(visualization_dir, "eqtl_factorization_pca_pve_heatmap.pdf")
+ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
 
 ######################################
