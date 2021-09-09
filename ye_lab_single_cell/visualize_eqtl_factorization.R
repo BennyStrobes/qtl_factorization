@@ -324,6 +324,26 @@ make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- functi
   return(merged)
 }
 
+generate_isg_signature_vector <- function(expr, gene_names) {
+  marker_genes <- c("CD74", "IL2RB", "IRF8", "CD69", "MARCH1", "IFIT1")
+  marker_gene_indices <- c()
+  for (marker_gene_iter in 1:length(marker_genes)) {
+    marker_gene = marker_genes[marker_gene_iter]
+    if (marker_gene %in% marker_genes) {
+       marker_gene_index <- which(gene_names==marker_gene)
+       marker_gene_indices <- c(marker_gene_indices, marker_gene_index)
+    }
+  }
+
+  base_expr <- expr[, marker_gene_indices[2]]
+
+  for (iter in 1:length(marker_gene_indices)) {
+    print(cor(base_expr, expr[, marker_gene_indices[iter]]))
+  }
+
+
+}
+
 
 
 ############################
@@ -343,6 +363,9 @@ sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalizat
 gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_gene_names.txt")
 gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
 gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_pca_scores.txt")
+
+
+
 
 ############################
 # Model Specification
@@ -398,6 +421,10 @@ covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
+#######################################
+# Generate isg signature vector
+#######################################
+isg_signature_vector = generate_isg_signature_vector(expr, gene_names)
 
 #######################################
 # Expression UMAP scatter colored by surge factor loadings
@@ -782,6 +809,16 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 ######################################
 # Visualize UMAP scatter plot based on marker genes
 #######################################
+
+
+marker_gene = "ISG15"
+marker_gene_index <- which(gene_names==marker_gene)
+marker_gene_expr_vec <- expr[, marker_gene_index]
+marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
 
 marker_gene = "CD40LG"
 marker_gene_index <- which(gene_names==marker_gene)

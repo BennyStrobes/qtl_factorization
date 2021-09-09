@@ -298,6 +298,56 @@ make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- functi
   return(merged)
 }
 
+
+make_exprPC_loading_correlation_heatmap <- function(covs, loadings) {
+  loadings <- as.matrix(loadings)
+  covs <- as.matrix(covs)
+
+  # Initialize PVE heatmap
+  factor_colnames <- paste0("Factor", 1:(dim(loadings)[2]))
+  factor_rownames <- paste0("PC", 1:(dim(covs)[2]))
+  pve_map <- matrix(0, dim(covs)[2], dim(loadings)[2])
+  colnames(pve_map) <- factor_colnames
+  rownames(pve_map) <- factor_rownames
+
+
+    # Loop through each PC, COV Pair and take correlation
+    num_pcs <- dim(loadings)[2]
+    num_covs <- dim(covs)[2]
+    print(num_pcs)
+    print(num_covs)
+    for (num_pc in 1:num_pcs) {
+      print(num_pc)
+        for (num_cov in 1:num_covs) {
+            pc_vec <- loadings[,num_pc]
+            cov_vec <- covs[,num_cov]
+            lin_model <- lm(pc_vec ~ cov_vec)
+            pve_map[num_cov, num_pc] <- summary(lin_model)$adj.r.squared
+        }
+    }
+    
+    melted_mat <- melt(pve_map)
+    colnames(melted_mat) <- c("Covariate", "Loading","PVE")
+
+    melted_mat$Covariate = factor(melted_mat$Covariate, levels=factor_rownames)
+    melted_mat$Loading = factor(melted_mat$Loading, levels=factor_colnames)
+   #  Use factors to represent covariate and pc name
+    # melted_mat$Covariate 
+    # melted_mat$Covariate <- factor(melted_mat$Covariate, levels = rownames(pve_map)[ord])
+    #melted_mat$PC <- substr(as.character(melted_mat$PC),3,5)
+    #melted_mat$PC <- factor(melted_mat$PC, levels=paste0("", 1:(length(unique(melted_mat$PC)))))
+
+    
+    #levels(melted_mat$PC) = paste0("PC", 1:(length(levels(melted_mat$PC))))
+    #  PLOT!
+    heatmap <- ggplot(data=melted_mat, aes(x=Covariate, y=Loading)) + geom_tile(aes(fill=PVE)) + scale_fill_gradient2(midpoint=-.05, guide="colorbar")
+    heatmap <- heatmap + labs(y="",fill="VE")
+    heatmap <- heatmap + theme(text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8),  axis.text.x = element_text(angle = 90,hjust=1, vjust=.5)) 
+    # Save File
+    return(heatmap)
+}
+
+
 make_covariate_loading_correlation_heatmap <- function(covariates, loadings) {
   loadings <- as.matrix(loadings)
 
@@ -420,8 +470,9 @@ visualization_dir <- paste0(visualization_dir, output_stem)
 ############################
 # Load in files
 ############################
+expr_pc_file <- paste0(processed_data_dir, "standardized_10_cap_normalized_expression_scanpy_4000_hvg_all_genotyped_cells_pca_loadings.txt")
+umap_file <- paste0(processed_data_dir, "standardized_normalized_expression_scanpy_4000_hvg_all_genotyped_cells_umap_loadings.txt")
 sample_covariate_file <- paste0(processed_data_dir, "cell_covariates.txt")
-
 ############################
 # Model Specification
 ############################
@@ -440,9 +491,14 @@ ordering <- order(pve, decreasing=TRUE)
 
 
 
+
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t", comment.char="*")
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
+expr_pcs <- read.table(expr_pc_file, header=FALSE)
+expr_umap <- read.table(umap_file, header=FALSE)
+print(dim(expr_pcs))
+print((dim(expr_umap)))
 #factors <- read.table(eqtl_factorization_factor_file, header=FALSE)
 
 
@@ -453,6 +509,21 @@ ordered_pve <- pve[ordering]
 
 #factors <- factors[ordering,]
 
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+num_factors <- dim(loadings)[2]
+for (factor_num in 1:num_factors) {
+  output_file <- paste0(visualization_dir, "expr_umap_loading_scatter_colored_by_surge", factor_num, ".pdf")
+  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,factor_num], expr_umap, paste0("SURGE", factor_num))
+  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+}
+
+output_file <- paste0(visualization_dir, "expr_umap_loading_scatter_colored_by_differentiation_day.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$day, expr_umap, "Differentiation day")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
 #######################################
 # Covariate-loading heatmap
 #######################################
@@ -460,6 +531,14 @@ output_file <- paste0(visualization_dir, "covariate_loading_correlation_heatmap.
 heatmap <- make_covariate_loading_correlation_heatmap(covariates, loadings)
 ggsave(heatmap, file=output_file, width=7.2, height=5.5, units="in")
 
+
+#######################################
+# exprPC-loading heatmap
+#######################################
+output_file <- paste0(visualization_dir, "exprPC_loading_correlation_heatmap.pdf")
+heatmap <- make_exprPC_loading_correlation_heatmap(expr_pcs[,1:20], loadings)
+ggsave(heatmap, file=output_file, width=7.2, height=5.5, units="in")
+print("DONE")
 
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor

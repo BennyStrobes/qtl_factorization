@@ -315,7 +315,11 @@ def normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, 
 	##################################
 	if gene_level_normalization == 'zscore':
 		for gene_num in range(normalized_expression.shape[1]):
-			normalized_expression[:,gene_num] = (raw_pseudobulk_expression[:, gene_num] - np.mean(raw_pseudobulk_expression[:, gene_num]))/np.std(raw_pseudobulk_expression[:, gene_num])
+			temp_expr = (raw_pseudobulk_expression[:, gene_num] - np.mean(raw_pseudobulk_expression[:, gene_num]))/np.std(raw_pseudobulk_expression[:, gene_num])
+			temp_expr[temp_expr > 10.0] = 10.0
+			temp_expr[temp_expr < -10.0] = -10.0
+			temp_expr = temp_expr - np.mean(temp_expr)
+			normalized_expression[:, gene_num] = temp_expr
 	elif gene_level_normalization == 'ign':
 		# Code from GTEx v8
 		# Project each gene onto a gaussian
@@ -385,7 +389,7 @@ cell_isg_score_file = sys.argv[9]
 
 # Load in processed-SC Ann-Data file
 input_h5py_file = processed_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_2.h5ad'
-adata = sc.read_h5ad(input_h5py_file)
+#adata = sc.read_h5ad(input_h5py_file)
 
 
 #################
@@ -400,12 +404,12 @@ cell_id_to_isg_score = create_cell_id_to_isg_score_mapping(cell_isg_score_file)
 ##################
 # Perform cell clustering seperately in each individual
 ##################
-adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
+#adata = perform_leiden_clustering_in_each_individual(adata, cluster_resolution)
 
 # Save in temporary adata object
 temp_h5_output_file = processed_pseudobulk_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_with_individual_leiden_clusters_' + str(cluster_resolution) + '_' + cluster_type + '.h5ad'
-adata.write(temp_h5_output_file)
-#adata = sc.read_h5ad(temp_h5_output_file)
+#adata.write(temp_h5_output_file)
+adata = sc.read_h5ad(temp_h5_output_file)
 
 
 #######################
@@ -420,7 +424,7 @@ adata.obs['cell_isg_score'] = ordered_cell_isg_scores
 # Create cell type summary output file of clustering file
 #######################
 clustering_ct_summary_file = processed_pseudobulk_expression_dir + 'scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + cluster_type + '_cell_type_summary.txt'
-print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
+#print_pseudobulk_clustering_mapping_cell_type_summary(adata, clustering_ct_summary_file, 'individual_leiden_clusters_' + str(cluster_resolution))
 
 
 
@@ -513,6 +517,7 @@ gene_level_normalization = 'zscore'
 num_pcs = 200
 # output root
 pb_expression_output_root = processed_pseudobulk_expression_dir + 'pseudobulk_scran_normalization_hvg_' + num_hvg + '_regress_batch_' + regress_out_batch + '_individual_clustering_leiden_resolution_' + str(cluster_resolution) + '_' + cluster_type + '_' + sample_level_normalization + '_sample_norm_' + gene_level_normalization + '_gene_norm_'
+print('last step')
 normalize_expression_and_generate_expression_pcs(raw_pseudobulk_expression, sample_level_normalization, gene_level_normalization, num_pcs, pb_expression_output_root)
 
 '''

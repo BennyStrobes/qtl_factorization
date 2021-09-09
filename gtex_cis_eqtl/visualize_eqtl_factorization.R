@@ -1232,7 +1232,7 @@ make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, cova
 	p <- ggplot(df, aes(fill=cell_type, y=counts, x=bin)) + 
     	geom_bar(position="fill", stat="identity") +
     	gtex_v8_figure_theme() +
-    	labs(fill="", y="Cell type proportions", x=paste0("Loading ", loading_number, " bin"))
+    	labs(fill="", y="Cell type proportions", x=paste0("SURGE latent contxt ", loading_number, " bin"))
     return(p)
 }
 
@@ -1404,8 +1404,8 @@ ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
 loading_number <- 1
 num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
-ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+stacked_barplot1 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot1, file=output_file, width=7.2, height=4.0, units="in")
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments
@@ -1419,8 +1419,8 @@ ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
 loading_number <- 2
 num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
-ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+stacked_barplot2 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot2, file=output_file, width=7.2, height=4.0, units="in")
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments
@@ -1464,8 +1464,8 @@ ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
 loading_number <- 5
 num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
-ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+stacked_barplot5 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot5, file=output_file, width=7.2, height=4.0, units="in")
 
 
 ##################
@@ -1480,8 +1480,8 @@ ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
 loading_number <- 6
 num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
-ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+stacked_barplot6 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot6, file=output_file, width=7.2, height=4.0, units="in")
 
 
 ##################
@@ -1496,8 +1496,15 @@ ggsave(boxplots, file=output_file, width=7.2, height=8.5, units="in")
 loading_number <- 7
 num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
-ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+stacked_barplot7 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot7, file=output_file, width=7.2, height=4.0, units="in")
+
+
+##################
+# Joint stacked bar plot
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "multi_loading_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
+joint_stacked_bar_plot <- plot_grid(stacked_barplot1 + theme(legend.position="none"), stacked_barplot2+ theme(legend.position="none"), stacked_barplot5+ theme(legend.position="none"), stacked_barplot6+ theme(legend.position="none"), stacked_barplot7+ theme(legend.position="none"), ncol=1)
+ggsave(joint_stacked_bar_plot, file=output_file, width=7.2, height=10.0, units="in")
 
 
 
@@ -1507,6 +1514,12 @@ ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "line_per_factor_loadings_boxplot_seperated_by_ancestry_and_tissue.pdf")
 boxplots <- make_loading_boxplot_plot_with_row_for_every_factor_by_race_and_tissue_type(covariates$race, tissue_10_names, loadings[,1:6])
 ggsave(boxplots, file=output_file, width=7.2, height=11.5, units="in")
+
+
+loading_num <- 2
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_num, "_Epithelial_cells", "_loadings_scatter.pdf")
+p <- make_cell_type_loading_scatter(loadings[,loading_num], covariates$Epithelial, paste0("Loading ", loading_num), "Epithelial", tissue_10_names, tissue_colors) 
+ggsave(p, file=output_file, width=7.2, height=5.5, units="in")
 
 
 

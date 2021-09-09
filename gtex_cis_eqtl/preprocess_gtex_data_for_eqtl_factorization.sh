@@ -26,8 +26,9 @@ module load python/2.7-anaconda
 ##############################################
 # Preprocess gene expression data
 ##############################################
+if false; then
 python preprocess_gtex_expression_data.py $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir
-
+fi
 
 if false; then
 module load R/3.5.1
@@ -38,8 +39,9 @@ fi
 #############################################
 # Prepare data for standard eqtl analysis
 #############################################
+if false; then
 python prepare_gtex_data_for_cross_tissue_eqtl_analysis.py $tissues_file $gtex_genotype_dir $output_dir
-
+fi
 
 
 
@@ -59,8 +61,9 @@ num_jobs="1"
 
 job_number="0"
 qtl_output_root=$output_dir"cross_tissue_eqtl_results_"$job_number"_"$num_jobs"_"
+if false; then
 sh run_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_output_root $job_number $num_jobs
-
+fi
 
 if false; then
 for job_number in $(seq 1 $(($num_jobs-1))); do 
@@ -71,11 +74,120 @@ fi
 
 
 # merge parallel runs
+if false; then
 python merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_eqtl_results_" $num_jobs
+fi
+
 
 
 
 #############################################
+# Prepare data for eQTL factorization 
+#############################################
+num_genes="2000"
+if false; then
+python preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes
+fi
+
+if false; then
+num_genes="2000"
+chromosome_num="8"
+python preprocess_gtex_data_based_on_standard_eqtls_hold_out_chromosome_for_eqtl_factorization.py $output_dir $num_genes $chromosome_num
+fi
+
+if false; then
+num_genes="2000"
+chromosome_num="9"
+python preprocess_gtex_data_based_on_standard_eqtls_hold_out_chromosome_for_eqtl_factorization.py $output_dir $num_genes $chromosome_num
+fi
+
+
+if false; then
+num_genes="2000"
+chromosome_num="10"
+python preprocess_gtex_data_based_on_standard_eqtls_hold_out_chromosome_for_eqtl_factorization.py $output_dir $num_genes $chromosome_num
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+############################################
 # Run variance eqtl analysis
 #############################################
 # Input data
@@ -101,23 +213,6 @@ for job_number in $(seq 1 $(($num_jobs-1))); do
 	sbatch run_v_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_output_root $job_number $num_jobs
 done
 fi
-
-
-
-
-#############################################
-# Prepare data for eQTL factorization 
-#############################################
-num_genes="2000"
-python preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes
-
-
-
-
-
-
-
-
 
 
 

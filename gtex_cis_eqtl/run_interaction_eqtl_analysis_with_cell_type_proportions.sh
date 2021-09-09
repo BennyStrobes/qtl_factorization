@@ -20,6 +20,10 @@ qtl_sample_overlap_file=$eqtl_input_dir"individual_id.txt"
 xcell_sample_enrichment_file=$eqtl_input_dir"sample_covariates.txt"
 
 
+
+######################################
+# Run Xcellxgenotype interaction in each cell independently
+######################################
 # Loop through cell types
 cell_types=( "Adipocytes" "Epithelial_cells" "Hepatocytes" "Keratinocytes" "Myocytes" "Neurons" "Neutrophils")
 ################################
@@ -43,10 +47,12 @@ for cell_type in "${cell_types[@]}"; do
 done
 fi
 
-if false; then
 for cell_type in "${cell_types[@]}"; do
 	echo $cell_type
 	qtl_output_root=$output_stem$cell_type"_interaction_eqtl_results_"
 	python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 done
-fi
+
+
+
+

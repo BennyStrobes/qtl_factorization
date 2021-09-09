@@ -102,6 +102,19 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		#os.system('rm ' + file_name)
 	t.close()
 
+def get_pvalue_only_file(input_file, output_file):
+	f = open(input_file)
+	t = open(output_file,'w')
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			continue
+		t.write(data[2] + '\n')
+	f.close()
+	t.close()
 
 
 output_root = sys.argv[1]
@@ -110,6 +123,12 @@ total_jobs = int(sys.argv[2])
 
 merged_file = output_root + 'merged.txt'
 merge_parallelized_results(output_root, ".txt", total_jobs)
+
+
+
+merged_file = output_root + 'merged.txt'
+merged_pvalue_only_file = output_root + 'merged_pvalue_only.txt'
+get_pvalue_only_file(merged_file,merged_pvalue_only_file)
 
 fdr = .05
 fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'

@@ -23,8 +23,9 @@ visualize_latent_factor_interaction_eqtl_dir="$6"
 # Prepare input data for latent factor interaction eqtl analysis
 #############################################
 # This first part needs 250GB of memory to run..
+if false; then
 python prepare_latent_factor_interaction_eqtl_data.py $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
-
+fi
 
 #############################################
 # Run standard eQTL Analysis
@@ -40,9 +41,9 @@ qtl_sample_overlap_file=$latent_factor_interaction_eqtl_dir"latent_factor_intera
 #In parallel
 num_jobs="50"
 job_number="0"
-qtl_output_root=$latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_none_zscore_eqtl_results_"$job_number"_"$num_jobs"_tmp_"
+qtl_output_root=$latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_none_zscore_eqtl_results_"$job_number"_"$num_jobs"_"
 if false; then
-sh run_standard_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
+sbatch run_standard_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
 fi
 
 if false; then
@@ -52,10 +53,13 @@ for job_number in $(seq 1 $(($num_jobs-1))); do
 done
 fi
 
+
 # merge parallel runs
 if false; then
 python merge_parallelized_standard_eqtl_calls.py $latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_none_zscore_eqtl_results_" $num_jobs
 fi
+
+
 #############################################
 # Visualize latent factor interaction results
 #############################################

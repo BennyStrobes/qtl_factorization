@@ -320,6 +320,7 @@ def create_mapping_from_gene_names_to_expression_vectors(sc_expression_file, gen
 	mapping = {}
 	for index, gene_name in enumerate(gene_names):
 		mapping[gene_name] = expression_matrix[:, index]
+		#vec = (expression_matrix[:, index]).astype(float)
 	del expression_matrix
 	return mapping
 
@@ -349,12 +350,13 @@ def generate_single_cell_expression_eqtl_training_data(ld_pruned_variant_gene_pa
 		if gene_name not in gene_name_to_expression_vector:
 			pdb.set_trace()
 		expression_string = gene_name_to_expression_vector[gene_name]
-		data = np.asarray(expression_string.split()).astype(float)
-		data[data > 5.0] = 5.0
-		data[data < -5.0] = -5.0
-		data = data - np.mean(data)
+		#data = np.asarray(expression_string.split()).astype(float)
+		#data[data > 5.0] = 5.0
+		#data[data < -5.0] = -5.0
+		#print(np.mean(data))
+		#data = data - np.mean(data)
 		# Print to output file
-		t.write('\t'.join(data.astype(str)) + '\n')
+		t.write(expression_string + '\n')
 	t.close()
 
 
@@ -522,30 +524,26 @@ def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expre
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
 	print('variant gene pairs')
-	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
+	#extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file)
 
 	########################
 	# Step 2: Generate expression matrix
 	########################
 	print('expr')
-	generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
+	#generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
 
 	########################
 	# Step 3: Generate Genotype matrix
 	########################
 	print('geno')
-	construct_genotype_matrix(eqtl_variant_gene_pairs_file, genotype_data_dir, sample_covariate_file, eqtl_genotype_file)
+	#construct_genotype_matrix(eqtl_variant_gene_pairs_file, genotype_data_dir, sample_covariate_file, eqtl_genotype_file)
 
 	########################
 	# Step 4: Generate sample overlap file
 	########################
 	print('sample overlap')
-	construct_sample_overlap_file(sample_covariate_file, eqtl_sample_overlap_file)
+	#construct_sample_overlap_file(sample_covariate_file, eqtl_sample_overlap_file)
 
-	# Quick error checking
-	if num_covariate_pcs < num_lf_pcs:
-		print('Fatal assumption erororor')
-		pdb.set_trace()
 
 	########################
 	# Step 5: Generate covariate file
@@ -599,8 +597,8 @@ if len(np.unique(ensamble_ids)) != len(ensamble_ids):
 ###################
 # Max distance between variant and gene tss
 distance=50000
-num_covariate_pcs = 10
-num_lf_pcs = 20
+num_covariate_pcs = 30
+num_lf_pcs = 10
 
 # Input files
 expression_file = processed_expression_dir + 'pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_none_sample_norm_zscore_gene_norm_normalized_expression.txt'

@@ -33,6 +33,9 @@ isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info
 # File containing isg scores for each cell
 cell_isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/cell_isg_scores.csv"
 
+# GSEA data
+gsea_data_dir="/work-zfs/abattle4/bstrober/tools/tools-master/gsea/data/"
+
 ######################
 # Output directories
 ######################
@@ -75,6 +78,9 @@ eqtl_factorization_results_dir=$output_root"eqtl_factorization_results/"
 # Directory containing visualizations of eqtl factorization results
 eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 
+# Directory containing gene set enrichment results
+gene_set_enrichment_dir=$output_root"gene_set_enrichment/"
+
 
 
 ######################
@@ -105,9 +111,8 @@ fi
 #############################################
 # Prepare data for eQTL factorization 
 #############################################
-if false; then
 sh preprocess_data_for_eqtl_factorization.sh $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
-fi
+
 
 
 
@@ -125,14 +130,24 @@ variance_param="1e-3"
 ard_variance_param="1e-16"
 seed="1"
 permutation_type="False"
-model_name="eqtl_factorization_vi_ard_full_component_update"
+model_name="eqtl_factorization_vi_ard_environmental_fixed_effect"
 ratio_variance_standardization="True"
-warmup_iterations="5"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_lambda_"$lambda_v"_vlong_alt_init_"
+warmup_iterations="3000"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_lambda_"$lambda_v"_vlong_"
 if false; then
-sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+fi
+if false; then
+source ~/.bash_profile
+warmup_iterations="3000"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_lambda_"$lambda_v"_vlong_alt_init_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+fi
 
 
+
+
+if false; then
 ratio_variance_standardization="True"
 warmup_iterations="3000"
 
@@ -244,16 +259,29 @@ output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_resul
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
+
+
+############################################
+# Run gene set enrichment analysis
+############################################
+model_loadings_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_vlong_temper_U_S.txt"
+expr_file=$processed_pseudobulk_expression_dir"pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_normalized_expression.txt"
+gene_names_file=$processed_pseudobulk_expression_dir"pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_gene_names.txt"
+gene_set_enrichment_output_stem=$gene_set_enrichment_dir"standard_eqtl_ard_full_component_update_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
+if false; then
+sh gene_set_enrichment_analysis.sh $model_loadings_file $expr_file $gene_names_file $gsea_data_dir $gene_set_enrichment_output_stem
+fi
+
 #############################################
 ## Visualize eqtl factorization
 #############################################
 if false; then
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_1_warmup_5_ratio_variance_std_True_permute_False_lambda_1_vlong_alt_init_temper_"
-output_stem="standard_eqtl_ard_full_component_update_alt_init_rv_True_permute_False_seed_1_5_warmup_lambda_1_"
+model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_vlong_temper_"
+output_stem="standard_eqtl_ard_full_component_update_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-
-
+fi
+if false; then
 module load R/3.5.1
 model_stem="eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_vlong_temper_"
 output_stem="standard_eqtl_ard_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"

@@ -1148,7 +1148,7 @@ make_loading_boxplot_for_one_factor_by_race_and_tissue_type <- function(race,tis
         gtex_v8_figure_theme() + 
             labs(x="", y = paste0("Sample loading (", factor_number,")"), fill="") +
             theme(legend.position="top") +
-            guides(colour = guide_legend(override.aes = list(size=2)))
+            guides(colour = guide_legend(override.aes = list(size=2))) 
      
    return(boxplot)
 
@@ -1189,7 +1189,7 @@ make_loading_by_cell_type_scatter <- function(loading_vec, cell_type_vec, loadin
 plotter <- ggplot(df, aes(x=loading, y=cell_type_vec)) + 
            geom_point() +
            gtex_v8_figure_theme() + 
-           labs(x=paste0("Loading ", loading_num), y=cell_type_name, title=paste0("Adjusted r squard: ", r_squared))
+           labs(x=paste0("SURGE Loading ", loading_num), y=cell_type_name, title=paste0("Adjusted r squard: ", r_squared))
     return(plotter)
 
 }
@@ -1212,6 +1212,26 @@ make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, cova
 	lm1 = lm(loading_vec~Adipocytes+Epithelial_cells+Hepatocytes+Keratinocytes+Myocytes+Neurons+Neutrophils, data=covariates) #Create the linear regression
  }
 
+make_cell_type_enrichment_pvalue_plot <- function(loading_vec, covariates, loading_number) {
+	#print(scale(covariates))
+	new_df <- data.frame(Adipocytes=scale(covariates$Adipocytes), Epithelial_cells=scale(covariates$Epithelial_cells), Hepatocytes=scale(covariates$Hepatocytes), Keratinocytes=scale(covariates$Keratinocytes), Myocytes=scale(covariates$Myocytes), Neurons=scale(covariates$Neurons), Neutrophils=scale(covariates$Neutrophils))
+
+	lm1 = lm(loading_vec~Adipocytes+Epithelial_cells+Hepatocytes+Keratinocytes+Myocytes+Neurons+Neutrophils, data=new_df) #Create the linear regression
+	
+	coefs = coef(summary(lm1))[2:(dim(coef(summary(lm1)))[1]), ]
+	ub = coefs[,1] + 2.96*coefs[,2]
+	lb = coefs[,1] - 2.96*coefs[,2]
+	df <- data.frame(term=row.names(coefs), estimate=coefs[,1], conf.low=lb, conf.high=ub)
+	p <- ggplot(df, aes(term, estimate,color=term))+
+  		geom_point()+
+  		geom_pointrange(aes(ymin = conf.low, ymax = conf.high))+
+  		gtex_v8_figure_theme() +
+  		geom_hline(yintercept=0) +
+  		labs(x="", y="Effect size") +
+  		theme(legend.position="none") +
+  		theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+  	return(p)
+}
 observed_cell_type_proportion_stacked_bar_plot <- function(loading_vec, loading_number, covariates, num_bins) {
 	minny <- min(loading_vec)
 	maxy <- max(loading_vec)
@@ -1262,7 +1282,7 @@ observed_cell_type_proportion_stacked_bar_plot <- function(loading_vec, loading_
 	p <- ggplot(df, aes(fill=cell_type, y=counts, x=bin)) + 
     	geom_bar(position="fill", stat="identity") +
     	gtex_v8_figure_theme() +
-    	labs(fill="", y="Cell type proportions", x=paste0("Loading ", loading_number, " bin"))
+    	labs(fill="", y="Cell type proportions", x=paste0("SURGE Loading ", loading_number, " bin"))
     return(p)
 }
 
@@ -1284,6 +1304,76 @@ loading_by_various_cell_types_scatters <- function(loading_vec, loading_number, 
 	return(merged)
 }
 
+sample_non_significant_hits <- function(pvalues, fraction_kept=.01,fraction_sampled=.001) {
+    index <- floor(length(pvalues)*fraction_kept)
+    to_keep <- pvalues[1:index]
+    to_filter <- pvalues[(index+1):length(pvalues)]
+    filtered <- sort(sample(to_filter,floor(length(to_filter)*fraction_sampled)))
+    return(c(to_keep,filtered))
+}
+
+make_interaction_eqtl_qq_plot <- function(interaction_eqtl_dir, tissue_stem) {
+	surge_qtl_file <- paste0(interaction_eqtl_dir, "surge_interaction_eqtl_factor_1_", tissue_stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_interaction_eqtl_results_merged_pvalue_only.txt")
+	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V1
+	sorted_surge_qtl_pvalues <- sample_non_significant_hits(sort(surge_qtl_pvalues))
+
+	sorted_null_qtl_pvalues <- sample_non_significant_hits(sort(runif(length(surge_qtl_pvalues))))
+	
+
+
+	df <- data.frame(surge_pvalue=-log10(sorted_surge_qtl_pvalues+1e-40), cell_type_pvalue=-log10(sorted_null_qtl_pvalues+1e-40))
+
+    # PLOT!
+    max_val <-max(max(-log10(sorted_surge_qtl_pvalues + 1e-40)), max(-log10(sorted_null_qtl_pvalues + 1e-40)))
+    #PLOT!
+    scatter <- ggplot(df, aes(x = cell_type_pvalue, y = surge_pvalue)) + geom_point()
+    scatter <- scatter + theme(text = element_text(size=14), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    scatter <- scatter + labs(colour="",x = expression(log[10]("Expected eQTL p-value")), y = expression(log[10]("SURGE interaction eQTL p-value")))
+    scatter <- scatter + geom_abline()
+    scatter <- scatter + theme(legend.position="bottom")
+    scatter <- scatter + scale_x_continuous(limits = c(-.1, max_val + .1), breaks = round(seq(0, max_val, by = 5),1)) + scale_y_continuous(limits = c(-.1,max_val+.1), breaks = round(seq(0, max_val, by = 5),1))
+    scatter <- scatter + theme(plot.title=element_text(size=8, face="plain"), text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8))
+    return(scatter)
+
+}
+
+
+make_interaction_eqtl_cell_type_comparison_qq_plot <- function(interaction_eqtl_dir, tissue_stem) {
+	surge_qtl_file <- paste0(interaction_eqtl_dir, "surge_interaction_eqtl_factor_1_", tissue_stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_interaction_eqtl_results_merged_pvalue_only.txt")
+	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V1
+	sorted_surge_qtl_pvalues <- sample_non_significant_hits(sort(surge_qtl_pvalues))
+
+	cell_types <- c("Adipocytes", "Epithelial_cells", "Hepatocytes", "Keratinocytes", "Myocytes", "Neurons", "Neutrophils")
+	
+	surge_pvalue_vec <- c()
+	cell_type_pvalue_vec <- c()
+	cell_type_vec <- c()
+	for (cell_type_iter in 1:length(cell_types)) {
+		cell_type <- cell_types[cell_type_iter]
+		cell_type_qtl_file <- paste0(interaction_eqtl_dir, "xcell_interaction_tissues_subset_colon_transverse_", cell_type, "_interaction_eqtl_results_merged_pvalue_only.txt")
+		cell_type_qtl_pvalues <- read.table(cell_type_qtl_file, header=FALSE)$V1
+		sorted_cell_type_qtl_pvalues <- sort(cell_type_qtl_pvalues)
+
+		surge_pvalue_vec <- c(surge_pvalue_vec, sorted_surge_qtl_pvalues)
+		cell_type_pvalue_vec <- c(cell_type_pvalue_vec, sample_non_significant_hits(sorted_cell_type_qtl_pvalues))
+		cell_type_vec <- c(cell_type_vec, rep(cell_type, length(sorted_surge_qtl_pvalues)))
+	}
+	df <- data.frame(surge_pvalue=-log10(surge_pvalue_vec+1e-40), cell_type_pvalue=-log10(cell_type_pvalue_vec+1e-40), cell_type=factor(cell_type_vec, levels=cell_types))
+
+    # PLOT!
+    max_val <-max(max(-log10(surge_pvalue_vec + 1e-40)), max(-log10(cell_type_pvalue_vec + 1e-40)))
+    #PLOT!
+    scatter <- ggplot(df, aes(x = cell_type_pvalue, y = surge_pvalue, colour = cell_type)) + geom_point()
+    scatter <- scatter + theme(text = element_text(size=14), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
+    scatter <- scatter + labs(colour="",x = expression(log[10]("Cell type interaction eQTL p-value")), y = expression(log[10]("SURGE interaction eQTL p-value")))
+    scatter <- scatter + geom_abline()
+    scatter <- scatter + theme(legend.position="bottom")
+    scatter <- scatter + scale_x_continuous(limits = c(-.1, max_val + .1), breaks = round(seq(0, max_val, by = 5),1)) + scale_y_continuous(limits = c(-.1,max_val+.1), breaks = round(seq(0, max_val, by = 5),1))
+    scatter <- scatter + theme(plot.title=element_text(size=8, face="plain"), text = element_text(size=8),axis.text=element_text(size=7), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=7), legend.title = element_text(size=8))
+    return(scatter)
+
+}
+
 
 
 
@@ -1291,6 +1381,8 @@ processed_data_dir <- args[1]
 eqtl_results_dir <- args[2]
 visualization_dir <- args[3]
 tissue_colors_file <- args[4]
+interaction_eqtl_dir <- args[5]
+
 
 # Read in tissue colors and names
 tissue_colors = read.table(tissue_colors_file, header = T, stringsAsFactors = F, sep = "\t")
@@ -1312,7 +1404,7 @@ for (tiss_num in 1:length(tissue_colors$tissue_id)) {
 # Load in files
 ############################
 options(warn=1)
-stem <- "tissues_subset_whole_blood"
+stem <- "tissues_subset_colon_transverse"
 tissue_10_file <- paste0(processed_data_dir, stem, "_sample_names.txt")
 tissue_10_sample_covariate_file <- paste0(processed_data_dir, stem, "_sample_covariates.txt")
 tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, stem, "_sample_surveyed_covariates.txt")
@@ -1327,7 +1419,7 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 ############################
 # Model Specification
 ############################
-tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_3000_ratio_variance_std_True_permute_False_2000_tests_temper_")
+tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_tests_temper_")
 tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
@@ -1351,18 +1443,20 @@ pcs <- read.table(tissue_10_expression_pcs_file, header=TRUE)
 # Remove sample name column from pcs
 pcs <- pcs[,2:(dim(pcs)[2])]
 
-#explore_relationship_between_surveyed_covariates_and_eqtl_factors(tissue_10_surveyed_covariate_file, loadings)
-#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, loadings, tissue_10_indi_names)
-#explore_relationship_between_technical_covariates_and_eqtl_factors(tissue_10_technical_covariate_file, pcs, tissue_10_indi_names)
 
-#explore_relationship_between_sample_covariates_and_eqtl_factors(tissue_10_sample_covariate_file, loadings)
-#explore_relationship_between_muscle_age_and_eqtl_factors(tissue_10_sample_covariate_file, loadings)
 
-#####################
-# Make histogram showing distribution of factor values for each factor
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "factor_distribution_histograms.pdf")
-#hist <- make_factor_distribution_histograms(tissue_10_factor_file)
-#ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
+#######################################
+# Make interaction eqtl QQ plot
+#######################################
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "interaction_eqtl_qq_plot.pdf")
+qq_plot <- make_interaction_eqtl_qq_plot(interaction_eqtl_dir, stem)
+ggsave(qq_plot, file=output_file, width=7.2, height=5.5, units="in")
+
+
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "interaction_eqtl_cell_type_comparison_qq_plot.pdf")
+qq_plot <- make_interaction_eqtl_cell_type_comparison_qq_plot(interaction_eqtl_dir, stem)
+ggsave(qq_plot, file=output_file, width=7.2, height=5.5, units="in")
 
 
 #######################################
@@ -1416,10 +1510,22 @@ ggsave(merged, file=output_file, width=13.2, height=5.5, units="in")
 
 ##################
 covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
-
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_by_genotype_pc1_colored_by_race.pdf")
 boxplots <- loading_by_genotype_pc1_colored_by_race(loadings[,1],factor(covariates$race), pcs$genotype_PC0)
 ggsave(boxplots, file=output_file, width=7.2, height=5.5, units="in")
+
+
+##################
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_by_epithelial_cell_enrichment.pdf")
+epi_scatter <- make_loading_by_cell_type_scatter(loadings[,1], covariates$Epithelial_cells, 1, "Epithelial cell enrichment")
+ggsave(epi_scatter, file=output_file, width=7.2, height=5.5, units="in")
+
+
+##################
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_by_cell_type_enrichment_pvalues.pdf")
+cell_type_pvalues_plot <- make_cell_type_enrichment_pvalue_plot(loadings[,1], covariates, 1)
+ggsave(cell_type_pvalues_plot, file=output_file, width=7.2, height=5.5, units="in")
+
 
 
 ##################

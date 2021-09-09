@@ -179,7 +179,7 @@ def get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_
 	else:
 		print('error: method ' + method + ' currently not implemented')
 		pdb.set_trace()
-	return indices
+	return indices, adata
 
 def filter_to_highly_variable_genes(recreated_normalized_gene_expression_file, recreated_normalized_hvg_gene_expression_file, highly_variable_gene_indices):
 	f = open(recreated_normalized_gene_expression_file)
@@ -273,32 +273,32 @@ genotype_file = processed_genotype_dir + 'genotype_missing_removed.txt'
 
 ##############################
 # Reformat genotype data and get list of individuals that we have genotype data for
-valid_individuals = get_dictionary_list_of_individuals_that_we_have_genotype_for(genotype_file)
+#valid_individuals = get_dictionary_list_of_individuals_that_we_have_genotype_for(genotype_file)
 
 
 ###############################
 # Create mapping from cell-id to individual id
 # And filter cells to those for which we have genotype data for
 cell_to_individual_mapping_file = processed_expression_dir + 'cell_individual_mapping.txt'
-make_cell_to_individual_mapping(meta_data_file, cell_to_individual_mapping_file, valid_individuals)
+#make_cell_to_individual_mapping(meta_data_file, cell_to_individual_mapping_file, valid_individuals)
 
 
 ###############################
 # Re-create cell covariates
 # And filter cells to those for which we have genotype data for
 recreated_cell_covariates_file = processed_expression_dir + 'cell_covariates.txt'
-valid_cell_indices = recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file, cell_state_file)
+# = recreate_cell_covariates(meta_data_file, recreated_cell_covariates_file, valid_individuals, genotype_pc_file, cell_state_file)
 
 ###############################
 # Re-create expression data
 recreated_normalized_gene_expression_file = processed_expression_dir + 'normalized_expression_all_genotyped_cells.txt'
-recreate_expression(normalized_expression_file, recreated_normalized_gene_expression_file, valid_cell_indices)
+#recreate_expression(normalized_expression_file, recreated_normalized_gene_expression_file, valid_cell_indices)
 
 
 ###############################
 # Re-create expression data
 recreated_normalized_gene_expression_gene_symbols_file = processed_expression_dir + 'normalized_expression_gene_symbols_all_genotyped_cells.txt'
-filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expression_file, recreated_normalized_gene_expression_gene_symbols_file)
+#filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expression_file, recreated_normalized_gene_expression_gene_symbols_file)
 
 
 ###############################
@@ -306,11 +306,24 @@ filter_expression_file_to_only_have_gene_symbols(recreated_normalized_gene_expre
 hvg_methods = ['scran', 'scanpy', 'scran', 'scanpy', 'scran', 'scanpy', 'scran', 'scanpy']
 num_genes_arr = [1000, 1000, 2000, 2000, 3000, 3000, 4000, 4000]
 
+hvg_methods = ['scanpy']
+num_genes_arr = [4000]
+
 for i, hvg_method in enumerate(hvg_methods):
 	num_genes = num_genes_arr[i]
 	full_hvg_method = hvg_method + '_' + str(num_genes)
 
-	highly_variable_gene_indices = get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, recreated_cell_covariates_file, hvg_method + '_approach', num_genes)
+	highly_variable_gene_indices, adata = get_highly_variable_genes(recreated_normalized_gene_expression_gene_symbols_file, recreated_cell_covariates_file, hvg_method + '_approach', num_genes)
+	adata = adata[:, adata.var.highly_variable]
+
+	# Run UMAP
+	scanpy.tl.pca(adata, svd_solver='arpack')
+	scanpy.pp.neighbors(adata)
+	scanpy.tl.umap(adata)
+	umap_output_file = processed_expression_dir + 'standardized_normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells_umap_loadings.txt'
+	np.savetxt(umap_output_file, adata.obsm['X_umap'], fmt="%s", delimiter='\t', comments='')
+	print("UMAP DONE")
+
 	recreated_normalized_hvg_gene_expression_file = processed_expression_dir + 'normalized_expression_' + full_hvg_method + '_hvg_all_genotyped_cells.txt'
 	filter_to_highly_variable_genes(recreated_normalized_gene_expression_file, recreated_normalized_hvg_gene_expression_file, highly_variable_gene_indices)
 

@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=30:00:00
+#SBATCH --time=20:00:00
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 
@@ -15,6 +15,8 @@ qtl_sample_overlap_file="$6"
 qtl_output_root="$7"
 job_number="$8"
 num_jobs="$9"
+
+source /work-zfs/abattle4/bstrober/temp/.bash_profile
 
 total_lines_plus_one=`wc -l $qtl_test_names_file`
 

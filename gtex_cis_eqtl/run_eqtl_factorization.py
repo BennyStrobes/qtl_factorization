@@ -2,11 +2,10 @@ import numpy as np
 import os
 import sys
 import pdb
-import eqtl_factorization_vi_ard
+#import eqtl_factorization_vi_ard
 import eqtl_factorization_vi_ard_full_component_update
-from pymer4.models import Lmer
 import pandas as pd
-import eqtl_factorization_vi_alt_ard_full_component_update
+#import eqtl_factorization_vi_alt_ard_full_component_update
 
 # Load in sample overlap data
 def load_in_sample_overlap_data(sample_overlap_file):
