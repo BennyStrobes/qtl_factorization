@@ -111,8 +111,9 @@ fi
 #############################################
 # Prepare data for eQTL factorization 
 #############################################
+if false; then
 sh preprocess_data_for_eqtl_factorization.sh $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
-
+fi
 
 
 
