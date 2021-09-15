@@ -816,6 +816,7 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_mu = pca.components_.T
 		for k in range(self.K):
 			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
+		self.U_mu = self.U_mu*0.0
 		self.U_var = np.ones((self.N, self.K))*(1.0/self.gamma_v) 
 		self.gamma_U_alpha = np.ones(self.K)
 		self.gamma_U_beta = np.ones(self.K)

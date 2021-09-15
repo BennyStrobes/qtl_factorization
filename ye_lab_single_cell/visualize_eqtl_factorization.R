@@ -5,6 +5,8 @@ library(cowplot)
 library(umap)
 library(ggplot2)
 library(RColorBrewer)
+library(sigmoid)
+library(lme4)
 options(bitmapType = 'cairo', device = 'pdf')
 
 
@@ -112,7 +114,8 @@ make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covar
 	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.01) +
 	           gtex_v8_figure_theme() + 
 	           labs(x="UMAP 1", y = "UMAP 2", color=covariate_name) + 
-	           scale_color_gradient(low="pink",high="blue") +
+             scale_colour_gradient2() +
+	           #scale_color_gradient(low="pink",high="blue") +
 	           theme(legend.position="bottom") + 
 	           theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
 	return(plotter)
@@ -123,7 +126,7 @@ make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covar
 #######################################
 make_pseudobulk_pc_loading_correlation_heatmap <- function(expr_pcs, loadings) {
   loadings <- as.matrix(loadings)
-  expr_pcs <- as.matrix(expr_pcs)[,1:30]
+  expr_pcs <- as.matrix(expr_pcs)[,1:40]
 
 
 
@@ -359,12 +362,10 @@ visualization_dir <- paste0(visualization_dir, output_stem)
 ############################
 # Load in files
 ############################
-sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_sample_covariates.txt")
-gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_gene_names.txt")
-gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
-gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_regress_batch_True_individual_clustering_leiden_resolution_10.0_none_sample_norm_zscore_gene_norm_pca_scores.txt")
-
-
+sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_covariates.txt")
+gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt")
+gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
+gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_pca_scores.txt")
 
 
 ############################
@@ -397,34 +398,39 @@ gene_names <- read.table(gene_names_file, header=FALSE)$V1
 #saveRDS( expr, "expr.rds")
 expr <- readRDS("expr.rds")
 
+expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+saveRDS(expr_pcs, "expr_pcs.rds")
+#expr_pcs <- readRDS("expr_pcs.rds")
+
+
+#umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
+#umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
+#print("DONE")
+
+#gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-#saveRDS(expr_pcs, "expr_pcs.rds")
-expr_pcs <- readRDS("expr_pcs.rds")
-
-#umap_expr_pcs = umap(expr_pcs[,1:30])$layout
-#saveRDS(umap_expr_pcs, "umap_expr_pcs.rds")
-umap_expr_pcs <- readRDS("umap_expr_pcs.rds")
-
-#print(dim(expr))
-#umap_expr= umap(expr)$layout
-#saveRDS(umap_expr, "umap_expr.rds")
-#umap_expr <- readRDS("umap_expr.rds")
-print("DONE")
-
+umap_expr = umap(expr_pcs)$layout
+#saveRDS(umap_expr, "umap_expr_loadings.rds")
 
 
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
+
 
 covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
+
+#fit <- lmer(expr_pcs[,3] ~ loadings[,1] + loadings[,2] + loadings[,3] + loadings[,4] + loadings[,5] + loadings[,6] + loadings[,7] + loadings[,8] + loadings[,9] + loadings[,10] + (1|Z))
+#fit2 <- lm(expr_pcs[,3] ~ predict(fit))
+#print(summary(fit2))
+
 #######################################
 # Generate isg signature vector
 #######################################
-isg_signature_vector = generate_isg_signature_vector(expr, gene_names)
+#isg_signature_vector = generate_isg_signature_vector(expr, gene_names)
 
 #######################################
 # Expression UMAP scatter colored by surge factor loadings
@@ -432,27 +438,77 @@ isg_signature_vector = generate_isg_signature_vector(expr, gene_names)
 surge_num <- 1
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 surge_num <- 2
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 surge_num <- 3
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 surge_num <- 4
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr_pcs, paste0("SURGE ", surge_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 5
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 6
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 7
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 8
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 9
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 10
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$cg_cov_mode, umap_expr, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type2.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_expr, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_individual.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ind_cov, umap_expr, "cell type")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
-
-
+print("DONE")
 
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
@@ -606,12 +662,18 @@ output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_fac
 boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov[cell_indices], loadings[cell_indices,], "Batch")
 ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
-
 print('UMAP START')
-umap_loadings = umap(loadings)$layout
-saveRDS( umap_loadings, "umap_loadings.rds")
-#umap_loadings <- readRDS("umap_loadings.rds")
+#umap_loadings = umap(loadings)$layout
+#saveRDS( umap_loadings, "umap_loadings.rds")
+umap_loadings <- readRDS("umap_loadings.rds")
 print('UMAP DONE')
+
+#indices <- (abs(umap_loadings[,1]) < 8) & (abs(umap_loadings[,2]) < 8)
+#umap_loadings <- umap_loadings[indices,]
+#covariates <- covariates[indices,]
+#loadings <- loadings[indices,]
+#expr_pcs <- expr_pcs[indices,]
+#expr <- expr[indices,]
 
 
 ######################################
@@ -655,6 +717,13 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 #######################################
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_log_donor_isg_score.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(log(covariates$donor_isg_score), umap_loadings, "log(Donor ISG score)")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by number of cells
+#######################################
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_donor_isg_score.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable((covariates$donor_isg_score), umap_loadings, "Donor ISG score")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 ######################################
@@ -734,23 +803,58 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 #######################################
 lf_num <- 1
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 2
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 3
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 4
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(loadings[,lf_num], umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+lf_num <- 5
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+lf_num <- 6
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+lf_num <- 7
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+lf_num <- 8
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+lf_num <- 9
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+lf_num <- 10
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
 
 
 ######################################
@@ -792,12 +896,31 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expres
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-
 expression_pc_num <- 7
 expr_pc_vec <- expr_pcs[,expression_pc_num]
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expression_pc_num_", expression_pc_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+expression_pc_num <- 8
+expr_pc_vec <- expr_pcs[,expression_pc_num]
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expression_pc_num_", expression_pc_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+expression_pc_num <- 9
+expr_pc_vec <- expr_pcs[,expression_pc_num]
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expression_pc_num_", expression_pc_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+expression_pc_num <- 10
+expr_pc_vec <- expr_pcs[,expression_pc_num]
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_expression_pc_num_", expression_pc_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(expr_pc_vec, umap_loadings, paste0("Expression PC ", expression_pc_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
 
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_avg_cell_isg_score.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable((covariates$avg_cell_isg_score), umap_loadings, "avg cell ISG score")

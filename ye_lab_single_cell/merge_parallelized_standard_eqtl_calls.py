@@ -82,7 +82,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			data = line.split('\t')
 			t2.write(line + '\n')
 			counter = counter +1
-			if len(data) < 2:
+			if len(data) < 3:
 				print('miss')
 				continue
 			if data[2] == 'NA':

@@ -144,15 +144,11 @@ covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1 +1
 
-unique_groups <- unique(groups)
-individual_groups <- c()
-for (index in 1:length(unique_groups)) {
-	group_name <- unique_groups[index]
-	individual_groups <- c(individual_groups, which(groups==group_name)[1])
-}
+
 print("Data loaded in.. starting")
 
 num_lfs <- dim(lfs)[2]
+print(num_lfs)
 
 output_file <- paste0(output_root, "results.txt")
 sink(output_file)
@@ -184,7 +180,6 @@ while(!stop) {
 		tryCatch(
 		{
 			lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
-			#lmm_results_perm = run_lf_interaction_eqtl_lmm_perm(expr, geno, covariates, lfs, groups, individual_groups)
 
 			new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lmm_results$eqtl_pvalue, "\t", paste0(lmm_results$coefficient_pvalues, collapse=","), "\n")
         		

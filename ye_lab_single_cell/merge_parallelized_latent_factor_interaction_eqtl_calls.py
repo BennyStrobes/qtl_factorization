@@ -213,12 +213,3 @@ fdr = .05
 fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
-
-nominal_coefficient_pvalue_thresholds = [1e-4, 1e-6, 1e-8]
-num_hits_per_lf_file = output_root + 'number_of_hits_per_latent_factor.txt'
-number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds)
-
-
-num_quantiles = 5
-num_hits_per_lf_per_quantile_file = output_root + 'number_of_hits_per_latent_factor_stratefied_by_' + str(num_quantiles) + '_quantiles.txt'
-number_of_hits_per_latent_factor_seperated_by_quantiles(fdr_file, num_hits_per_lf_per_quantile_file, num_quantiles)
