@@ -16,7 +16,7 @@ output_stem="$5"
 
 # Input data
 qtl_expression_file=$eqtl_input_dir"expression.txt"
-qtl_genotype_file=$eqtl_input_dir"genotype.txt"
+qtl_genotype_file=$eqtl_input_dir"genotype2.txt"
 qtl_covariate_file=$eqtl_input_dir"covariates.txt"
 qtl_lf_file=$eqtl_input_dir"latent_factors.txt"
 qtl_test_names_file=$eqtl_input_dir"variant_gene_pairs.txt"
@@ -33,9 +33,8 @@ if false; then
 python extract_surge_latent_factor_by_pve.py $surge_latent_factors_file $factor_pve_file $latent_factor_num $surge_latent_factor_file
 fi
 
+num_jobs="200"
 
-
-num_jobs="50"
 if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
 	qtl_output_root=$output_stem"interaction_eqtl_results_"$job_number"_"$num_jobs"_"
@@ -43,9 +42,6 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 done
 fi
 
-
 python merge_parallelized_latent_factor_interaction_eqtl_calls.py $output_stem"interaction_eqtl_results_" $num_jobs
-
-
 
 

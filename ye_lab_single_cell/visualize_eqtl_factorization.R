@@ -394,7 +394,7 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-#expr <- read.table(gene_expr_file, header=FALSE)
+expr <- read.table(gene_expr_file, header=FALSE)
 #saveRDS( expr, "expr.rds")
 expr <- readRDS("expr.rds")
 
@@ -551,7 +551,7 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type.pdf")
 boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings, "Cell Type")
-ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+ggsave(boxplot, file=output_file, width=12.2, height=5.5, units="in")
 
 ######################################
 # Make loading boxplot colored by Ancestry
@@ -803,55 +803,55 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 #######################################
 lf_num <- 1
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 2
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 3
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 4
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 5
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 6
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 lf_num <- 7
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 lf_num <- 8
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 lf_num <- 9
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 lf_num <- 10
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("eQTL Factorization ", lf_num))
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 

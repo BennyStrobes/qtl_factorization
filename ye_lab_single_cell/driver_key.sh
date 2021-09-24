@@ -36,6 +36,17 @@ cell_isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate
 # GSEA data
 gsea_data_dir="/work-zfs/abattle4/bstrober/tools/tools-master/gsea/data/"
 
+# File containing list of GWAS files (downloaded here: https://alkesgroup.broadinstitute.org/sumstats_formatted/ on 9/15/21)
+gwas_files="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/gwas_files.txt"
+
+# directory containing gwas snp info
+gwas_snp_info_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_genotype/"
+
+# Directory containing coloc input data
+coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/coloc/input_data/"
+
+
+
 ######################
 # Output directories
 ######################
@@ -84,6 +95,15 @@ gene_set_enrichment_dir=$output_root"gene_set_enrichment/"
 # Directory containing surge interaction eqtl results
 surge_interaction_eqtl_dir=$output_root"surge_interaction_eqtl/"
 
+# Gwas overlap dir
+gwas_overlap_dir=$output_root"gwas_overlap/"
+
+# Coloc dir
+coloc_dir=$output_root"coloc/"
+
+# visualize Coloc dir
+visualize_coloc_dir=$output_root"visualize_coloc/"
+
 
 
 ######################
@@ -108,7 +128,7 @@ fi
 # Call latent-factor (PCA) interaction-eqtls
 ######################
 if false; then
-sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
+sbatch latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
 fi
 
 #############################################
@@ -276,26 +296,57 @@ fi
 ############################################
 # Compute interaction eqtls with surge latent factors
 ############################################
-if false; then
 # Surge output files
 surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
 # Latent factor to test for interaction eqtl analysis
-latent_factor_num="1"  # Base 1
+latent_factor_num="4"  # Base 1
 # Output root
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"
+if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
 fi
 
 
+# Surge output files
+surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
+factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
+# Latent factor to test for interaction eqtl analysis
+latent_factor_num="4"  # Base 1
+# Output root
+output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"
+if false; then
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
+fi
+
+
+# Surge output files
+surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
+factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
+# Latent factor to test for interaction eqtl analysis
+latent_factor_num="4"  # Base 1
+# Output root
+output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"$latent_factor_num"_"
+if false; then
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
+fi
 
 
 
+############################################
+# Check for overlap with coloc
+############################################
+if false; then
+sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $coloc_input_dir $coloc_dir $visualize_coloc_dir
+fi
 
-
-
-
-
+############################################
+# Check for overlap with gwas results
+############################################
+test_info_file=$latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_input_variant_gene_pairs.txt"
+if false; then
+sh run_gwas_overlap_analysis.sh $surge_interaction_eqtl_dir $gwas_overlap_dir $coloc_dir"processed_gwas_studies.txt" $test_info_file $gwas_snp_info_dir
+fi
 
 
 
@@ -324,32 +375,6 @@ output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_heteroskedastic_rv_True_permut
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
 
-if false; then
-module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_none_zscore_capped_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_5_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_"
-output_stem="standard_eqtl_hvg_6000_ard_heteroskedastic_rv_True_permute_False_seed_1_5_warmup_lambda_1_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-fi
-if false; then
-
-module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_none_zscore_capped_eqtl_factorization_vi_ard_environmental_fixed_effect_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_False_temper_"
-output_stem="standard_eqtl_hvg_6000_ard_environmental_fixed_effect_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-
-
-module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_False_temper_"
-output_stem="standard_eqtl_hvg_6000_ard_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-
-
-module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_none_zscore_capped_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_False_temper_"
-output_stem="standard_eqtl_hvg_6000_ard_full_component_update_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
-
-fi
 
 
 

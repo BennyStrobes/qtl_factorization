@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=10:00:00
-#SBATCH --mem=250GB
-#SBATCH --partition=lrgmem
+#SBATCH --time=20:00:00
+#SBATCH --mem=90GB
+#SBATCH --partition=shared
 #SBATCH --nodes=1
 
 
@@ -23,9 +23,8 @@ visualize_latent_factor_interaction_eqtl_dir="$6"
 # Prepare input data for latent factor interaction eqtl analysis
 #############################################
 # This first part needs 250GB of memory to run..
-if false; then
 python prepare_latent_factor_interaction_eqtl_data.py $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
-fi
+
 
 #############################################
 # Run standard eQTL Analysis
@@ -55,8 +54,9 @@ fi
 
 
 # merge parallel runs
+if false; then
 python merge_parallelized_standard_eqtl_calls.py $latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_results_" $num_jobs
-
+fi
 
 
 #############################################
