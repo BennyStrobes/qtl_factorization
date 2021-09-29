@@ -55,7 +55,6 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 	sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $parallelized_expression_file $parallelized_genotype_file $parallelized_test_names_file $qtl_new_covariate_file $surge_latent_factor_file $qtl_sample_overlap_file $qtl_output_root
 done
 fi
-
 if false; then
 python merge_parallelized_latent_factor_interaction_eqtl_calls.py $output_stem"interaction_eqtl_results_" $num_jobs
 fi
@@ -70,7 +69,6 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 	sbatch run_standard_eqtl_analysis_in_parallel.sh $parallelized_expression_file $parallelized_genotype_file $parallelized_test_names_file $qtl_new_covariate_file $qtl_sample_overlap_file $qtl_output_root
 done
 fi
-
 if false; then
 python merge_parallelized_standard_eqtl_calls.py $output_stem"standard_eqtl_results_" $num_jobs
 fi

@@ -2,6 +2,8 @@ import numpy as np
 import os
 import sys
 import pdb
+import scipy.stats
+
 
 def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file, fdr_thresh):
 	f = open(variant_gene_pairs_eqtl_results_file)
@@ -15,23 +17,27 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 		gene_id = data[1]
 		variant_id = data[0]
 		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
 		if gene_id not in genes:
-			genes[gene_id] = (variant_id, pvalue, 1, line)
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
 		else:
-			old_pvalue = genes[gene_id][1]
-			old_count = genes[gene_id][2]
-			if pvalue <= old_pvalue:
-				genes[gene_id] = (variant_id, pvalue, old_count+1, line)
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
 			else:
-				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], old_count+1, genes[gene_id][3])
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
 	f.close()
 	# Loop through genes and do BF correction
 	bf_gene_array = []
 	for gene in genes.keys():
 		lead_variant = genes[gene][0]
 		lead_nominal_pvalue = genes[gene][1]
-		num_variants_at_gene = genes[gene][2]
-		test_line = genes[gene][3]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
 		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
 		if bf_corrected_pvalue > 1.0:
 			bf_corrected_pvalue = 1.0
@@ -53,6 +59,7 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 			std_err_beta = (data[3])
 			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
 	t.close()
+
 
 def make_sure_files_exist(output_root, total_jobs, suffix):
 	booly = True
@@ -83,12 +90,18 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		for line in f:
 			line = line.rstrip()
 			data = line.split('\t')
-			t2.write(line + '\n')
+			beta = float(data[2])
+			std_err_beta = float(data[3])
+			old_pvalue = data[4]
+			new_pvalue = scipy.stats.norm.cdf(-np.abs( beta/std_err_beta))*2
+			new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(new_pvalue)
+			new_data = new_line.split('\t')
+			t2.write(new_line + '\n')
 			counter = counter +1
-			if len(data) < 2:
+			if len(new_data) < 2:
 				print('miss')
 				continue
-			if data[2] == 'NA':
+			if new_data[2] == 'NA':
 				continue
 			# HEADER
 			#if head_count == 0:
@@ -98,7 +111,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			#		t.write(line + '\n')
 			#	continue
 			# Standard line
-			t.write(line + '\n')
+			t.write(new_line + '\n')
 		f.close()
 		# Delete file from single job
 		#os.system ('rm ' + file_name)

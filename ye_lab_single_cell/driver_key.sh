@@ -315,15 +315,21 @@ surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_sta
 factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
 # Output root
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
-if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $output_stem
-fi
+
+
+
 
 ############################################
 # Run SUSIE fine mapping
 ############################################
 sample_names_file=$processed_pseudobulk_expression_dir"pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_names.txt"
+if false; then
 sh run_susie_finemapping_analysis.sh $surge_interaction_eqtl_dir $processed_genotype_dir $susie_input_data_dir $susie_results_dir $susie_visualization_dir $sample_names_file
+fi
+
+
+
 
 ############################################
 # Check for overlap with coloc
