@@ -6,7 +6,7 @@ import pdb
 def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file, fdr_thresh):
 	f = open(variant_gene_pairs_eqtl_results_file)
 	t = open(multple_testing_correction_results_file, 'w')
-	t.write('snp_id\tgene_id\tpvalue\teffect_size\tstd_err\tnum_snps_in_gene\tfdr\n')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
 	head_count = 0
 	genes = {}
 	for line in f:
@@ -14,7 +14,7 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 		data = line.split()
 		gene_id = data[1]
 		variant_id = data[0]
-		pvalue = float(data[2])
+		pvalue = float(data[4])
 		if gene_id not in genes:
 			genes[gene_id] = (variant_id, pvalue, 1, line)
 		else:
@@ -48,7 +48,10 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 		if fdr > fdr_thresh:
 			sig = False
 		if sig == True:
-			t.write(gene_tuple[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
 	t.close()
 
 def make_sure_files_exist(output_root, total_jobs, suffix):
@@ -82,7 +85,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			data = line.split('\t')
 			t2.write(line + '\n')
 			counter = counter +1
-			if len(data) < 3:
+			if len(data) < 2:
 				print('miss')
 				continue
 			if data[2] == 'NA':
@@ -218,5 +221,9 @@ fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
 fdr = .2
+fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+fdr = .5
 fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)

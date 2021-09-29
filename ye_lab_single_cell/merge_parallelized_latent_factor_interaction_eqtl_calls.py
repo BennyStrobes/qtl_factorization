@@ -63,14 +63,14 @@ def make_sure_files_exist(output_root, total_jobs, suffix):
 			booly = False
 	return booly
 
-def merge_parallelized_results(output_root, suffix, total_jobs):
+def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
 	if to_run == False:
 		print('Missing required input files. Please re-evaluate :)')
 		return
 	# Open output (merged result) file handle
-	t = open(output_root + 'merged' + suffix, 'w')
-	t2 = open(output_root + 'merged_include_nan' + suffix, 'w')
+	t = open(output_root + 'latent_factor_' + str(lf_num+1) + '_merged' + suffix, 'w')
+	t2 = open(output_root + 'latent_factor_' + str(lf_num+1) + '_merged_include_nan' + suffix, 'w')
 	# Loop through parrallelized jobs
 	for job_number in range(total_jobs):
 		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
@@ -83,12 +83,14 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		for line in f:
 			line = line.rstrip()
 			data = line.split('\t')
-			t2.write(line + '\n')
+			new_line = data[0] + '\t' + data[1] + '\t' + data[(2 + lf_num*3)] + '\t' + data[(3 + lf_num*3)] + '\t' + data[(4 + lf_num*3)]
+			new_data = new_line.split('\t')
+			t2.write(new_line + '\n')
 			counter = counter +1
-			if len(data) < 2:
+			if len(data) < (lf_num*3):
 				print('miss')
 				continue
-			if data[2] == 'NA':
+			if new_data[2] == 'NA':
 				continue
 			# HEADER
 			#if head_count == 0:
@@ -98,7 +100,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			#		t.write(line + '\n')
 			#	continue
 			# Standard line
-			t.write(line + '\n')
+			t.write(new_line + '\n')
 		f.close()
 		# Delete file from single job
 		#os.system ('rm ' + file_name)
@@ -204,26 +206,44 @@ def number_of_hits_per_latent_factor_seperated_by_quantiles(fdr_file, num_hits_p
 			t.write(str(latent_factor_num+1) + '\t' + str(quantile_num) + '\t' + str(num_hits[latent_factor_num]) + '\n')
 	t.close()
 
+def get_number_of_latent_factors(file_name):
+	f = open(file_name)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			num_lf = int((len(data)-2.0)/3)
+			continue
+	f.close()
+	return num_lf
 
 output_root = sys.argv[1]
 total_jobs = int(sys.argv[2])
 
+# Extract number of latent factors
+num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt')
 
-merged_file = output_root + 'merged.txt'
-merge_parallelized_results(output_root, '.txt', total_jobs)
 
-fdr = .05
-fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+for lf_num in range(num_lf):
+	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
+	merge_parallelized_results(output_root, '.txt', total_jobs, lf_num)
 
-fdr = .1
-fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+	fdr = .05
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
-fdr = .2
-fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+	fdr = .1
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
-fdr = .5
-fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+	fdr = .2
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+	fdr = .5
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+

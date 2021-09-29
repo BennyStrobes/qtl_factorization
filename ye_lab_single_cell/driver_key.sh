@@ -45,7 +45,9 @@ gwas_snp_info_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_c
 # Directory containing coloc input data
 coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/coloc/input_data/"
 
-
+# File containing remap 2022 tfbs
+# downloaded here https://remap.univ-amu.fr/download_page on 9/27/21
+remap_tfbs_file="/work-zfs/abattle4/lab_data/tfbs_remap_2022/remap2022_nr_macs2_hg19_v1_0.bed"
 
 ######################
 # Output directories
@@ -93,13 +95,25 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 gene_set_enrichment_dir=$output_root"gene_set_enrichment/"
 
 # Directory containing surge interaction eqtl results
-surge_interaction_eqtl_dir=$output_root"surge_interaction_eqtl/"
+surge_interaction_eqtl_dir=$output_root"surge_interaction_eqtl_v2/"
 
 # Gwas overlap dir
 gwas_overlap_dir=$output_root"gwas_overlap/"
 
 # Coloc dir
 coloc_dir=$output_root"coloc/"
+
+# Susie input dir
+susie_input_data_dir=$output_root"susie_input/"
+
+# susie results dir
+susie_results_dir=$output_root"susie_results/"
+
+# susie visualization dir
+susie_visualization_dir=$output_root"susie_visualization/"
+
+# remap enrichment dir
+remap_tfbs_dir=$output_root"remap_tfbs/"
 
 # visualize Coloc dir
 visualize_coloc_dir=$output_root"visualize_coloc/"
@@ -299,39 +313,17 @@ fi
 # Surge output files
 surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
-# Latent factor to test for interaction eqtl analysis
-latent_factor_num="4"  # Base 1
 # Output root
-output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"
+output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
 if false; then
-sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $output_stem
 fi
 
-
-# Surge output files
-surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
-factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
-# Latent factor to test for interaction eqtl analysis
-latent_factor_num="4"  # Base 1
-# Output root
-output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"
-if false; then
-sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
-fi
-
-
-# Surge output files
-surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
-factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
-# Latent factor to test for interaction eqtl analysis
-latent_factor_num="4"  # Base 1
-# Output root
-output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"$latent_factor_num"_"
-if false; then
-sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
-fi
-
-
+############################################
+# Run SUSIE fine mapping
+############################################
+sample_names_file=$processed_pseudobulk_expression_dir"pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_names.txt"
+sh run_susie_finemapping_analysis.sh $surge_interaction_eqtl_dir $processed_genotype_dir $susie_input_data_dir $susie_results_dir $susie_visualization_dir $sample_names_file
 
 ############################################
 # Check for overlap with coloc
@@ -340,6 +332,13 @@ if false; then
 sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $coloc_input_dir $coloc_dir $visualize_coloc_dir
 fi
 
+
+############################################
+# Remap tfbs enrichment analysis
+############################################
+if false; then
+sh run_remap_tfbs_enrichment_analysis.sh $surge_interaction_eqtl_dir $remap_tfbs_file $remap_tfbs_dir $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_variant_gene_pairs.txt"
+fi
 ############################################
 # Check for overlap with gwas results
 ############################################

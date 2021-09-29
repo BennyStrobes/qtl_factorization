@@ -30,7 +30,7 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
 		for (study_iter in 1:length(study_names)) {
 			gwas_study_name <- study_names[study_iter]
 			surge_genes <- c()
-			for (latent_factor_num in 1:5) {
+			for (latent_factor_num in 1:10) {
 				eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 				results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
 				coloc_results_df <- read.table(results_file, header=TRUE)
@@ -76,7 +76,7 @@ extract_num_coloc_hits_df <- function(study_names, coloc_dir) {
 
 	pph4_threshs <- c(.8, .9, .95, .99)
 
-	for (latent_factor_num in 1:5) {
+	for (latent_factor_num in 1:10) {
 		eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 		informal_eqtl_study_name <- paste0("SURGE_interaction_", latent_factor_num)
 		for (pph4_iter in 1:length(pph4_threshs)) {
@@ -123,8 +123,7 @@ make_number_of_colocalizations_bar_plot <- function(df, pph4_threshold) {
     	geom_bar(position="dodge", stat="identity") +
     	gtex_v8_figure_theme() + theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
     	theme(legend.position="top") +
-    	labs(y="Number of colocalizations", x="GWAS study", fill="", title=paste0("pph4 threshold: ", pph4_threshold)) +
-    	 scale_fill_manual(values = c("grey44", "dodgerblue3"))
+    	labs(y="Number of colocalizations", x="GWAS study", fill="", title=paste0("pph4 threshold: ", pph4_threshold))
     return(p)
 }
 
@@ -143,7 +142,6 @@ num_coloc_hits_standard_vs_surge_df <- extract_num_coloc_hits_standard_vs_surge_
 num_coloc_hits_df <- extract_num_coloc_hits_df(study_names, coloc_dir)
 
 
-if (FALSE) {
 pph4_threshold <- .9
 output_file <- paste0(visualize_coloc_dir, "number_of_colocalizations_pph4_thresh_", pph4_threshold, "_bar_plot.pdf")
 bar_plot_9 <- make_number_of_colocalizations_bar_plot(num_coloc_hits_df[num_coloc_hits_df$pph4_thresh==pph4_threshold,], pph4_threshold)
@@ -159,7 +157,7 @@ output_file <- paste0(visualize_coloc_dir, "number_of_colocalizations_pph4_thres
 bar_plot_99 <- make_number_of_colocalizations_bar_plot(num_coloc_hits_df[num_coloc_hits_df$pph4_thresh==pph4_threshold,], pph4_threshold)
 ggsave(bar_plot_99, file=output_file, width=7.2, height=6.0, units="in")
 
-}
+
 
 
 

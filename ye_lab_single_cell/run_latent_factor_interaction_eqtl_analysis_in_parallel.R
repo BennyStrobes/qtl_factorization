@@ -70,7 +70,7 @@ run_lf_interaction_eqtl_lmm_perm <- function(expr, geno, covariates, lfs, groups
 	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=c(1.0, 1.0)))
 }
 
-run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups) {
+run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups, num_lf) {
 	fit_full <- lmer(expr ~ geno + covariates + lfs + lfs:geno + (1 | groups), REML=FALSE)
 	#fit_null <- lmer(expr ~ geno + covariates + lfs + (1 | groups), REML=FALSE)
 
@@ -84,7 +84,6 @@ run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups) {
 	coefficient_pvalues <- 2 * (1 - pnorm(abs(coefs$t.value)))
 
 	num_cov = dim(covariates)[2]
-	num_lf = dim(lfs)[2]
 	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov + num_lf):length(coefficient_pvalues)]
 	betas <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),1]
 	std_err <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),2]
@@ -128,18 +127,10 @@ covariate_file = args[4]
 interaction_factor_file = args[5]
 sample_overlap_file = args[6]
 output_root = args[7]
-job_number = as.numeric(args[8])
-num_jobs = as.numeric(args[9])
-total_lines = as.numeric(args[10]) - 1
-
-print(total_lines)
 
 
-# Determine number of lines each parrallelized job will complete
-lines_per_job = ceiling(total_lines/num_jobs)
-print(lines_per_job)
-start_num = job_number*lines_per_job
-end_num = (job_number + 1)*lines_per_job
+
+
 
 
 covariates <- as.matrix(read.table(covariate_file, header=FALSE))
@@ -165,34 +156,52 @@ f_geno = file(genotype_file, "r")
 
 
 line_test = readLines(f_test, n=1)
-line_test = readLines(f_test, n=1)
 line_expr = readLines(f_expr, n=1)
 line_geno = readLines(f_geno, n=1)
 
 while(!stop) {
-	if (count >= start_num & count < end_num) {
 	# Unpack data
-		expr = as.numeric(strsplit(line_expr,'\t')[[1]])
-		geno = as.numeric(strsplit(line_geno,'\t')[[1]])
+	expr = as.numeric(strsplit(line_expr,'\t')[[1]])
+	geno = as.numeric(strsplit(line_geno,'\t')[[1]])
 
-		# Run eqtl analysis
-		line_info <- strsplit(line_test,'\t')[[1]]
-		ensamble_id = line_info[1]
-		rs_id = line_info[2]
-		tryCatch(
-		{
-			lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups)
+	# Run eqtl analysis
+	line_info <- strsplit(line_test,'\t')[[1]]
+	ensamble_id = line_info[1]
+	rs_id = line_info[2]
 
-			new_line <- paste0(rs_id, "\t", ensamble_id ,"\t",lmm_results$beta, "\t", lmm_results$std_err, "\t", paste0(lmm_results$pvalue, collapse=","), "\n")
-        		
-        	cat(new_line)
-        },
-        error = function(e) {
-        	new_line <- paste0(rs_id, "\t", ensamble_id, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, num_lfs), collapse=","), "\n")
-        	cat(new_line)
-        }
-        )
+	new_line <- paste0(rs_id, "\t", ensamble_id)
+
+	if (FALSE) {
+	for (lf_num in 1:num_lfs) {
+	tryCatch(
+	{
+		lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs[,lf_num], groups, 1)
+
+		new_line <- paste0(new_line,"\t",lmm_results$beta, "\t", lmm_results$std_err, "\t", paste0(lmm_results$pvalue, collapse=","))
+        		     },
+     error = function(e) {
+        new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, 1), collapse=","))
+       }
+      )
 	}
+	}
+
+	tryCatch(
+	{
+	lmm_full_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups, num_lfs)
+	for (lf_num in 1:num_lfs) {
+		new_line <- paste0(new_line,"\t",lmm_full_results$beta[lf_num], "\t", lmm_full_results$std_err[lf_num], "\t", lmm_full_results$pvalue[lf_num])
+	}
+	},
+	error = function(e) {
+	for (lf_num in 1:num_lfs) {
+		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, 1), collapse=","))
+	}
+	}
+	)
+
+
+	cat(paste0(new_line, "\n"))
 	# Get info for next line
 	count = count + 1
 	line_test = readLines(f_test, n=1)
