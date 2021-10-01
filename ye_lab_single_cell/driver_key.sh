@@ -49,6 +49,15 @@ coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cel
 # downloaded here https://remap.univ-amu.fr/download_page on 9/27/21
 remap_tfbs_file="/work-zfs/abattle4/lab_data/tfbs_remap_2022/remap2022_nr_macs2_hg19_v1_0.bed"
 
+# Directory containing ldsc source code
+ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/ldsc/"
+
+# Directory containing sldsc input data
+sldsc_input_data_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/sldsc_input_data/"
+
+# Directory containing Alkes group processed sumstats
+sumstats_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/"
+
 ######################
 # Output directories
 ######################
@@ -118,6 +127,14 @@ remap_tfbs_dir=$output_root"remap_tfbs/"
 # visualize Coloc dir
 visualize_coloc_dir=$output_root"visualize_coloc/"
 
+# sldsc processed results dir
+sldsc_processed_data_dir=$output_root"sldsc_processed_data/"
+
+# susie results dir
+sldsc_results_dir=$output_root"sldsc_results/"
+
+# susie visualization dir
+sldsc_visualization_dir=$output_root"sldsc_visualization/"
 
 
 ######################
@@ -315,8 +332,9 @@ surge_latent_factors_file=$eqtl_factorization_results_dir"eqtl_factorization_sta
 factor_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_factor_pve.txt"
 # Output root
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
+if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $surge_latent_factors_file $factor_pve_file $output_stem
-
+fi
 
 
 
@@ -328,7 +346,10 @@ if false; then
 sh run_susie_finemapping_analysis.sh $surge_interaction_eqtl_dir $processed_genotype_dir $susie_input_data_dir $susie_results_dir $susie_visualization_dir $sample_names_file
 fi
 
-
+############################################
+# Run S-LDSC
+############################################
+sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $coloc_input_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_visualization_dir $surge_interaction_eqtl_dir $sumstats_dir
 
 
 ############################################
