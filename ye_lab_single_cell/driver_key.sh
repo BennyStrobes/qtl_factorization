@@ -349,8 +349,9 @@ fi
 ############################################
 # Run S-LDSC
 ############################################
+if false; then
 sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $coloc_input_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_visualization_dir $surge_interaction_eqtl_dir $sumstats_dir
-
+fi
 
 ############################################
 # Check for overlap with coloc
@@ -364,8 +365,11 @@ fi
 # Remap tfbs enrichment analysis
 ############################################
 if false; then
-sh run_remap_tfbs_enrichment_analysis.sh $surge_interaction_eqtl_dir $remap_tfbs_file $remap_tfbs_dir $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_variant_gene_pairs.txt"
+sh run_remap_tfbs_enrichment_analysis.sh $surge_interaction_eqtl_dir $remap_tfbs_file $remap_tfbs_dir $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_variant_gene_pairs.txt" $gsea_data_dir
 fi
+
+
+
 ############################################
 # Check for overlap with gwas results
 ############################################

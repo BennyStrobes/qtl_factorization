@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=30:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=shared
 #SBATCH --nodes=1
 #SBATCH --mem=20GB
@@ -52,20 +52,20 @@ fi
 
 # Loop through GWAS studies
 # for each study from s-ldsc
+if false; then
 while read study_name study_file; do
-	echo $study_name
-
-	# Using egene annotations for each surge study independently while controlling for base line anno
-	python ${ldsc_source_code_dir}ldsc.py --h2 ${study_file} --ref-ld-chr ${sldsc_processed_data_dir}"baseline.,"${sldsc_processed_data_dir}"surge_egenes." --w-ld-chr ${sldsc_input_data_dir}"1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC." --overlap-annot --frqfile-chr ${sldsc_input_data_dir}"1000G_Phase3_frq/1000G.EUR.QC." --out ${sldsc_results_dir}${study_name}"_surge_egenes_05_and_baseline"
-
-	# Using egene annotations union surge studies while controlling for base line anno
-	python ${ldsc_source_code_dir}ldsc.py --h2 ${study_file} --ref-ld-chr ${sldsc_processed_data_dir}"baseline.,"${sldsc_processed_data_dir}"joint_surge_egenes_05." --w-ld-chr ${sldsc_input_data_dir}"1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC." --overlap-annot --frqfile-chr ${sldsc_input_data_dir}"1000G_Phase3_frq/1000G.EUR.QC." --out ${sldsc_results_dir}${study_name}"_joint_surge_egenes_05_and_baseline"
+	# BaselineLD eQTL
+	sbatch sldsc_in_single_study.sh $study_name $study_file $ldsc_source_code_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_input_data_dir
 done <$processed_gwas_studies_file
+fi
 
 
 
-
-
+################################
+# Visualize S-LDSC results
+################################
+module load R/3.5.1
+Rscript visualize_sldsc_results.R $processed_gwas_studies_file $sldsc_results_dir $sldsc_visualization_dir
 
 
 

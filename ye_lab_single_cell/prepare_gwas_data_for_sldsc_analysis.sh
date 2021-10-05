@@ -176,12 +176,6 @@ cp ${sumstats_dir}PASS_Primary_biliary_cirrhosis.sumstats ${sldsc_processed_data
 gzip ${sldsc_processed_data_dir}${study_name}".sumstats"
 fi
 
-study_name="RA"
-echo -e "$study_name\t"${sldsc_processed_data_dir}${study_name}".sumstats.gz" >> $processed_gwas_studies_file
-if false; then
-cp ${sumstats_dir}PASS_Rheumatoid_Arthritis.sumstats ${sldsc_processed_data_dir}${study_name}".sumstats"
-gzip ${sldsc_processed_data_dir}${study_name}".sumstats"
-fi
 
 study_name="CAD"
 echo -e "$study_name\t"${sldsc_processed_data_dir}${study_name}".sumstats.gz" >> $processed_gwas_studies_file

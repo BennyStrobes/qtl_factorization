@@ -27,7 +27,7 @@ def make_chromosome_with_remap_tfbs(chrom_num, remap_tfbs_file):
 		# Extract relevent fields
 		start = int(data[1])
 		end = int(data[2])
-		peak_name = data[3]
+		peak_name = data[3].split(':')[0]
 		# More error checking
 		if end < start:
 			print('assumption error')
@@ -67,9 +67,15 @@ def get_tf_dicti(remap_tfbs_file):
 		start = int(data[1])
 		end = int(data[2])
 		peak_name = data[3]
-		unique_tfs = parse_peak_name(peak_name)
-		for tf_name in unique_tfs:
-			tf_dicti[tf_name] = 0
+		info = peak_name.split(':')
+		if len(info) != 2:
+			print('assumption eroror')
+			pdb.set_trace()
+		tf_name = info[0]
+		tf_dicti[tf_name] = 0
+		#unique_tfs = parse_peak_name(peak_name)
+		#for tf_name in unique_tfs:
+			#tf_dicti[tf_name] = 0
 	f.close()
 	return tf_dicti
 
@@ -103,9 +109,12 @@ def update_tf_dicti(tf_dicti, sig_variants, chromosome, chrom_num):
 			continue
 		infos = info.split(';')
 		for peak_name in infos:
+			tf_dicti[peak_name] = tf_dicti[peak_name] + 1
+			'''
 			unique_tfs = parse_peak_name(peak_name)
 			for unique_tf in unique_tfs:
 				tf_dicti[unique_tf] = tf_dicti[unique_tf] + 1
+			'''
 	return tf_dicti
 
 def update_bgrd_tf_dicti(bgrd_tf_dicti, bgrd_variants, bgrd_run_num, chromosome, chrom_num):
@@ -120,9 +129,12 @@ def update_bgrd_tf_dicti(bgrd_tf_dicti, bgrd_variants, bgrd_run_num, chromosome,
 			continue
 		infos = info.split(';')
 		for peak_name in infos:
+			bgrd_tf_dicti[peak_name][bgrd_run_num] = bgrd_tf_dicti[peak_name][bgrd_run_num] + 1
+			'''
 			unique_tfs = parse_peak_name(peak_name)
 			for unique_tf in unique_tfs:
 				bgrd_tf_dicti[unique_tf][bgrd_run_num] = bgrd_tf_dicti[unique_tf][bgrd_run_num] + 1
+			'''
 	return bgrd_tf_dicti
 
 # Return the bin number corresponding to this distance
@@ -233,16 +245,53 @@ def get_bgrd_eqtls(num_background_runs, bgrd_object, eqtls, test_info_file):
 		background_variant_gene_pairs.append(sample_background_variant_gene_pairs(test_infos, bgrd_object))
 	return background_variant_gene_pairs
 
+def extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs):
+	f = open(output_file)
+	arr = []
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		aa = float(data[1])
+		cc = np.asarray(data[3].split(',')).astype(float)
+		count = sum(aa < cc)
+		if aa == 0:
+			arr.append((data[0], count, 0.0))
+		else:
+			if np.isnan(np.nanmean(aa/cc)):
+				pdb.set_trace()
+			meany = np.mean(np.ma.masked_invalid(aa/cc))
+			arr.append((data[0], len(cc)-count, meany))
+	f.close()
+	#arr.sort(key=lambda x: x[2])
+	arr.sort(key=lambda x: x[1])
 
+	t = open(gsea_test_genes_file,'w')
+	test_count = 0
+	print(arr[((-201)):-1])
+	for tupler in arr[((-201)):-1]:
+		test_count = test_count + 1
+		t.write(tupler[0] + '\n')
+	t.close()
+	print(str(test_count) + ' test genes')
+	t = open(gsea_bgrd_genes_file,'w')
+	bgrd_count = 0
+	for tupler in arr[:500]:
+		t.write(tupler[0] + '\n')
+		bgrd_count = bgrd_count + 1
+	t.close()	
+	print(str(bgrd_count) + ' background genes')
 
 surge_interaction_sig_eqtl_file = sys.argv[1]
 remap_tfbs_file = sys.argv[2]
 output_file = sys.argv[3]
 test_info_file = sys.argv[4]
+gsea_test_genes_file = sys.argv[5]
+gsea_bgrd_genes_file = sys.argv[6]
+
+num_background_runs = 10000
 
 sig_variants, eqtls = get_sig_variants(surge_interaction_sig_eqtl_file)
 
-num_background_runs = 500
 bgrd_object = make_background_object(test_info_file)
 
 bgrd_variants = get_bgrd_eqtls(num_background_runs, bgrd_object, eqtls, test_info_file)
@@ -272,3 +321,8 @@ for tf_name in sorted(tf_dicti.keys()):
 	bgrd_counts = bgrd_tf_dicti[tf_name]
 	t.write(tf_name + '\t' + str(real_counts) + '\t' + str(num_real_variants) + '\t' + ','.join(bgrd_counts.astype(str)) + '\t' + ','.join(num_background_variants.astype(str)) + '\n') 
 t.close()
+
+extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs)
+
+
+
