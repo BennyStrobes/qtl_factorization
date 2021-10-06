@@ -245,14 +245,22 @@ def get_bgrd_eqtls(num_background_runs, bgrd_object, eqtls, test_info_file):
 		background_variant_gene_pairs.append(sample_background_variant_gene_pairs(test_infos, bgrd_object))
 	return background_variant_gene_pairs
 
-def extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs):
+def extract_test_and_bgrd_genes_for_gsea(output_file, output_enrichment_file, output_probability_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs):
 	f = open(output_file)
+	t = open(output_enrichment_file,'w')
+	t.write('TF\todds_ratio\n')
 	arr = []
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
+		tf = data[0]
 		aa = float(data[1])
-		cc = np.asarray(data[3].split(',')).astype(float)
+		bb = float(data[2]) 
+		cc = np.asarray(data[3].split(',')).astype(float) 
+		dd = np.asarray(data[4].split(',')).astype(float) 
+		orat = ((aa+1)/(bb+1))/((cc+1)/(dd+1))
+		for ele in orat:
+			t.write(tf + '\t' + str(ele) + '\n')
 		count = sum(aa < cc)
 		if aa == 0:
 			arr.append((data[0], count, 0.0))
@@ -262,6 +270,14 @@ def extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea
 			meany = np.mean(np.ma.masked_invalid(aa/cc))
 			arr.append((data[0], len(cc)-count, meany))
 	f.close()
+	t.close()
+	t = open(output_probability_file, 'w')
+	t.write('TF\tpvalue\n')
+	for ele in arr:
+		tf = ele[0]
+		p_val = (num_background_runs - ele[1])/num_background_runs
+		t.write(tf + '\t' + str(p_val) + '\n')
+	t.close()
 	#arr.sort(key=lambda x: x[2])
 	arr.sort(key=lambda x: x[1])
 
@@ -284,12 +300,14 @@ def extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea
 surge_interaction_sig_eqtl_file = sys.argv[1]
 remap_tfbs_file = sys.argv[2]
 output_file = sys.argv[3]
-test_info_file = sys.argv[4]
-gsea_test_genes_file = sys.argv[5]
-gsea_bgrd_genes_file = sys.argv[6]
+output_enrichment_file = sys.argv[4]
+output_probability_file = sys.argv[5]
+test_info_file = sys.argv[6]
+gsea_test_genes_file = sys.argv[7]
+gsea_bgrd_genes_file = sys.argv[8]
 
 num_background_runs = 10000
-
+'''
 sig_variants, eqtls = get_sig_variants(surge_interaction_sig_eqtl_file)
 
 bgrd_object = make_background_object(test_info_file)
@@ -321,8 +339,10 @@ for tf_name in sorted(tf_dicti.keys()):
 	bgrd_counts = bgrd_tf_dicti[tf_name]
 	t.write(tf_name + '\t' + str(real_counts) + '\t' + str(num_real_variants) + '\t' + ','.join(bgrd_counts.astype(str)) + '\t' + ','.join(num_background_variants.astype(str)) + '\n') 
 t.close()
+'''
+extract_test_and_bgrd_genes_for_gsea(output_file, output_enrichment_file, output_probability_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs)
 
-extract_test_and_bgrd_genes_for_gsea(output_file, gsea_test_genes_file, gsea_bgrd_genes_file, num_background_runs)
+
 
 
 

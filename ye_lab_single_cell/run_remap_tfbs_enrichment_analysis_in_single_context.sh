@@ -20,11 +20,24 @@ echo $latent_context
 
 surge_interaction_sig_eqtl_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_interaction_eqtl_results_latent_factor_"$latent_context"_genome_wide_signficant_bf_fdr_0.05.txt"
 output_file=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_overlap.txt"
+output_enrichment_file=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_enrichments.txt"
+output_probability_file=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_enrichment_probabilities.txt"
+
+
 gsea_test_genes_file=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_test_genes.txt"
 gsea_bgrd_genes_file=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_bgrd_genes.txt"
 gsea_output_root=$remap_tfbs_dir"surge_interaction_"$latent_context"_remap_enriched_tf_gsea_"
-python run_remap_tfbs_enrichment_analysis.py $surge_interaction_sig_eqtl_file $remap_tfbs_file $output_file $variant_info_file $gsea_test_genes_file $gsea_bgrd_genes_file
+if false; then
+python run_remap_tfbs_enrichment_analysis.py $surge_interaction_sig_eqtl_file $remap_tfbs_file $output_file $output_enrichment_file $output_probability_file $variant_info_file $gsea_test_genes_file $gsea_bgrd_genes_file
+fi
 
+
+module load R/3.5.1
+Rscript visualize_remap_tfbs_enrichment.R $remap_tfbs_dir"surge_interaction_"$latent_context"_"
+
+
+
+if false; then
 source ~/.bash_profile
 
 module load python/2.7-anaconda53
@@ -51,7 +64,7 @@ python order_and_threshold_gsea.py $gsea_output_root"enrichments_c7_all.txt"
 gsea $gsea_test_genes_file $gsea_bgrd_genes_file $gsea_data_dir"human_genesigdb.gmt" $gsea_output_root"enrichments_human_genesigdb.txt"
 python order_and_threshold_gsea.py $gsea_output_root"enrichments_human_genesigdb.txt"
 
-
+fi
 
 
 

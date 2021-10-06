@@ -2,12 +2,10 @@ args = commandArgs(trailingOnly=TRUE)
 library(reshape)
 library(grid)
 library(cowplot)
-library(umap)
 library(ggplot2)
 library(RColorBrewer)
-library(sigmoid)
-library(lme4)
 library(plyr)
+
 options(bitmapType = 'cairo', device = 'pdf')
 
 
@@ -133,12 +131,21 @@ make_enrichment_barplot <- function(df) {
 		geom_errorbar(aes(ymin=enrichment-enrichment_std_err, ymax=enrichment+enrichment_std_err), position = position_dodge(), width = .75, size=.2)
 
 	num_categories = length(unique(df$category))
-	if (num_categories == 2) {
-		p <- p + scale_fill_manual(values=c("hotpink3", "gray53"))
-	}
 	return(p)
 }
 
+
+make_prop_h2_barplot <- function(df) {
+	print(df)
+	p <- ggplot(data=df, aes(x=study, y=prop_h2, fill=category)) +
+		geom_bar(stat="identity", color="black", position=position_dodge(), width=.75) +
+		gtex_v8_figure_theme() +
+		theme(legend.position="top") +
+		theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
+		labs(y="S-LDSC proportion h^2", fill="") +
+		geom_errorbar(aes(ymin=prop_h2-prop_h2_std_err, ymax=prop_h2+prop_h2_std_err), position = position_dodge(), width = .75, size=.2)
+	return(p)
+}
 make_neglog10_pvalue_barplot <- function(df) {
 	df$neglog10_pvalue = -log10(df$enrichment_p)
 	p <- ggplot(data=df, aes(x=study, y=neglog10_pvalue, fill=category)) +
@@ -149,9 +156,7 @@ make_neglog10_pvalue_barplot <- function(df) {
 		geom_hline(yintercept=-log10(.05)) +
 		theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10))
 	num_categories = length(unique(df$category))
-	if (num_categories == 2) {
-		p <- p + scale_fill_manual(values=c("hotpink3", "gray53"))
-	}
+
 	return(p)
 }
 
@@ -307,7 +312,19 @@ make_cross_trait_enrichment_violinplot <- function(df) {
 }
 
 
-
+make_enrichment_scatterplot <- function(df) {
+	study_levels_non_blood_immune <- c("Alzheimer", "Bipolar", "CAD", "Schizophrenia", "bmi", "height", "T2D")
+	study_levels_immune <- c("Celiac", "Crohns", "IBD", "Lupus", "Multiple_sclerosis", "PBC", "Rheumatoid_Arthritis", "eczema", "Ulcerative_Colitis")
+	study_levels_blood <- c("eosinophil_count", "reticulocyte count", "lymphocyte count", "corpuscular hemoglobin", "monocyte count", "platelet count", "blood platelet vol", "blood red count", "blood white count")
+	study_indices = df$study %in% study_levels_immune
+	df_specific = df[study_indices,]
+ 	plotter <- ggplot(df_specific) + 
+             geom_point(aes(x=prop_snps, y=prop_h2, color=category), size=.1) +
+             gtex_v8_figure_theme() + 
+             theme(legend.position="bottom") +
+             geom_abline()
+  return(plotter)
+}
 
 
 
@@ -324,7 +341,8 @@ study_names <- extract_study_names(processed_gwas_studies_file)
 sldsc_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_surge_eqtls_1e-05_and_baselineLD.results")
 sldsc_surge_tau_df = extract_surge_tau_df(study_names, sldsc_results_dir, "_eqtls_1e-05_only_and_baselineLD.results")
 #sldsc_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_surge_eqtls_1e-05_and_baseline.results")
-#sldsc_joint_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_joint_surge_egenes_05_and_baseline.results")
+sldsc_joint_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_joint_surge_eqtls_1e-05_and_baselineLD.results")
+
 
 
 ##############################
@@ -333,6 +351,23 @@ sldsc_surge_tau_df = extract_surge_tau_df(study_names, sldsc_results_dir, "_eqtl
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_enrichment_barplot.pdf")
 enrichment_barplot <- make_enrichment_barplot(sldsc_surge_enrichment_df)
 ggsave(enrichment_barplot, file=output_file, width=12.2, height=6.0, units="in")
+
+output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_enrichment_barplot.pdf")
+enrichment_barplot <- make_enrichment_barplot(sldsc_joint_surge_enrichment_df)
+ggsave(enrichment_barplot, file=output_file, width=12.2, height=6.0, units="in")
+
+
+##############################
+# Make proportion heritability bar plot
+##############################
+output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_prop_h2_barplot.pdf")
+prop_h2_barplot <- make_prop_h2_barplot(sldsc_surge_enrichment_df)
+ggsave(prop_h2_barplot, file=output_file, width=12.2, height=6.0, units="in")
+
+output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_prop_h2_barplot.pdf")
+prop_h2_barplot <- make_prop_h2_barplot(sldsc_joint_surge_enrichment_df)
+ggsave(prop_h2_barplot, file=output_file, width=12.2, height=6.0, units="in")
+
 
 
 
@@ -343,7 +378,9 @@ output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD
 neglog10_pvalue_barplot <- make_neglog10_pvalue_barplot(sldsc_surge_enrichment_df)
 ggsave(neglog10_pvalue_barplot, file=output_file, width=12.2, height=6.0, units="in")
 
-
+output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_neglog10_pvalue_barplot.pdf")
+neglog10_pvalue_barplot <- make_neglog10_pvalue_barplot(sldsc_joint_surge_enrichment_df)
+ggsave(neglog10_pvalue_barplot, file=output_file, width=12.2, height=6.0, units="in")
 
 
 ##############################
