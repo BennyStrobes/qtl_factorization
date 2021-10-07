@@ -12,6 +12,7 @@ import time
 import pandas as pd 
 from pymer4.models import Lmer
 
+
 def sigmoid_function(x):
 	return 1.0/(1.0 + np.exp(-x))
 
@@ -298,6 +299,16 @@ def outside_update_F_t(F_mu, F_var, G_slice, G_fe_slice, Y_slice, U_S_expected_v
 
 	return np.hstack((F_mu, F_var))
 
+def outside_update_shell_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, G_raw_slice, Y_slice, U_S, V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior):
+	alpha_updates = []
+	beta_updates = []
+	for genotype_value in [0,1,2]:
+		genotype_indices = G_raw_slice == genotype_value
+		two_ele_arr = outside_update_tau_t(tau_alpha[genotype_value], tau_beta[genotype_value], G_slice[genotype_indices], G_fe_slice[genotype_indices], Y_slice[genotype_indices], np.sum(genotype_indices), U_S[genotype_indices,:], V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared[genotype_indices,:], C_t_squared, alpha_mu_t[genotype_indices], alpha_var_t[genotype_indices], cov[genotype_indices,:], cov_squared[genotype_indices,:], alpha_prior, beta_prior)
+		alpha_updates.append(two_ele_arr[0])
+		beta_updates.append(two_ele_arr[1])
+	return np.hstack((alpha_updates, beta_updates))
+
 def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U_S, V_S_t, F_S_t, C_t, V_S_t_squared, F_S_t_squared, U_S_squared, C_t_squared, alpha_mu_t, alpha_var_t, cov, cov_squared, alpha_prior, beta_prior):
 	# Compute Relevent expectations
 	squared_factor_terms = U_S_squared@V_S_t_squared
@@ -334,7 +345,7 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, output_root=''):
+	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, parallel=False, num_cores=24, output_root=''):
 		# Prior on gamma distributions defining variances
 		self.alpha_prior = alpha
 		self.beta_prior = beta
@@ -355,6 +366,10 @@ class EQTL_FACTORIZATION_VI(object):
 		self.output_root = output_root
 		# Number of iterations before ARD prior on U is started to be learned.
 		self.warmup_iterations = warmup_iterations
+		# Whether to parallelize or not
+		self.parallel = parallel
+		# Number of cores to use (only applicable if self.parallel==True)
+		self.num_cores = num_cores
 	def fit(self, G, G_fe, G_raw, Y, z, cov):
 		""" Fit the model.
 			Args:
@@ -516,19 +531,22 @@ class EQTL_FACTORIZATION_VI(object):
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		V_mu_copy = np.copy(self.V_mu)
 		V_var_copy = np.copy(self.V_var)
-		covariate_predicted = np.dot(self.cov, self.C_mu)
 
 		# Keep track of variables
 		V_update_data = []
 
-		for test_index in range(self.T):
-			V_update_data.append(outside_update_V_t(V_mu_copy[:, test_index], V_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.K, U_S_expected_val, U_S_squared_expected_val, self.F_mu[test_index], covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], self.gamma_v, tau_expected_val[test_index, self.G_raw[:, test_index]], test_index))
+		if self.parallel == False:
+			for test_index in range(self.T):
+				V_update_data.append(outside_update_V_t(V_mu_copy[:, test_index], V_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.K, U_S_expected_val, U_S_squared_expected_val, self.F_mu[test_index], self.covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], self.gamma_v, tau_expected_val[test_index, self.G_raw[:, test_index]], test_index))
+		elif self.parallel == True:
+			V_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_V_t)(V_mu_copy[:, test_index], V_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.K, U_S_expected_val, U_S_squared_expected_val, self.F_mu[test_index], self.covariate_predicted[:, test_index], self.alpha_big_mu[:, test_index], self.gamma_v, tau_expected_val[test_index, self.G_raw[:, test_index]], test_index) for test_index in range(self.T))
 
 		# Convert to array
 		V_update_data = np.asarray(V_update_data).T
 		# Fill in data structures
 		self.V_mu = V_update_data[(self.K*0):(1*self.K), :]
 		self.V_var = V_update_data[(self.K*1):(2*self.K), :]
+		self.V_squared = (np.square(self.V_mu) + self.V_var)
 
 
 	def update_U(self):
@@ -538,12 +556,14 @@ class EQTL_FACTORIZATION_VI(object):
 		V_S_squared_expected_val = (np.square(self.V_mu) + self.V_var)
 		U_mu_copy = np.copy(self.U_mu)
 		U_var_copy = np.copy(self.U_var)
-		covariate_predicted = np.dot(self.cov, self.C_mu)
 		U_update_data = []
 		gamma_u = self.gamma_U_alpha/self.gamma_U_beta
 
-		for sample_index in range(self.N):
-			U_update_data.append(outside_update_U_n(U_mu_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.G_fe[sample_index,:], self.G_raw[sample_index,:], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.alpha_big_mu[sample_index, :]))
+		if self.parallel == False:
+			for sample_index in range(self.N):
+				U_update_data.append(outside_update_U_n(U_mu_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.G_fe[sample_index,:], self.G_raw[sample_index,:], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, self.covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.alpha_big_mu[sample_index, :]))
+		elif self.parallel == True:
+			U_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_U_n)(U_mu_copy[sample_index,:], U_var_copy[sample_index,:], self.G[sample_index, :], self.G_fe[sample_index,:], self.G_raw[sample_index,:], self.Y[sample_index, :], self.K, self.V_mu, V_S_squared_expected_val, self.F_mu, self.covariate_predicted[sample_index, :], gamma_u, self.tau_alpha/self.tau_beta, self.alpha_big_mu[sample_index, :]) for sample_index in range(self.N))
 
 		# Convert to array
 		U_update_data = np.asarray(U_update_data)
@@ -558,11 +578,13 @@ class EQTL_FACTORIZATION_VI(object):
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		F_mu_copy = np.copy(self.F_mu)
 		F_var_copy = np.copy(self.F_var)
-		covariate_predicted = np.dot(self.cov, self.C_mu)
 		F_update_data = []
 		gamma_f = 0.0
-		for test_index in range(self.T):
-			F_update_data.append(outside_update_F_t(F_mu_copy[test_index], F_var_copy[test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], U_S_expected_val, self.V_mu[:,test_index], covariate_predicted[:, test_index], gamma_f, tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index]))
+		if True:
+			for test_index in range(self.T):
+				F_update_data.append(outside_update_F_t(F_mu_copy[test_index], F_var_copy[test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], U_S_expected_val, self.V_mu[:,test_index], self.covariate_predicted[:, test_index], gamma_f, tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index]))
+		elif False:
+			F_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_F_t)(F_mu_copy[test_index], F_var_copy[test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], U_S_expected_val, self.V_mu[:,test_index], self.covariate_predicted[:, test_index], gamma_f, tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index]) for test_index in range(self.T))
 		F_update_data = np.asarray(F_update_data)
 		self.F_mu = F_update_data[:,0]
 		self.F_var = F_update_data[:,1]
@@ -573,12 +595,13 @@ class EQTL_FACTORIZATION_VI(object):
 		psi_expected_val = self.psi_alpha/self.psi_beta
 		alpha_mu_copy = np.copy(self.alpha_mu)
 		alpha_var_copy = np.copy(self.alpha_var)
-		covariate_predicted = np.dot(self.cov, self.C_mu)
 
 		alpha_update_data = []
-		for test_index in range(self.T):
-			alpha_update_data.append(outside_update_alpha_t(alpha_mu_copy[:, test_index], alpha_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.I, U_S_expected_val, self.V_mu[:, test_index], self.F_mu[test_index], covariate_predicted[:, test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], psi_expected_val[test_index], self.individual_to_sample_indices, self.individual_to_number_full_indices))
-
+		if True:
+			for test_index in range(self.T):
+				alpha_update_data.append(outside_update_alpha_t(alpha_mu_copy[:, test_index], alpha_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.I, U_S_expected_val, self.V_mu[:, test_index], self.F_mu[test_index], self.covariate_predicted[:, test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], psi_expected_val[test_index], self.individual_to_sample_indices, self.individual_to_number_full_indices))
+		elif False:
+			alpha_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_alpha_t)(alpha_mu_copy[:, test_index], alpha_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.I, U_S_expected_val, self.V_mu[:, test_index], self.F_mu[test_index], self.covariate_predicted[:, test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], psi_expected_val[test_index], self.individual_to_sample_indices, self.individual_to_number_full_indices) for test_index in range(self.T))
 		alpha_update_data = np.transpose(np.asarray(alpha_update_data))
 		self.alpha_mu = alpha_update_data[:(self.I),:]
 		self.alpha_var = alpha_update_data[(self.I):, :]
@@ -594,16 +617,20 @@ class EQTL_FACTORIZATION_VI(object):
 		tau_expected_val = self.tau_alpha/self.tau_beta
 		C_mu_copy = np.copy(self.C_mu)
 		C_var_copy = np.copy(self.C_var)
-
-
 		C_update_data = []
-		for test_index in range(self.T):
-			C_update_data.append(outside_update_C_t(C_mu_copy[:, test_index], C_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index], self.cov, self.cov_squared))
+
+		if self.parallel == False:
+			for test_index in range(self.T):
+				C_update_data.append(outside_update_C_t(C_mu_copy[:, test_index], C_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index], self.cov, self.cov_squared))
+		elif self.parallel == True:
+			C_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_C_t)(C_mu_copy[:, test_index], C_var_copy[:, test_index], self.G[:, test_index], self.G_fe[:, test_index], self.Y[:, test_index], self.N, U_S_expected_val, self.V_mu[:,test_index], self.F_mu[test_index], tau_expected_val[test_index, self.G_raw[:, test_index]], self.alpha_big_mu[:, test_index], self.cov, self.cov_squared) for test_index in range(self.T))
+
 		C_update_data = np.transpose(np.asarray(C_update_data))
 
 		# Fill in data structures
 		self.C_mu = C_update_data[(self.num_cov*0):(1*self.num_cov), :]
 		self.C_var = C_update_data[(self.num_cov*1):(2*self.num_cov), :]
+		self.covariate_predicted = np.dot(self.cov, self.C_mu)
 
 	def update_gamma_U(self):
 		# Loop through factors
@@ -635,35 +662,21 @@ class EQTL_FACTORIZATION_VI(object):
 		F_S_squared = np.square(self.F_mu) + self.F_var
 		V_S_squared = np.square(self.V_mu) + self.V_var
 		U_S_squared = ((np.square(self.U_mu) + self.U_var))
-		U_S = (self.U_mu)
 		C_squared = np.square(self.C_mu) + self.C_var
-		# Loop through tests
+
+
 		tau_update_data = []
-		genotype_value = 0
-		for test_index in range(self.T):
-			genotype_indices = self.G_raw[:, test_index] == genotype_value
-			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index, genotype_value], tau_beta_copy[test_index, genotype_value], self.G[genotype_indices, test_index], self.G_fe[genotype_indices, test_index], self.Y[genotype_indices, test_index], np.sum(genotype_indices), U_S[genotype_indices,:], self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared[genotype_indices,:], C_squared[:, test_index], self.alpha_big_mu[genotype_indices, test_index], self.alpha_big_var[genotype_indices, test_index], self.cov[genotype_indices,:], self.cov_squared[genotype_indices,:], self.alpha_prior, self.beta_prior))
+		if self.parallel == False:
+			for test_index in range(self.T):
+				tau_update_data.append(outside_update_shell_tau_t(tau_alpha_copy[test_index, :], tau_beta_copy[test_index, :], self.G[:, test_index], self.G_fe[:, test_index], self.G_raw[:, test_index], self.Y[:, test_index], self.U_mu, self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared, C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior))
+		elif self.parallel == True:
+			tau_update_data = Parallel(n_jobs=self.num_cores)(delayed(outside_update_shell_tau_t)(tau_alpha_copy[test_index, :], tau_beta_copy[test_index, :], self.G[:, test_index], self.G_fe[:, test_index], self.G_raw[:, test_index], self.Y[:, test_index], self.U_mu, self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared, C_squared[:, test_index], self.alpha_big_mu[:, test_index], self.alpha_big_var[:, test_index], self.cov, self.cov_squared, self.alpha_prior, self.beta_prior) for test_index in range(self.T))
+
 		tau_update_data = np.asarray(tau_update_data)
-		self.tau_alpha[:, genotype_value] = tau_update_data[:,0]
-		self.tau_beta[:, genotype_value] = tau_update_data[:,1]
-		# Loop through tests
-		tau_update_data = []
-		genotype_value = 1
-		for test_index in range(self.T):
-			genotype_indices = self.G_raw[:, test_index] == genotype_value
-			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index, genotype_value], tau_beta_copy[test_index, genotype_value], self.G[genotype_indices, test_index], self.G_fe[genotype_indices, test_index], self.Y[genotype_indices, test_index], np.sum(genotype_indices), U_S[genotype_indices,:], self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared[genotype_indices,:], C_squared[:, test_index], self.alpha_big_mu[genotype_indices, test_index], self.alpha_big_var[genotype_indices, test_index], self.cov[genotype_indices,:], self.cov_squared[genotype_indices,:], self.alpha_prior, self.beta_prior))
-		tau_update_data = np.asarray(tau_update_data)
-		self.tau_alpha[:, genotype_value] = tau_update_data[:,0]
-		self.tau_beta[:, genotype_value] = tau_update_data[:,1]
-		# Loop through tests
-		tau_update_data = []
-		genotype_value = 2
-		for test_index in range(self.T):
-			genotype_indices = self.G_raw[:, test_index] == genotype_value
-			tau_update_data.append(outside_update_tau_t(tau_alpha_copy[test_index, genotype_value], tau_beta_copy[test_index, genotype_value], self.G[genotype_indices, test_index], self.G_fe[genotype_indices, test_index], self.Y[genotype_indices, test_index], np.sum(genotype_indices), U_S[genotype_indices,:], self.V_mu[:,test_index], self.F_mu[test_index], self.C_mu[:, test_index], V_S_squared[:, test_index], F_S_squared[test_index], U_S_squared[genotype_indices,:], C_squared[:, test_index], self.alpha_big_mu[genotype_indices, test_index], self.alpha_big_var[genotype_indices, test_index], self.cov[genotype_indices,:], self.cov_squared[genotype_indices,:], self.alpha_prior, self.beta_prior))
-		tau_update_data = np.asarray(tau_update_data)
-		self.tau_alpha[:, genotype_value] = tau_update_data[:,0]
-		self.tau_beta[:, genotype_value] = tau_update_data[:,1]
+		self.tau_alpha = tau_update_data[:,:3]
+		self.tau_beta = tau_update_data[:,3:]
+
+		self.tau_expected_val = self.tau_alpha/self.tau_beta
 
 
 	def update_elbo(self):
@@ -865,6 +878,8 @@ class EQTL_FACTORIZATION_VI(object):
 			self.V_mu[k,:] = ((self.V_mu[k,:]-np.mean(self.V_mu[k,:]))/np.std(self.V_mu[k,:]))
 		self.V_var = np.ones((self.K, self.T))*(1.0/1.0)
 
+		self.V_squared = (np.square(self.V_mu) + self.V_var)
+
 		# Initialize C and F
 		F_betas, C_betas, residual_varz = run_linear_model_for_initialization(self.Y, self.G_fe, self.cov, self.z)
 		self.F_mu = F_betas
@@ -875,9 +890,13 @@ class EQTL_FACTORIZATION_VI(object):
 		self.C_var = np.ones(self.C_mu.shape)
 
 		self.cov_squared = np.square(self.cov)
+
+
+		self.covariate_predicted = np.dot(self.cov, self.C_mu)
 		# Variances
 		self.tau_alpha = np.ones((self.T,3))*self.alpha_prior
 		self.tau_beta = np.ones((self.T,3))*self.beta_prior
+		self.tau_expected_val = self.tau_alpha/self.tau_beta
 		self.print_diagnostic_data()
 	def print_diagnostic_data(self):
 		print(str(self.N) + ' samples detected')

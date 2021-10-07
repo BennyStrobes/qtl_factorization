@@ -188,16 +188,15 @@ variance_param="1e-3"
 ard_variance_param="1e-16"
 seed="1"
 
-if false; then
 permutation_type="False"
 model_name="eqtl_factorization_vi_ard_heteroskedastic"
 ratio_variance_standardization="True"
 round_genotype="True"
 warmup_iterations="3000"
-num_latent_factors="10"
+num_latent_factors="30"
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_lambda_"$lambda_v"_round_geno_"$round_genotype"_parallel_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
-fi
+sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
 permutation_type="False"
 model_name="eqtl_factorization_vi_ard_heteroskedastic"
 ratio_variance_standardization="True"
