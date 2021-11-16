@@ -1,10 +1,10 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=60:00:00
-#SBATCH --partition=lrgmem
-#SBATCH --mem=30GB
-
+#SBATCH --time=50:00:00
+#SBATCH --partition=shared
+#SBATCH --mem=40GB
+#SBATCH --cpus-per-task=24
 #SBATCH --nodes=1
 
 

@@ -30,7 +30,7 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
 		for (study_iter in 1:length(study_names)) {
 			gwas_study_name <- study_names[study_iter]
 			surge_genes <- c()
-			for (latent_factor_num in 1:10) {
+			for (latent_factor_num in 1:3) {
 				eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 				results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
 				coloc_results_df <- read.table(results_file, header=TRUE)
@@ -76,7 +76,7 @@ extract_num_coloc_hits_df <- function(study_names, coloc_dir) {
 
 	pph4_threshs <- c(.8, .9, .95, .99)
 
-	for (latent_factor_num in 1:10) {
+	for (latent_factor_num in 1:3) {
 		eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 		informal_eqtl_study_name <- paste0("SURGE_interaction_", latent_factor_num)
 		for (pph4_iter in 1:length(pph4_threshs)) {
@@ -132,7 +132,8 @@ processed_gwas_studies_file <- args[1]
 coloc_dir <- args[2]
 visualize_coloc_dir <- args[3]
 
-
+print(processed_gwas_studies_file)
+print(coloc_dir)
 study_df <- read.table(processed_gwas_studies_file, header=FALSE)
 study_names <- as.character(study_df$V1)
 

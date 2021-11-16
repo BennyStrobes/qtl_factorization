@@ -218,7 +218,7 @@ make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loadings) {
 
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=ancestry)) + geom_boxplot(outlier.size = .1) +
 				gtex_v8_figure_theme() + 
-	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
+	        	labs(x="SURGE latent context", y = "Measurement loading", fill="") +
 	        	theme(legend.position="bottom")
 
 	return(boxplot)
@@ -374,7 +374,7 @@ make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loadings)
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
 				gtex_v8_figure_theme() + 
 				scale_fill_manual(values=colors) + 
-	        	labs(x="eQTL Factorization latent context", y = "Measurement loading", fill="") +
+	        	labs(x="SURGE latent context", y = "Measurement loading", fill="") +
 	        	theme(legend.position="bottom") +
 	           	guides(fill=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=.1))) + 
 	           	theme(legend.text=element_text(size=9))
@@ -1091,7 +1091,7 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
                 geom_point() +
                 ylim(0,max(variance_explained) + .002) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
-                labs(x = "Factor number", y = "Fraction of QTL variance explained") + 
+                labs(x = "SURGE latent context", y = "PVE") + 
                 gtex_v8_figure_theme() 
 
     return(line_plot)
@@ -1175,6 +1175,15 @@ plotter <- ggplot(df, aes(x=loading, y=cell_type_prop)) +
            labs(x=paste0("Loading ", loading_number), y="cell-type proportion lm", title=paste0("Adjusted r squard: ", r_squared))
     return(plotter)
 
+}
+
+make_loading_loading_scatter_colored_by_real_valued_covaraite <- function(l1, l2, real_cov, l1_name, l2_name, cov_name) {
+	df <- data.frame(loading_1=l1, loading_2=l2, cov=real_cov)
+	plotter <- ggplot(df, aes(x=loading_1, y=loading_2, color=cov)) + 
+           geom_point() +
+           gtex_v8_figure_theme() + 
+           labs(x=l1_name, y=l2_name, color=cov_name)
+    return(plotter)
 }
 
 make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, covariates) {
@@ -1303,13 +1312,22 @@ tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 pve_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 ordering <- order(pve, decreasing=TRUE)
-#ordering <- ordering[1:8]
+ordering <- ordering[1:7]
 
 
 
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
+
+muscle_indices <- as.character(tissue_10_names) == "Muscle_Skeletal"
+not_muscle_indices <- as.character(tissue_10_names) != "Muscle_Skeletal"
+
+#loading_1 <- loadings[,1]
+#print(mean(loading_1[muscle_indices]))
+#print(sd(loading_1[muscle_indices]))
+#print(mean(loading_1[not_muscle_indices]))
+#print(sd(loading_1[not_muscle_indices]))
 
 ############################
 # Start making plots!!
@@ -1518,9 +1536,17 @@ ggsave(boxplots, file=output_file, width=7.2, height=11.5, units="in")
 
 loading_num <- 2
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_num, "_Epithelial_cells", "_loadings_scatter.pdf")
-p <- make_cell_type_loading_scatter(loadings[,loading_num], covariates$Epithelial, paste0("Loading ", loading_num), "Epithelial", tissue_10_names, tissue_colors) 
-ggsave(p, file=output_file, width=7.2, height=5.5, units="in")
+epi_loading_2_scatter <- make_cell_type_loading_scatter(loadings[,loading_num], covariates$Epithelial, paste0("SURGE latent context ", loading_num), "Epithelial", tissue_10_names, tissue_colors) 
+ggsave(epi_loading_2_scatter, file=output_file, width=7.2, height=5.5, units="in")
 
+#################
+# Make loading_vs_loading scatter colored by real valued covariate
+loading_num_1 <- 3
+loading_num_2 <- 4
+real_valued_cov_name <- "genotype_pc1"
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_num_1,"_vs_loading_", loading_num_2, "scatter_colored_by_", real_valued_cov_name,".pdf")
+loading_3_4_colored_by_geno_pc1 <- make_loading_loading_scatter_colored_by_real_valued_covaraite(loadings[,loading_num_1], loadings[,loading_num_2], pcs$genotype_PC0, paste0("SURGE latent context ", loading_num_1), paste0("SURGE latent context ", loading_num_2), "Genotype PC1")
+ggsave(loading_3_4_colored_by_geno_pc1, file=output_file, width=7.2, height=5.5, units="in")
 
 
 cell_type_name = "Neurons"
@@ -1540,7 +1566,7 @@ ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
 cell_type_name = "Epithelial_cells"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, cell_type_name, "_loadings_scatter.pdf")
-scatters <- make_cell_type_loadings_scatters(loadings, covariates$Epithelial, cell_type_name, tissue_10_names, tissue_colors)
+epi_scatter <- make_cell_type_loadings_scatters(loadings, covariates$Epithelial, cell_type_name, tissue_10_names, tissue_colors)
 ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
 cell_type_name = "Adipocytes"
@@ -1625,6 +1651,31 @@ loading_num2 <- 5
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_4_loading_5_scatter_colored_by_Epithelial_for_digestive_samples.pdf")
 ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_samples_from_specified_tissue(loadings[, loading_num1], loadings[, loading_num2],  covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num1), paste0("Loading ", loading_num2), tissue_10_names, valid_tissues)
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "figure2.pdf")
+tissue_legend <- get_legend(boxplot_tissue)
+race_legend <- get_legend(boxplot_race)
+merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race + theme(legend.position="none"), tissue_legend, race_legend, epi_loading_2_scatter, stacked_barplot6, ncol=2, rel_heights=c(1,.5, 1), rel_widths=c(1, .8), labels = c('A', 'B', '', '', 'C', 'D'))
+ggsave(merged, file=output_file, width=12.2, height=7.5, units="in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 if (FALSE) {

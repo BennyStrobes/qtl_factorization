@@ -28,7 +28,7 @@ extract_surge_tau_df <- function(study_names, sldsc_results_dir, suffix) {
 		study_name <- study_names[study_iter]
 		cat_levels <- c()
 		# Add surge eqtls
-		for (latent_factor_num in 1:10) {
+		for (latent_factor_num in 1:3) {
 			study_file <- paste0(sldsc_results_dir, study_name, "_surge_", latent_factor_num, suffix)
 			study_df <- read.table(study_file, header=TRUE)
 			num_rows <- dim(study_df)[1]
@@ -40,7 +40,7 @@ extract_surge_tau_df <- function(study_names, sldsc_results_dir, suffix) {
 
 			cat_levels <- c(cat_levels, paste0("surge_eqtl_", latent_factor_num))
 		}
-		
+		if (FALSE) {
 		# Add standard eqtl
 		study_file <- paste0(sldsc_results_dir, study_name, "_standard", suffix)
 		study_df <- read.table(study_file, header=TRUE)
@@ -51,6 +51,7 @@ extract_surge_tau_df <- function(study_names, sldsc_results_dir, suffix) {
 		tau_arr <- c(tau_arr, study_df_small$Coefficient_z.score[1])
 
 		cat_levels <- c(cat_levels, "standard_eqtl")
+		}
 	}
 
 	study_levels_non_blood_immune <- c("Alzheimer", "Bipolar", "CAD", "Schizophrenia", "ukbb_bmi", "ukbb_height", "ukbb_T2D")
@@ -126,7 +127,7 @@ make_enrichment_barplot <- function(df) {
 		gtex_v8_figure_theme() +
 		theme(legend.position="top") +
 		theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
-		labs(y="S-LDSC enrichment", fill="") +
+		labs(y="S-LDSC\nenrichment", fill="") +
 		geom_hline(yintercept=1) +
 		geom_errorbar(aes(ymin=enrichment-enrichment_std_err, ymax=enrichment+enrichment_std_err), position = position_dodge(), width = .75, size=.2)
 
@@ -142,7 +143,7 @@ make_prop_h2_barplot <- function(df) {
 		gtex_v8_figure_theme() +
 		theme(legend.position="top") +
 		theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
-		labs(y="S-LDSC proportion h^2", fill="") +
+		labs(y="S-LDSC\nproportion h^2", fill="") +
 		geom_errorbar(aes(ymin=prop_h2-prop_h2_std_err, ymax=prop_h2+prop_h2_std_err), position = position_dodge(), width = .75, size=.2)
 	return(p)
 }
@@ -265,7 +266,7 @@ make_cross_trait_tau_boxplot <- function(df) {
 	p <- ggplot(data=new_df, aes(x=category, y=tau, fill=study_group)) +
 		geom_boxplot() +
 		gtex_v8_figure_theme() +
-		theme(legend.position="top") + 
+		theme(legend.position="bottom") + 
 		labs(y="S-LDSC Tau", fill="trait category") +
 		geom_hline(yintercept=0) +
 		theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10))
@@ -339,10 +340,13 @@ study_names <- extract_study_names(processed_gwas_studies_file)
 
 # Extract data frame of enrichment
 sldsc_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_surge_eqtls_1e-05_and_baselineLD.results")
+valid_indices = (((as.character(sldsc_surge_enrichment_df$category) == "surge_eqtl_1") + (as.character(sldsc_surge_enrichment_df$category) == "surge_eqtl_2") + (as.character(sldsc_surge_enrichment_df$category) == "surge_eqtl_3") + (as.character(sldsc_surge_enrichment_df$category) == "standard_eqtl")) > 0.0)
+sldsc_surge_enrichment_df = sldsc_surge_enrichment_df[valid_indices,]
+sldsc_surge_enrichment_df$category = factor(sldsc_surge_enrichment_df$category, levels=c("surge_eqtl_1", "surge_eqtl_2", "surge_eqtl_3", "standard_eqtl"))
+
 sldsc_surge_tau_df = extract_surge_tau_df(study_names, sldsc_results_dir, "_eqtls_1e-05_only_and_baselineLD.results")
 #sldsc_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_surge_eqtls_1e-05_and_baseline.results")
 sldsc_joint_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc_results_dir, "_joint_surge_eqtls_1e-05_and_baselineLD.results")
-
 
 
 ##############################
@@ -350,11 +354,11 @@ sldsc_joint_surge_enrichment_df = extract_surge_enrichment_df(study_names, sldsc
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_enrichment_barplot.pdf")
 enrichment_barplot <- make_enrichment_barplot(sldsc_surge_enrichment_df)
-ggsave(enrichment_barplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(enrichment_barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_enrichment_barplot.pdf")
-enrichment_barplot <- make_enrichment_barplot(sldsc_joint_surge_enrichment_df)
-ggsave(enrichment_barplot, file=output_file, width=12.2, height=6.0, units="in")
+joint_enrichment_barplot <- make_enrichment_barplot(sldsc_joint_surge_enrichment_df)
+ggsave(joint_enrichment_barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ##############################
@@ -362,11 +366,18 @@ ggsave(enrichment_barplot, file=output_file, width=12.2, height=6.0, units="in")
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_prop_h2_barplot.pdf")
 prop_h2_barplot <- make_prop_h2_barplot(sldsc_surge_enrichment_df)
-ggsave(prop_h2_barplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(prop_h2_barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_prop_h2_barplot.pdf")
-prop_h2_barplot <- make_prop_h2_barplot(sldsc_joint_surge_enrichment_df)
-ggsave(prop_h2_barplot, file=output_file, width=12.2, height=6.0, units="in")
+joint_prop_h2_barplot <- make_prop_h2_barplot(sldsc_joint_surge_enrichment_df)
+ggsave(joint_prop_h2_barplot, file=output_file, width=7.2, height=6.0, units="in")
+
+# Cowplot
+output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_enrichment_and_prop_h2_barplot.pdf")
+legend <- get_legend(joint_enrichment_barplot)
+merged <- plot_grid(joint_enrichment_barplot +theme(legend.position="none"), joint_prop_h2_barplot+theme(legend.position="none"), legend,rel_heights=c(1,1,.2), ncol=1,labels=c("A","B", ""))
+ggsave(merged, file=output_file, width=7.2, height=7.0, units="in")
+
 
 
 
@@ -376,11 +387,11 @@ ggsave(prop_h2_barplot, file=output_file, width=12.2, height=6.0, units="in")
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_neglog10_pvalue_barplot.pdf")
 neglog10_pvalue_barplot <- make_neglog10_pvalue_barplot(sldsc_surge_enrichment_df)
-ggsave(neglog10_pvalue_barplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(neglog10_pvalue_barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 output_file <- paste0(sldsc_visualization_dir, "joint_surge_eqtls_1e-05_and_baselineLD_neglog10_pvalue_barplot.pdf")
 neglog10_pvalue_barplot <- make_neglog10_pvalue_barplot(sldsc_joint_surge_enrichment_df)
-ggsave(neglog10_pvalue_barplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(neglog10_pvalue_barplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ##############################
@@ -388,14 +399,14 @@ ggsave(neglog10_pvalue_barplot, file=output_file, width=12.2, height=6.0, units=
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_cross_trait_neglog10_pvalue_boxplot.pdf")
 x_trait_neglog10_pvalue_boxplot <- make_cross_trait_neglog10_pvalue_boxplot(sldsc_surge_enrichment_df)
-ggsave(x_trait_neglog10_pvalue_boxplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(x_trait_neglog10_pvalue_boxplot, file=output_file, width=7.2, height=6.0, units="in")
 
 ##############################
 # Make cross-trait enrichment box plot
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_cross_trait_enrichment_boxplot.pdf")
 x_trait_enrichment_boxplot <- make_cross_trait_enrichment_boxplot(sldsc_surge_enrichment_df)
-ggsave(x_trait_enrichment_boxplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(x_trait_enrichment_boxplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
 ##############################
@@ -403,7 +414,7 @@ ggsave(x_trait_enrichment_boxplot, file=output_file, width=12.2, height=6.0, uni
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_cross_trait_enrichment_violinplot.pdf")
 x_trait_enrichment_boxplot <- make_cross_trait_enrichment_violinplot(sldsc_surge_enrichment_df)
-ggsave(x_trait_enrichment_boxplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(x_trait_enrichment_boxplot, file=output_file, width=7.2, height=6.0, units="in")
 
 
 
@@ -412,9 +423,9 @@ ggsave(x_trait_enrichment_boxplot, file=output_file, width=12.2, height=6.0, uni
 ##############################
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_one_at_a_time_and_baselineLD_cross_trait_tau_boxplot.pdf")
 x_trait_tau_boxplot <- make_cross_trait_tau_boxplot(sldsc_surge_tau_df)
-ggsave(x_trait_tau_boxplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(x_trait_tau_boxplot, file=output_file, width=9.5, height=6.0, units="in")
 
 output_file <- paste0(sldsc_visualization_dir, "surge_eqtls_1e-05_and_baselineLD_cross_trait_tau_boxplot.pdf")
 x_trait_tau_boxplot <- make_cross_trait_tau_boxplot(sldsc_surge_enrichment_df)
-ggsave(x_trait_tau_boxplot, file=output_file, width=12.2, height=6.0, units="in")
+ggsave(x_trait_tau_boxplot, file=output_file, width=9.5, height=6.0, units="in")
 

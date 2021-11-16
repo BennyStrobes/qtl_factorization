@@ -345,7 +345,7 @@ def outside_update_tau_t(tau_alpha, tau_beta, G_slice, G_fe_slice, Y_slice, N, U
 
 
 class EQTL_FACTORIZATION_VI(object):
-	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, parallel=False, num_cores=24, output_root=''):
+	def __init__(self, K=25, alpha=1e-16, beta=1e-16, ard_alpha=1e-16, ard_beta=1e-16, gamma_v=1.0, max_iter=10, delta_elbo_threshold=.01, warmup_iterations=0, parallel=True, num_cores=24, output_root=''):
 		# Prior on gamma distributions defining variances
 		self.alpha_prior = alpha
 		self.beta_prior = beta
@@ -449,7 +449,7 @@ class EQTL_FACTORIZATION_VI(object):
 			# Print temporary results to output every X iterations
 			if np.mod(vi_iter, 5) == 0 and vi_iter > 0:
 				np.savetxt(self.output_root + 'temper_U_S.txt', (self.U_mu), fmt="%s", delimiter='\t')
-				np.savetxt(self.output_root + 'temper_factor_genetic_pve.txt', (self.factor_genetic_pve), fmt="%s", delimiter='\t')
+				np.savetxt(self.output_root + 'temper_factor_g_pve.txt', (self.factor_genetic_pve), fmt="%s", delimiter='\t')
 				np.savetxt(self.output_root + 'temper_factor_pve.txt', (self.factor_pve), fmt="%s", delimiter='\t')
 				np.save(self.output_root + 'temper_U_S.npy', self.U_mu)
 				np.save(self.output_root + 'temper_gamma_U.npy', self.gamma_U_alpha/self.gamma_U_beta)

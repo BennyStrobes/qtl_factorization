@@ -100,7 +100,7 @@ make_umap_loading_scatter_plot_colored_by_categorical_variable <- function(covar
 	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.001) +
 	           gtex_v8_figure_theme() + 
 	           guides(colour = guide_legend(override.aes = list(size=2))) +
-	           labs(x="UMAP 1", y = "UMAP 2", color=covariate_name) + 
+	           labs(x="SURGE UMAP 1", y = "SURGE UMAP 2", color=covariate_name) + 
 	           guides(colour=guide_legend(nrow=3,byrow=TRUE, override.aes = list(size=2))) +
 	           theme(legend.position="bottom") + 
 	           theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
@@ -113,7 +113,7 @@ make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covar
 	plotter <- ggplot(df) + 
 	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.01) +
 	           gtex_v8_figure_theme() + 
-	           labs(x="UMAP 1", y = "UMAP 2", color=covariate_name) + 
+	           labs(x="SURGE UMAP 1", y = "SURGE UMAP 2", color=covariate_name) + 
              scale_colour_gradient2() +
 	           #scale_color_gradient(low="pink",high="blue") +
 	           theme(legend.position="bottom") + 
@@ -285,7 +285,7 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
                 geom_point() +
                 ylim(0,max(variance_explained) + .002) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
-                labs(x = "Factor number", y = "Fraction of QTL variance explained") + 
+                labs(x = "Latent context", y = "PVE") + 
                 gtex_v8_figure_theme() 
 
     return(line_plot)
@@ -389,27 +389,35 @@ ordering <- order(pve, decreasing=TRUE)
 
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
+print(sample_covariate_file)
+# Change "nan" to "monocyte"
+covariates$ct_cov_mode = as.character(covariates$ct_cov_mode)
+covariates$ct_cov_mode[covariates$ct_cov_mode == "nan"] = rep("monocyte", sum(covariates$ct_cov_mode == "nan"))
+covariates$ct_cov_mode = factor(covariates$ct_cov_mode)
+
+
 loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 #factors <- read.table(eqtl_factorization_factor_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-expr <- read.table(gene_expr_file, header=FALSE)
+
+#expr <- read.table(gene_expr_file, header=FALSE)
 #saveRDS( expr, "expr.rds")
 expr <- readRDS("expr.rds")
 
-expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-saveRDS(expr_pcs, "expr_pcs.rds")
-#expr_pcs <- readRDS("expr_pcs.rds")
+#expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+#saveRDS(expr_pcs, "expr_pcs.rds")
+expr_pcs <- readRDS("expr_pcs.rds")
 
 
-#umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
-#umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
+umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
+umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
 #print("DONE")
 
 #gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-umap_expr = umap(expr_pcs)$layout
+#umap_expr = umap(expr_pcs)$layout
 #saveRDS(umap_expr, "umap_expr_loadings.rds")
 
 
@@ -514,7 +522,7 @@ print("DONE")
 # PVE plot showing fraction of eqtl variance explained through each factor
 #######################################
 output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
-pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:3])
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
 
 #######################################
@@ -529,6 +537,14 @@ loading_num <- 1
 output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
 histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
 ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+
+loading_num <- 1
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
 
 
 ######################################
@@ -550,7 +566,7 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 # Make loading boxplot colored by Ancestry
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type.pdf")
-boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings, "Cell Type")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings[,1:3], "Cell Type")
 ggsave(boxplot, file=output_file, width=12.2, height=5.5, units="in")
 
 ######################################
@@ -587,7 +603,7 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 # Make loading boxplot colored by Ancestry
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type_fine_res.pdf")
-boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_cov_mode, loadings, "Cell Type (fine res)")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_cov_mode, loadings[,1:3], "Cell Type")
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################################
@@ -696,6 +712,8 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_cell_type2.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_loadings, "cell type")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
 
 ######################################
 # Visualize UMAP scatter plot colored by cell type
@@ -973,8 +991,8 @@ marker_gene_index <- which(gene_names==marker_gene)
 marker_gene_expr_vec <- expr[, marker_gene_index]
 marker_gene_expr_vec[marker_gene_expr_vec > 6.0] = 6.0
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+umap_scatter_bank1 <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
+ggsave(umap_scatter_bank1, file=output_file, width=7.2, height=6.0, units="in")
 
 
 marker_gene = "RTKN2"
@@ -990,8 +1008,8 @@ marker_gene_index <- which(gene_names==marker_gene)
 marker_gene_expr_vec <- expr[, marker_gene_index]
 marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+umap_scatter_cd8b <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
+ggsave(umap_scatter_cd8b, file=output_file, width=7.2, height=6.0, units="in")
 
 marker_gene = "ISG15"
 marker_gene_index <- which(gene_names==marker_gene)
@@ -1026,6 +1044,14 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", mar
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
+marker_gene = "CD14"
+marker_gene_index <- which(gene_names==marker_gene)
+marker_gene_expr_vec <- expr[, marker_gene_index]
+marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
+umap_scatter_cd14 <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
+ggsave(umap_scatter_cd14, file=output_file, width=7.2, height=6.0, units="in")
+
 
 marker_gene = "RGS1"
 marker_gene_index <- which(gene_names==marker_gene)
@@ -1040,8 +1066,8 @@ marker_gene_index <- which(gene_names==marker_gene)
 marker_gene_expr_vec <- expr[, marker_gene_index]
 marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+umap_scatter_nkg7 <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
+ggsave(umap_scatter_nkg7, file=output_file, width=7.2, height=6.0, units="in")
 
 marker_gene = "PRF1"
 marker_gene_index <- which(gene_names==marker_gene)
@@ -1050,3 +1076,9 @@ marker_gene_expr_vec[marker_gene_expr_vec > 4.0] = 4.0
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_", marker_gene, "_expression.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(marker_gene_expr_vec, umap_loadings, marker_gene)
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_multiple_marker_genes_expression.pdf")
+merged <- plot_grid(umap_scatter_cd14, umap_scatter_nkg7, umap_scatter_cd8b, umap_scatter_bank1, ncol=2, labels = c('A', 'B', 'C', 'D'))
+ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
+
+

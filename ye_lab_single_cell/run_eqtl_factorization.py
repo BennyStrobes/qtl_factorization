@@ -57,6 +57,7 @@ def permute_donor(G, Z):
 
 	# First create donorXtest matrix
 	G_donor = np.zeros((num_donors, num_tests))
+	donor_num_to_sample_num = {}
 	for donor_num in range(num_donors):
 		donor_indices = np.where(Z==donor_num)[0]
 		if len(donor_indices) < 1:
@@ -64,11 +65,20 @@ def permute_donor(G, Z):
 			pdb.set_trace()
 		sample_index = donor_indices[0]
 		G_donor[donor_num, :] = G[sample_index, :]
+		donor_num_to_sample_num[donor_num] = sample_index
 	permy = np.random.permutation(range(num_donors))
 	G_donor_perm = G_donor[permy,:]
 	for sample_num in range(num_samples):
 		G_perm[sample_num, :] = G_donor_perm[Z[sample_num], :]
-	return G_perm
+	# generate sample level permy
+	sample_permy = []
+	for zz in Z:
+		new_sample_num = donor_num_to_sample_num[permy[zz]]
+		sample_permy.append(new_sample_num)
+	sample_permy = np.asarray(sample_permy)
+	if np.array_equal(G[sample_permy,:], G_perm) == False:
+		print('assumption erororor')
+	return G_perm, sample_permy
 
 def get_resid_expression_from_vi_lmm(Y, G, Z, cov, lmm_root):
 	F = np.load(lmm_root + 'temper_F.npy')
@@ -116,10 +126,13 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 
 	if permutation_type == 'interaction_only':
 		G_fe = np.copy(G)
-		G = permute_donor(G, Z)
+		G, sample_permutation = permute_donor(G, Z)
+		np.savetxt(output_root + 'sample_permutation.txt', (sample_permutation), fmt="%s", delimiter='\t')
 	elif permutation_type == 'fixed_and_interaction':
-		G = permute_donor(G, Z)
+		G, sample_permutation = permute_donor(G, Z)
 		G_fe = np.copy(G)
+		np.savetxt(output_root + 'sample_permutation.txt', (sample_permutation), fmt="%s", delimiter='\t')
+
 	elif permutation_type == 'False':
 		G_fe = np.copy(G)
 	else:
