@@ -229,7 +229,7 @@ warmup_iterations="3000"
 num_latent_factors="10"
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"
 if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
 fi
 
 
@@ -274,8 +274,9 @@ fi
 ############################################
 # Check for overlap with coloc
 ############################################
+if false; then
 sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $coloc_input_dir $coloc_dir $visualize_coloc_dir
-
+fi
 
 ############################################
 # Remap tfbs enrichment analysis
@@ -315,7 +316,7 @@ fi
 module load R/3.5.1
 model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_"
 output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_heteroskedastic_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-if fales; then
+if false; then
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
 fi
 

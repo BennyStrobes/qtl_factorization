@@ -4,6 +4,115 @@ import sys
 import pdb
 import scipy.stats
 
+def alphabetical_ordered_gene_level_stats(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file):
+	f = open(variant_gene_pairs_eqtl_results_file)
+	t = open(multple_testing_correction_results_file, 'w')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
+	head_count = 0
+	genes = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split()
+		gene_id = data[1]
+		variant_id = data[0]
+		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
+		if gene_id not in genes:
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
+		else:
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
+			else:
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
+	f.close()
+	# Loop through genes and do BF correction
+	bf_gene_array = []
+	for gene in genes.keys():
+		lead_variant = genes[gene][0]
+		lead_nominal_pvalue = genes[gene][1]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
+		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
+		if bf_corrected_pvalue > 1.0:
+			bf_corrected_pvalue = 1.0
+		bf_gene_array.append((bf_corrected_pvalue, lead_variant, gene, num_variants_at_gene, test_line))
+	sorted_bf_gene_array = sorted(bf_gene_array, key=lambda tup: tup[2])
+	# BH correction
+	kk = 1
+	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
+	sig = True
+	for gene_tuple in sorted_bf_gene_array:
+		bf_pvalue = gene_tuple[0]
+		fdr = num_genes*bf_pvalue/kk 
+		kk = kk + 1
+		if sig == True:
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+	t.close()
+
+
+def ordered_gene_level_stats(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file):
+	f = open(variant_gene_pairs_eqtl_results_file)
+	t = open(multple_testing_correction_results_file, 'w')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
+	head_count = 0
+	genes = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split()
+		gene_id = data[1]
+		variant_id = data[0]
+		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
+		if gene_id not in genes:
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
+		else:
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
+			else:
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
+	f.close()
+	# Loop through genes and do BF correction
+	bf_gene_array = []
+	for gene in genes.keys():
+		lead_variant = genes[gene][0]
+		lead_nominal_pvalue = genes[gene][1]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
+		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
+		if bf_corrected_pvalue > 1.0:
+			bf_corrected_pvalue = 1.0
+		bf_gene_array.append((bf_corrected_pvalue, lead_variant, gene, num_variants_at_gene, test_line))
+	sorted_bf_gene_array = sorted(bf_gene_array, key=lambda tup: tup[0])
+	# BH correction
+	kk = 1
+	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
+	sig = True
+	for gene_tuple in sorted_bf_gene_array:
+		bf_pvalue = gene_tuple[0]
+		fdr = num_genes*bf_pvalue/kk 
+		kk = kk + 1
+		if sig == True:
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+	t.close()
+
 def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file, fdr_thresh):
 	f = open(variant_gene_pairs_eqtl_results_file)
 	t = open(multple_testing_correction_results_file, 'w')
@@ -45,6 +154,7 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 	# BH correction
 	kk = 1
 	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
 	sig = True
 	for gene_tuple in sorted_bf_gene_array:
 		bf_pvalue = gene_tuple[0]
@@ -90,9 +200,12 @@ def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 			data = line.split('\t')
 			beta = float(data[(2 + lf_num*3)])
 			std_err_beta = float(data[(3 + lf_num*3)])
-			old_pvalue = data[(4 + lf_num*3)]
-			new_pvalue = scipy.stats.norm.cdf(-np.abs( beta/std_err_beta))*2
-			new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(new_pvalue)
+			old_pvalue = float(data[(4 + lf_num*3)])
+			if old_pvalue < 1e-10:
+				new_pvalue = scipy.stats.norm.cdf(-np.abs( beta/std_err_beta))*2
+				new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(new_pvalue)
+			else:
+				new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(old_pvalue)
 			new_data = new_line.split('\t')
 			t2.write(new_line + '\n')
 			counter = counter +1
@@ -240,6 +353,12 @@ for lf_num in range(num_lf):
 	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
 	merge_parallelized_results(output_root, '.txt', total_jobs, lf_num)
 
+	output_file = output_root + 'latent_factor_' + str(lf_num+1) + '_ordered_gene_level_stats.txt'
+	ordered_gene_level_stats(merged_file, output_file)
+
+	output_file = output_root + 'latent_factor_' + str(lf_num+1) + '_alphabetical_ordered_gene_level_stats.txt'
+	alphabetical_ordered_gene_level_stats(merged_file, output_file)
+
 	fdr = .05
 	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
@@ -252,8 +371,5 @@ for lf_num in range(num_lf):
 	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
-	fdr = .5
-	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 
 

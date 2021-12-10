@@ -13,8 +13,9 @@ qtl_interaction_factor_file="$5"
 qtl_sample_overlap_file="$6"
 sample_permutation_file="$7"
 qtl_output_root="$8"
+version="$9"
 
 
 
 module load R/3.5.1
-Rscript run_permuted_latent_factor_interaction_eqtl_analysis_in_parallel.R $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $sample_permutation_file $qtl_output_root
+Rscript run_permuted_latent_factor_interaction_eqtl_analysis_in_parallel.R $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $sample_permutation_file $qtl_output_root $version

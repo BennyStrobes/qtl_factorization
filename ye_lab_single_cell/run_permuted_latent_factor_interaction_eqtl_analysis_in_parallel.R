@@ -91,6 +91,28 @@ run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups, num
 	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err))
 }
 
+run_lf_interaction_eqtl_lmm_perm_interaction_only <- function(expr, geno, perm_geno, covariates, lfs, groups, num_lf) {
+	fit_full <- lmer(expr ~ geno + covariates + lfs + lfs:perm_geno + (1 | groups), REML=FALSE)
+	#fit_null <- lmer(expr ~ geno + covariates + lfs + (1 | groups), REML=FALSE)
+
+	#lrt <- anova(fit_null,fit_full)
+
+	#aggregate_pvalue <- lrt[[8]][2]
+
+	# extract coefficients
+	coefs <- data.frame(coef(summary(fit_full)))
+	# use normal distribution to approximate p-value
+	coefficient_pvalues <- 2 * (1 - pnorm(abs(coefs$t.value)))
+
+	num_cov = dim(covariates)[2]
+	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov + num_lf):length(coefficient_pvalues)]
+	betas <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),1]
+	std_err <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),2]
+
+	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err))
+}
+
+
 
 pass_genotype_filter <- function(geno, thresh) {
 	rounded_geno <- round(geno)
@@ -128,6 +150,7 @@ interaction_factor_file = args[5]
 sample_overlap_file = args[6]
 sample_permutation_file = args[7]
 output_root = args[8]
+version =args[9]
 
 
 
@@ -174,7 +197,7 @@ while(!stop) {
 
 	new_line <- paste0(rs_id, "\t", ensamble_id)
 
-
+	if (version == "fixed_and_interaction") {
 	tryCatch(
 	{
 	lmm_full_results = run_lf_interaction_eqtl_lmm(expr, perm_geno, covariates, lfs, groups, num_lfs)
@@ -188,6 +211,24 @@ while(!stop) {
 	}
 	}
 	)
+	}
+
+	if (version == "interaction_only") {
+	tryCatch(
+	{
+	lmm_full_results = run_lf_interaction_eqtl_lmm_perm_interaction_only(expr, geno, perm_geno, covariates, lfs, groups, num_lfs)
+	for (lf_num in 1:num_lfs) {
+		new_line <- paste0(new_line,"\t",lmm_full_results$beta[lf_num], "\t", lmm_full_results$std_err[lf_num], "\t", lmm_full_results$pvalue[lf_num])
+	}
+	},
+	error = function(e) {
+	for (lf_num in 1:num_lfs) {
+		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, 1), collapse=","))
+	}
+	}
+	)		
+		
+	}
 
 
 	cat(paste0(new_line, "\n"))
