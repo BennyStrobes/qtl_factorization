@@ -50,7 +50,7 @@ coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cel
 remap_tfbs_file="/work-zfs/abattle4/lab_data/tfbs_remap_2022/remap2022_nr_macs2_hg19_v1_0.bed"
 
 # Directory containing ldsc source code
-ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/ldsc/"
+ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/custom_sldsc/ldsc/"
 
 # Directory containing sldsc input data
 sldsc_input_data_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/sldsc_input_data/"
@@ -138,6 +138,13 @@ sldsc_visualization_dir=$output_root"sldsc_visualization/"
 
 # Directory containing results of eQTL correlation analysis
 eqtl_correlation_dir=$output_root"eqtl_correlation/"
+
+# Directory containing per-cell SLDSC processed data
+per_cell_sldsc_processed_data_dir=$output_root"per_cell_sldsc_processed_data/"
+
+# Directory containing per-cell SLDSC results
+per_cell_sldsc_results_dir=$output_root"per_cell_sldsc_results/"
+
 
 
 ######################
@@ -272,6 +279,13 @@ sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $coloc_inpu
 fi
 
 ############################################
+# Run per-cell S-LDSC
+############################################
+sample_names_file=$processed_pseudobulk_expression_dir"pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_names.txt"
+sh run_per_cell_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $surge_interaction_eqtl_dir $sample_names_file $per_cell_sldsc_processed_data_dir $per_cell_sldsc_results_dir
+
+
+############################################
 # Check for overlap with coloc
 ############################################
 if false; then
@@ -313,11 +327,11 @@ fi
 #############################################
 ## Visualize eqtl factorization
 #############################################
+if false; then
 module load R/3.5.1
 model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_"
 output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_heteroskedastic_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-if false; then
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem
+Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir
 fi
 
 

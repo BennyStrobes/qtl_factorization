@@ -108,10 +108,10 @@ make_umap_loading_scatter_plot_colored_by_categorical_variable <- function(covar
 }
 
 
-make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covariates, umap_loadings, covariate_name) {
+make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covariates, umap_loadings, covariate_name,point_size=.01) {
 	df <- data.frame(loading_1=umap_loadings[,1], loading_2=umap_loadings[,2], covariate=covariates)
 	plotter <- ggplot(df) + 
-	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=.01) +
+	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=point_size) +
 	           gtex_v8_figure_theme() + 
 	           labs(x="SURGE UMAP 1", y = "SURGE UMAP 2", color=covariate_name) + 
              scale_colour_gradient2() +
@@ -358,6 +358,7 @@ visualization_dir <- args[3]
 model_stem <- args[4]
 output_stem <- args[5]
 visualization_dir <- paste0(visualization_dir, output_stem)
+per_cell_sldsc_results_dir <- args[6]
 
 ############################
 # Load in files
@@ -366,7 +367,7 @@ sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalizat
 gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt")
 gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
 gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_pca_scores.txt")
-
+per_cell_sldsc_results_file <- paste0(per_cell_sldsc_results_dir, "per_cell_sldsc_results.txt")
 
 ############################
 # Model Specification
@@ -389,7 +390,8 @@ ordering <- order(pve, decreasing=TRUE)
 
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
-print(sample_covariate_file)
+per_cell_sldsc_results <- read.table(per_cell_sldsc_results_file, header=TRUE, sep="\t")
+print(summary(per_cell_sldsc_results))
 # Change "nan" to "monocyte"
 covariates$ct_cov_mode = as.character(covariates$ct_cov_mode)
 covariates$ct_cov_mode[covariates$ct_cov_mode == "nan"] = rep("monocyte", sum(covariates$ct_cov_mode == "nan"))
@@ -404,15 +406,15 @@ gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
 #expr <- read.table(gene_expr_file, header=FALSE)
 #saveRDS( expr, "expr.rds")
-expr <- readRDS("expr.rds")
+#expr <- readRDS("expr.rds")
 
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
 #saveRDS(expr_pcs, "expr_pcs.rds")
-expr_pcs <- readRDS("expr_pcs.rds")
+#expr_pcs <- readRDS("expr_pcs.rds")
 
 
-umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
-umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
+#umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
+#umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
 #print("DONE")
 
 #gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
@@ -430,7 +432,7 @@ covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
-
+if (FALSE) {
 #fit <- lmer(expr_pcs[,3] ~ loadings[,1] + loadings[,2] + loadings[,3] + loadings[,4] + loadings[,5] + loadings[,6] + loadings[,7] + loadings[,8] + loadings[,9] + loadings[,10] + (1|Z))
 #fit2 <- lm(expr_pcs[,3] ~ predict(fit))
 #print(summary(fit2))
@@ -678,6 +680,7 @@ output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_fac
 boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov[cell_indices], loadings[cell_indices,], "Batch")
 ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
+}
 print('UMAP START')
 #umap_loadings = umap(loadings)$layout
 #saveRDS( umap_loadings, "umap_loadings.rds")
@@ -691,7 +694,27 @@ print('UMAP DONE')
 #expr_pcs <- expr_pcs[indices,]
 #expr <- expr[indices,]
 
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_ukbb_blood_monocyte_count_enrichment.pdf")
+indices = !is.na(per_cell_sldsc_results$ukbb_blood_monocyte_count_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(per_cell_sldsc_results$ukbb_blood_monocyte_count_enrichment[indices], umap_loadings[indices,], "S-LDSC enrichment (monocyte count)", point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_ukbb_blood_monocyte_count_tau.pdf")
+indices = !is.na(per_cell_sldsc_results$ukbb_blood_monocyte_count_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(per_cell_sldsc_results$ukbb_blood_monocyte_count_tau_star[indices], umap_loadings[indices,], "S-LDSC Tau (monocyte count)", point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_Ulcerative_Colitis_enrichment.pdf")
+indices = !is.na(per_cell_sldsc_results$Ulcerative_Colitis_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(per_cell_sldsc_results$Ulcerative_Colitis_enrichment[indices], umap_loadings[indices,], "S-LDSC enrichment (UC)", point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_Ulcerative_Colitis_tau.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(per_cell_sldsc_results$Ulcerative_Colitis_tau_star[indices], umap_loadings[indices,], "S-LDSC Tau (UC)", point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+if (FALSE) {
 ######################################
 # Visualize UMAP scatter plot colored by individual
 #######################################
@@ -1081,4 +1104,4 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_multip
 merged <- plot_grid(umap_scatter_cd14, umap_scatter_nkg7, umap_scatter_cd8b, umap_scatter_bank1, ncol=2, labels = c('A', 'B', 'C', 'D'))
 ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
 
-
+}

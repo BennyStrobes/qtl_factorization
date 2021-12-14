@@ -250,8 +250,10 @@ def merge_betas_results(output_root, suffix, total_jobs, num_lf):
 			line = line.rstrip()
 			data = line.split('\t')
 			betas = []
+			betas.append(data[2])
 			for lf_num in range(num_lf):
-				beta = (data[(2 + lf_num*3)])
+
+				beta = (data[(5 + lf_num*3)])
 				betas.append(beta)
 			betas = np.asarray(betas)
 			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
@@ -384,13 +386,13 @@ total_jobs = int(sys.argv[2])
 
 
 # Extract number of latent factors
-num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt')
+num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
 
 merged_file = output_root + '_betas_merged.txt'
 merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
 
-
+'''
 for lf_num in range(num_lf):
 	print(lf_num)
 	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
@@ -413,5 +415,5 @@ for lf_num in range(num_lf):
 	fdr = .2
 	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
-
+'''
 
