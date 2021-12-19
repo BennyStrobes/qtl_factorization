@@ -12,8 +12,9 @@ qtl_covariate_file="$4"
 qtl_interaction_factor_file="$5"
 qtl_sample_overlap_file="$6"
 qtl_output_root="$7"
+num_contexts="$8"
 
 
 
 module load R/3.5.1
-Rscript run_latent_factor_interaction_eqtl_standardized_genotype_analysis_in_parallel.R $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root
+Rscript run_latent_factor_interaction_eqtl_standardized_genotype_analysis_in_parallel.R $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_interaction_factor_file $qtl_sample_overlap_file $qtl_output_root $num_contexts

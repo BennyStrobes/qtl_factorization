@@ -133,8 +133,7 @@ covariate_file = args[4]
 interaction_factor_file = args[5]
 sample_overlap_file = args[6]
 output_root = args[7]
-
-
+num_contexts = as.numeric(args[8])
 
 
 
@@ -143,6 +142,7 @@ covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1 +1
 
+lfs <- lfs[,1:num_contexts]
 
 print("Data loaded in.. starting")
 

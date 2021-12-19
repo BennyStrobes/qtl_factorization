@@ -80,6 +80,38 @@ python merge_parallelized_latent_factor_interaction_eqtl_calls_standardized_geno
 fi
 
 
+
+
+
+
+
+
+
+# Interaction eqtl analysis (w standardized genotype) only 3 lfs
+if false; then
+for job_number in $(seq 0 $(($num_jobs-1))); do 
+	qtl_output_root=$output_stem"interaction_eqtl_standardized_genotype_results_3_surge_contexts_"$job_number"_"$num_jobs"_"
+	parallelized_expression_file=$output_stem"expression_parallelized_"$job_number".txt"
+	parallelized_genotype_file=$output_stem"genotype_parallelized_"$job_number".txt"
+	parallelized_test_names_file=$output_stem"variant_gene_pairs_parallelized_"$job_number".txt"
+	sbatch run_latent_factor_interaction_eqtl_standardized_genotype_analysis_in_parallel.sh $parallelized_expression_file $parallelized_genotype_file $parallelized_test_names_file $qtl_new_covariate_file $surge_latent_factor_file $qtl_sample_overlap_file $qtl_output_root "3"
+done
+fi
+if false; then
+python merge_parallelized_latent_factor_interaction_eqtl_calls_standardized_genotype.py $output_stem"interaction_eqtl_standardized_genotype_results_3_surge_contexts_" $num_jobs
+fi
+
+if false; then
+surge_latent_factor_file_3_components=$output_stem"surge_latent_factors_3_components_v2.txt"
+cut -d$'\t' -f 1-3 $surge_latent_factor_file >$surge_latent_factor_file_3_components
+fi
+
+
+
+
+
+
+
 #########
 # Perm run 1 (fixed effects and interaction)
 ##########
