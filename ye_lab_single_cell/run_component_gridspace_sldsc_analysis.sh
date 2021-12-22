@@ -1,10 +1,9 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=10:00:00
-#SBATCH --partition=shared
+#SBATCH --time=2:00:00
+#SBATCH --partition=express
 #SBATCH --nodes=1
-#SBATCH --mem=17GB
 
 
 
@@ -40,12 +39,9 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 done
 fi
 
-
-
-
-
-python organize_component_gridspace_sldsc_results_across_parallel_runs.py $sample_names_file $component_gridspace_sldsc_results_dir
-
+if false; then
+python organize_component_gridspace_sldsc_results_across_parallel_runs.py $sample_names_file $component_gridspace_sldsc_results_dir $component_gridspace_sldsc_processed_data_dir $num_jobs
+fi
 
 
 

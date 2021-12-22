@@ -347,15 +347,19 @@ generate_isg_signature_vector <- function(expr, gene_names) {
 
 }
 
-sldsc_enrichment_se_plot_over_continuous_domain <- function(df, trait_name, component_num) {
+sldsc_enrichment_se_plot_over_continuous_domain <- function(df, trait_name, component_num, static_eqtl_trait_subset) {
   df$enrichment_lb <- df$enrichment - df$enrichment_std_err
   df$enrichment_ub <- df$enrichment + df$enrichment_std_err
 
   p <- ggplot(df,aes(x=component_position,y=enrichment)) + 
-      geom_ribbon(aes(x=component_position,ymin=enrichment_lb,ymax=enrichment_ub),fill='grey70')+
-      geom_line(col='green') + 
+      geom_ribbon(aes(x=component_position,ymin=enrichment_lb,ymax=enrichment_ub),fill='thistle2')+
+      geom_line(col='orchid3') + 
       gtex_v8_figure_theme() +
-      labs(x=paste0("SURGE context ", component_num), y=paste0(trait_name,"\nS-LDSC enrichment"))
+      labs(x=paste0("SURGE context ", component_num), y=paste0(trait_name,"\nS-LDSC enrichment")) + 
+      geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1], col='black', size=.5) + 
+      geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1] - static_eqtl_trait_subset$enrichment_std_err, col='black', linetype="dashed", size=.5) +
+      geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1] + static_eqtl_trait_subset$enrichment_std_err, col='black', linetype="dashed", size=.5)
+
   return(p)
 
 }
@@ -374,7 +378,7 @@ visualization_dir <- paste0(visualization_dir, output_stem)
 per_cell_sldsc_results_dir <- args[6]
 per_cell_3_component_sldsc_results_dir <- args[7]
 component_gridspace_sldsc_results_dir <- args[8]
-
+static_eqtl_sldsc_results_dir <- args[9]
 
 ############################
 # Load in files
@@ -395,6 +399,7 @@ per_cell_3_component_sldsc_non_blood_immune_ma_results_file <- paste0(per_cell_3
 
 component_gridspace_sldsc_results_file <- paste0(component_gridspace_sldsc_results_dir, "component_gridspace_sldsc_results.txt")
 
+static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_eqtl_sldsc_results.txt")
 
 ############################
 # Model Specification
@@ -430,6 +435,7 @@ per_cell_3_component_non_blood_immune_ma_sldsc_results <- read.table(per_cell_3_
 
 
 component_gridspace_sldsc_results <- read.table(component_gridspace_sldsc_results_file, header=TRUE, sep="\t")
+static_eqtl_sldsc_results <- read.table(static_eqtl_sldsc_results_file, header=TRUE, sep="\t")
 
 
 # Change "nan" to "monocyte"
@@ -733,18 +739,19 @@ for (trait_iter in 1:length(trait_arr)) {
 
   output_file <- paste0(visualization_dir, "continous_", trait_name, "_sldsc_enrichment_plot.pdf")
 
+  static_eqtl_trait_subset <- static_eqtl_sldsc_results[as.character(static_eqtl_sldsc_results$trait_name) == trait_name,]
 
   component_num <- 1
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset)
 
   component_num <- 2
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot2 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot2 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset)
 
   component_num <- 3
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset)
 
   continous_sldsc_enrichmennt_plot_joint <- plot_grid(continous_sldsc_enrichmennt_plot1,continous_sldsc_enrichmennt_plot2, continous_sldsc_enrichmennt_plot3, ncol=1)
 

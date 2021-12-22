@@ -1,9 +1,8 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=1:00:00
-#SBATCH --partition=shared
-#SBATCH --mem=30GB
+#SBATCH --time=2:00:00
+#SBATCH --partition=express
 
 #SBATCH --nodes=1
 
@@ -158,6 +157,12 @@ component_gridspace_sldsc_processed_data_dir=$output_root"component_gridspace_sl
 # Directory containing gridspace sldsc results
 component_gridspace_sldsc_results_dir=$output_root"component_gridspace_sldsc_results/"
 
+# Directory containing static_eqtl sldsc processed data
+static_eqtl_sldsc_processed_data_dir=$output_root"static_eqtl_sldsc_processed_data/"
+
+# Directory containing static eqtl sldsc results
+static_eqtl_sldsc_results_dir=$output_root"static_eqtl_sldsc_results/"
+
 ######################
 # Preprocess single cell expression
 ######################
@@ -289,6 +294,15 @@ if false; then
 sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $coloc_input_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_visualization_dir $surge_interaction_eqtl_dir $sumstats_dir
 fi
 
+
+############################################
+# Run static eqtl S-LDSC
+############################################
+static_eqtl_effect_sizes_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_standard_eqtl_standardized_genotype_results_betas_merged.txt"
+if false; then
+sh run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir $static_eqtl_effect_sizes_file
+fi
+
 ############################################
 # Run per-cell S-LDSC
 ############################################
@@ -313,7 +327,7 @@ fi
 loading_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_surge_latent_factors_3_components_v2.txt"
 surge_eqtl_effect_sizes_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_interaction_eqtl_standardized_genotype_results_3_surge_contexts_betas_merged.txt"
 if false; then
-sh run_component_gridspace_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file
+sh run_component_gridspace_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file 
 fi
 
 ############################################
@@ -361,8 +375,9 @@ fi
 module load R/3.5.1
 model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_"
 output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_heteroskedastic_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir
-
+if false; then
+Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir $static_eqtl_sldsc_results_dir
+fi
 
 
 

@@ -41,7 +41,6 @@ sample_specific_eqtl_effect_sizes_file=$per_cell_sldsc_processed_data_dir"sample
 python produce_component_gridspace_sample_specific_eqtl_effect_sizes.py $sample_names_file_parr $surge_eqtl_effect_sizes_file $sample_specific_eqtl_effect_sizes_file
 
 
-
 # Contenate across genes to variant level
 # Currently taking sum of squared betas
 variant_level_sample_specific_eqtl_effect_sizes_file=$per_cell_sldsc_processed_data_dir"variant_level_sample_specific_eqtl_effect_sizes_"$job_number"_"$num_jobs".txt"
@@ -80,11 +79,6 @@ while read gwas_study_name gwas_study_file; do
 
 	python ${custom_ldsc_source_code_dir}ldsc.py --h2 ${gwas_study_file} --ref-ld-chr ${per_cell_sldsc_processed_data_dir}"baselineLD_no_qtl." --multi_single_anno $per_sample_annotation_summary_file --w-ld-chr ${sldsc_input_data_dir}"1000G_Phase3_weights_hm3_no_MHC/weights.hm3_noMHC." --overlap-annot --print-coefficients --frqfile-chr ${sldsc_input_data_dir}"1000G_Phase3_frq/1000G.EUR.QC." --out ${sldsc_output_stem} --logout ${sldsc_log_output_stem}
 done <$processed_gwas_studies_file
-
-
-
-
-
 
 
 

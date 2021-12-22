@@ -229,6 +229,46 @@ def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 	t2.close()
 	t.close()
 
+def merge_pvalue_results(output_root, suffix, total_jobs, num_lf):
+	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
+	if to_run == False:
+		print('Missing required input files. Please re-evaluate :)')
+		return
+	# Open output (merged result) file handle
+	t = open(output_root + 'pvalues_merged' + suffix, 'w')
+	t2 = open(output_root + 'pvalues_merged_include_nan' + suffix, 'w')
+	# Loop through parrallelized jobs
+	for job_number in range(total_jobs):
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		# Open file for one job
+		f = open(file_name)
+		# To identify header
+		head_count = 0
+		# Stream file from one job
+		counter = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			betas = []
+			betas.append(data[4])
+			for lf_num in range(num_lf):
+
+				beta = (data[(7 + lf_num*3)])
+				betas.append(beta)
+			betas = np.asarray(betas)
+			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
+			t2.write(new_line + '\n')
+			counter = counter +1
+			if betas[0] == 'NA':
+				continue
+			# Standard line
+			t.write(new_line + '\n')
+		f.close()
+		# Delete file from single job
+		#os.system ('rm ' + file_name)
+	t2.close()
+	t.close()
+
 def merge_betas_results(output_root, suffix, total_jobs, num_lf):
 	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
 	if to_run == False:
@@ -387,10 +427,13 @@ total_jobs = int(sys.argv[2])
 
 # Extract number of latent factors
 num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
+pdb.set_trace()
 
 merged_file = output_root + '_betas_merged.txt'
 merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
+merged_file = output_root + '_pvalues_merged.txt'
+#merge_pvalue_results(output_root, '.txt', total_jobs, num_lf)
 
 '''
 for lf_num in range(num_lf):

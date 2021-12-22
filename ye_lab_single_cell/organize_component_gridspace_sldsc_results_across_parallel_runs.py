@@ -4,6 +4,21 @@ import sys
 import pdb
 
 
+def extract_sldsc_estimate_of_genetic_heritability_from_log_file(sldsc_log_file):
+	f = open(sldsc_log_file)
+	h_squared_line_found = False
+	for line in f:
+		line = line.rstrip()
+		if line.startswith('Total Observed scale h2') == False:
+			continue
+		h_squared_line_found = True
+		h_squared_g = float(line.split('h2: ')[1].split(' (')[0])
+		h_squared_g_std_error = float(line.split('h2: ')[1].split(' (')[1].split(')')[0])
+	f.close()
+	if h_squared_line_found == False:
+		print('assumption eroror')
+		pdb.set_trace()
+	return h_squared_g
 
 def extract_enrichment_and_tau_from_bottom_line_of_sldsc_results_file(per_cell_trait_file):
 	aa = np.loadtxt(per_cell_trait_file,dtype=str, delimiter='\t')
@@ -13,6 +28,7 @@ def extract_enrichment_and_tau_from_bottom_line_of_sldsc_results_file(per_cell_t
 	tau = aa[-1,-3]
 	enrichment_std_err = aa[-1,5]
 	tau_std_err = aa[-1,-2]
+
 	return enrichment, tau, neg_log10_pvalue, enrichment_std_err, tau_std_err
 
 
@@ -53,7 +69,8 @@ def meta_analysis(effects, se, method='random', weights=None):
 	return summary, se_summary
 
 
-def sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir):
+def sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir, sample_name_to_anno_sdev):
+	M = 5961159
 	f = open(sample_names_file)
 	for line in f:
 		sample_name = line.rstrip()
@@ -66,14 +83,25 @@ def sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, p
 		tau_ses = []
 		for trait_name in trait_names:
 			per_cell_trait_file = per_cell_sldsc_results_dir + 'sample_specific_eqtl_effect_sizes_' + trait_name + '_' + sample_name + '.results'
+			per_cell_log_file = per_cell_sldsc_results_dir + 'sample_specific_eqtl_effect_sizes_' + trait_name + '_' + sample_name + '.log'
 			if os.path.exists(per_cell_trait_file) == False:
 				sample_measured_in_all_traits = False
 			else:
 				enrichment, tau, neg_log10_pvalue, enrichment_std_err, tau_std_err = extract_enrichment_and_tau_from_bottom_line_of_sldsc_results_file(per_cell_trait_file)
+				
+				h_squared_g = extract_sldsc_estimate_of_genetic_heritability_from_log_file(per_cell_log_file)
+
+				annotation_standard_error = sample_name_to_anno_sdev[sample_name]
+				# Star scaling factor
+				scaling_factor = M*annotation_standard_error/h_squared_g
+				# Multiple tau by scaling factor to get tau_star
+				tau_star = str(float(tau)*scaling_factor)
+				tau_star_std_error = str(float(tau_std_err)*np.abs(scaling_factor))
+
 				enrichments.append(float(enrichment))
-				taus.append(float(tau))
+				taus.append(float(tau_star))
 				enrichment_ses.append(float(enrichment_std_err))
-				tau_ses.append(float(tau_std_err))
+				tau_ses.append(float(tau_star_std_error))
 		enrichments = np.asarray(enrichments)
 		taus = np.asarray(taus)
 		enrichment_ses = np.asarray(enrichment_ses)
@@ -89,13 +117,35 @@ def sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, p
 	return t
 
 
-
+def create_mapping_from_sample_name_to_anno_sdev(per_cell_processed_data_dir, num_jobs):
+	dicti = {}
+	for job_number in range(num_jobs):
+		summary_file = per_cell_processed_data_dir + 'summary_sample_specific_eqtl_effect_sizes_' + str(job_number) + '_' + str(num_jobs) + '.txt'
+		f = open(summary_file)
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			sample_name = data[0]
+			anno_file = data[1]
+			aa = np.load(anno_file)
+			sdev = np.std(aa)
+			if sample_name in dicti:
+				print('assumption erorro')
+				pdb.set_trace()
+			dicti[sample_name] = sdev
+		f.close()
+	return dicti
 
 sample_names_file = sys.argv[1]
 per_cell_sldsc_results_dir = sys.argv[2]
+per_cell_processed_data_dir = sys.argv[3]
+num_jobs = int(sys.argv[4])
 
 # Number of snps
 M = 5961159
+
+sample_name_to_anno_sdev = create_mapping_from_sample_name_to_anno_sdev(per_cell_processed_data_dir, num_jobs)
+
 
 trait_names = ['ukbb_blood_monocyte_count', 'ukbb_blood_lymphocyte_count', 'ukbb_bmi', 'ukbb_eczema', 'ukbb_blood_eosinophil_count', 'ukbb_blood_high_light_scatter_reticulotye_count', 'ukbb_blood_mean_corpuscular_hemoglobin', 'ukbb_blood_platelet_vol', 'ukbb_blood_platelet_count', 'ukbb_blood_red_count', 'ukbb_blood_white_count', 'ukbb_height', 'ukbb_T2D', 'Celiac', 'Crohns', 'Ulcerative_Colitis', 'Rheumatoid_Arthritis', 'Lupus', 'IBD', 'Multiple_sclerosis', 'PBC', 'CAD', 'Bipolar', 'Alzheimer', 'Schizophrenia']
 
@@ -114,12 +164,21 @@ for line in f:
 	component_position = sample_name.split(':')[1]
 	for trait_name in trait_names:
 		per_cell_trait_file = per_cell_sldsc_results_dir + 'sample_specific_eqtl_effect_sizes_' + trait_name + '_' + sample_name + '.results'
+		per_cell_log_file = per_cell_sldsc_results_dir + 'sample_specific_eqtl_effect_sizes_' + trait_name + '_' + sample_name + '.log'
 		if os.path.exists(per_cell_trait_file) == False:
 			t.write(sample_name + '\t' + component_num + '\t' + component_position + '\t' + trait_name + '\tNA\tNA\tNA\tNA\tNA\n')
 		else:
 			enrichment, tau, neg_log10_pvalue, enrichment_std_err, tau_std_err = extract_enrichment_and_tau_from_bottom_line_of_sldsc_results_file(per_cell_trait_file)
-			t.write(sample_name + '\t' + component_num + '\t' + component_position + '\t' + trait_name + '\t' + enrichment + '\t' + enrichment_std_err + '\t' + tau + '\t' + tau_std_err + '\t' + neg_log10_pvalue + '\n')
+			
+			h_squared_g = extract_sldsc_estimate_of_genetic_heritability_from_log_file(per_cell_log_file)
 
+			annotation_standard_error = sample_name_to_anno_sdev[sample_name]
+			# Star scaling factor
+			scaling_factor = M*annotation_standard_error/h_squared_g
+			# Multiple tau by scaling factor to get tau_star
+			tau_star = str(float(tau)*scaling_factor)
+			tau_star_std_error = str(float(tau_std_err)*np.abs(scaling_factor))
+			t.write(sample_name + '\t' + component_num + '\t' + component_position + '\t' + trait_name + '\t' + enrichment + '\t' + enrichment_std_err + '\t' + tau_star + '\t' + tau_star_std_error + '\t' + neg_log10_pvalue + '\n')
 f.close()
 
 
@@ -132,17 +191,17 @@ f.close()
 
 meta_analysis_name = 'Blood_meta'
 trait_names = ['ukbb_blood_eosinophil_count', 'ukbb_blood_platelet_count', 'ukbb_blood_platelet_vol', 'ukbb_blood_red_count', 'ukbb_blood_white_count']
-t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir)
+t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir, sample_name_to_anno_sdev)
 
 
 meta_analysis_name = 'Immune_meta'
 trait_names = ['Celiac', 'Crohns', 'ukbb_eczema', 'Lupus', 'Rheumatoid_Arthritis', 'Ulcerative_Colitis']
 meta_analysis_file = per_cell_sldsc_results_dir + 'per_cell_sldsc_' + meta_analysis_name + '_meta_analysis_results.txt'
-t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir)
+t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir, sample_name_to_anno_sdev)
 
 
 meta_analysis_name = 'Non_blood_immune_meta'
 trait_names = ['ukbb_bmi', 'CAD', 'ukbb_height', 'Schizophrenia', 'ukbb_T2D']
 meta_analysis_file = per_cell_sldsc_results_dir + 'per_cell_sldsc_' + meta_analysis_name + '_meta_analysis_results.txt'
-t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir)
+t = sldsc_meta_analysis(meta_analysis_name, trait_names, t, sample_names_file, per_cell_sldsc_results_dir, sample_name_to_anno_sdev)
 t.close()

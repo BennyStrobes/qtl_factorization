@@ -15,6 +15,7 @@ surge_eqtl_effect_sizes_file = sys.argv[2]
 sample_specific_eqtl_effect_sizes_file = sys.argv[3]
 
 
+pvalue_thresh=1e-6
 
 # Load in sample names
 sample_names = np.loadtxt(sample_names_file, dtype=str)
@@ -51,15 +52,17 @@ for line in f:
 	# Extract relevent fields
 	variant_id = data[0]
 	gene_id = data[1]
+
 	beta_shared = float(data[2])
 	betas = np.asarray(data[3:]).astype(float)
+
 
 	beta_in_each_sample = []
 	for sample_num in range(num_samples):
 		sample_info = sample_info_arr[sample_num]
 		sample_component_num = sample_info[0]
 		sample_component_position = sample_info[1]
-		sample_beta = beta_shared + (betas[sample_component_num]*sample_component_position)
+		sample_beta = (beta_shared + (betas[sample_component_num]*sample_component_position))
 		beta_in_each_sample.append(sample_beta)
 	beta_in_each_sample = np.asarray(beta_in_each_sample)
 
