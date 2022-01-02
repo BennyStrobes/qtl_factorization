@@ -211,6 +211,83 @@ variance_param="1e-3"
 ard_variance_param="1e-16"
 seed="1"
 
+if false; then
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_large_warmup_var_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard_full_component_update"
+ratio_variance_standardization="True"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_large_warmup_var_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
+
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="False"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_large_warmup_var_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+fi
+
+
+if false; then
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="False"
+round_genotype="True"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
+
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+round_genotype="True"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
+
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard_heteroskedastic"
+ratio_variance_standardization="True"
+round_genotype="True"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard_heteroskedastic"
+ratio_variance_standardization="False"
+round_genotype="True"
+warmup_iterations="5"
+num_latent_factors="10"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype
+fi
+
+
+
+
+
+
+
 permutation_type="False"
 model_name="eqtl_factorization_vi_ard_heteroskedastic"
 ratio_variance_standardization="True"
@@ -373,11 +450,10 @@ fi
 ## Visualize eqtl factorization
 #############################################
 module load R/3.5.1
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_heteroskedastic_results_k_init_10_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_"
-output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_heteroskedastic_rv_True_permute_False_seed_1_3000_warmup_lambda_1_"
-if false; then
+model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_factorization_vi_ard_results_k_10_seed_1_warm_5_rv_std_True_perm_False_round_gen_False_temper_"
+output_stem="standard_eqtl_hvg_6000_no_cap_15_ard_rv_True_permute_False_seed_1_5_warmup_lambda_1_"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir $static_eqtl_sldsc_results_dir
-fi
+
 
 
 

@@ -114,8 +114,8 @@ make_umap_loading_scatter_plot_colored_by_real_valued_variable <- function(covar
 	           geom_point(aes(x=loading_1, y=loading_2, color=covariate), size=point_size) +
 	           gtex_v8_figure_theme() + 
 	           labs(x="SURGE UMAP 1", y = "SURGE UMAP 2", color=covariate_name) + 
-             #scale_colour_gradient2() +
-	           #scale_color_gradient(low="pink",high="blue") +
+             scale_colour_gradient2() +
+	           scale_color_gradient(low="pink",high="blue") +
 	           theme(legend.position="bottom") + 
 	           theme(legend.text = element_text(size=8), legend.title = element_text(size=8))
 	return(plotter)
@@ -387,6 +387,8 @@ sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalizat
 gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt")
 gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
 gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_pca_scores.txt")
+
+if (FALSE) {
 per_cell_sldsc_results_file <- paste0(per_cell_sldsc_results_dir, "per_cell_sldsc_results.txt")
 per_cell_sldsc_blood_ma_results_file <- paste0(per_cell_sldsc_results_dir, "per_cell_sldsc_Blood_meta_analysis_results.txt")
 per_cell_sldsc_immune_ma_results_file <- paste0(per_cell_sldsc_results_dir, "per_cell_sldsc_Immune_meta_analysis_results.txt")
@@ -400,6 +402,8 @@ per_cell_3_component_sldsc_non_blood_immune_ma_results_file <- paste0(per_cell_3
 component_gridspace_sldsc_results_file <- paste0(component_gridspace_sldsc_results_dir, "component_gridspace_sldsc_results.txt")
 
 static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_eqtl_sldsc_results.txt")
+}
+
 
 ############################
 # Model Specification
@@ -415,7 +419,7 @@ pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
 ordering <- order(pve, decreasing=TRUE)
-#ordering <- ordering[1:3]
+ordering <- ordering[1:4]
 #print(ordering)
 
 
@@ -423,6 +427,7 @@ ordering <- order(pve, decreasing=TRUE)
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 
+if (FALSE) {
 per_cell_sldsc_results <- read.table(per_cell_sldsc_results_file, header=TRUE, sep="\t")
 per_cell_blood_ma_sldsc_results <- read.table(per_cell_sldsc_blood_ma_results_file, header=TRUE, sep="\t")
 per_cell_immune_ma_sldsc_results <- read.table(per_cell_sldsc_immune_ma_results_file, header=TRUE, sep="\t")
@@ -436,7 +441,7 @@ per_cell_3_component_non_blood_immune_ma_sldsc_results <- read.table(per_cell_3_
 
 component_gridspace_sldsc_results <- read.table(component_gridspace_sldsc_results_file, header=TRUE, sep="\t")
 static_eqtl_sldsc_results <- read.table(static_eqtl_sldsc_results_file, header=TRUE, sep="\t")
-
+}
 
 # Change "nan" to "monocyte"
 covariates$ct_cov_mode = as.character(covariates$ct_cov_mode)
@@ -452,15 +457,15 @@ gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
 #expr <- read.table(gene_expr_file, header=FALSE)
 #saveRDS( expr, "expr.rds")
-#expr <- readRDS("expr.rds")
+expr <- readRDS("expr.rds")
 
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
 #saveRDS(expr_pcs, "expr_pcs.rds")
-#expr_pcs <- readRDS("expr_pcs.rds")
+expr_pcs <- readRDS("expr_pcs.rds")
 
 
-#umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
-#umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
+umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
+umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
 #print("DONE")
 
 #gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
@@ -473,12 +478,12 @@ loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
 
 
+
 covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$SLE_status))
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
-if (FALSE) {
 #fit <- lmer(expr_pcs[,3] ~ loadings[,1] + loadings[,2] + loadings[,3] + loadings[,4] + loadings[,5] + loadings[,6] + loadings[,7] + loadings[,8] + loadings[,9] + loadings[,10] + (1|Z))
 #fit2 <- lm(expr_pcs[,3] ~ predict(fit))
 #print(summary(fit2))
@@ -511,6 +516,7 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+if (FALSE) {
 surge_num <- 5
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
@@ -538,9 +544,10 @@ umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(s
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 surge_num <- 10
 surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")#
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+}
 
 ######################################
 # Visualize UMAP scatter plot colored by cell type
@@ -614,7 +621,7 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 # Make loading boxplot colored by Ancestry
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type.pdf")
-boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings[,1:3], "Cell Type")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings, "Cell Type")
 ggsave(boxplot, file=output_file, width=12.2, height=5.5, units="in")
 
 ######################################
@@ -651,7 +658,7 @@ ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 # Make loading boxplot colored by Ancestry
 #######################################
 output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type_fine_res.pdf")
-boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_cov_mode, loadings[,1:3], "Cell Type")
+boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$ct_cov_mode, loadings, "Cell Type")
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################################
@@ -726,11 +733,10 @@ output_file <- paste0(visualization_dir, "loading_boxplot_with_row_for_every_fac
 boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate(covariates$batch_cov[cell_indices], loadings[cell_indices,], "Batch")
 ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
-}
 
 
 
-
+if (FALSE) {
 trait_arr <- unique(as.character(component_gridspace_sldsc_results$trait_name))
 
 
@@ -758,30 +764,6 @@ for (trait_iter in 1:length(trait_arr)) {
   ggsave(continous_sldsc_enrichmennt_plot_joint, file=output_file, width=7.2, height=8.0, units="in")
 
 }
-
-if (FALSE) {
-
-
-print('UMAP START')
-#umap_loadings_3_comp = umap(loadings[,1:3])$layout
-#saveRDS(umap_loadings_3_comp, "umap_loadings_3_comp.rds")
-umap_loadings_3_comp <- readRDS("umap_loadings_3_comp.rds")
-print('UMAP DONE')
-
-######################################
-# Visualize UMAP scatter plot colored by cell type
-#######################################
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_cell_type_3_component.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$cg_cov_mode, umap_loadings_3_comp, "cell type")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-######################################
-# Visualize UMAP scatter plot colored by cell type
-#######################################
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_cell_type2_3_component.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_loadings_3_comp, "cell type")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
 
 
 
@@ -847,12 +829,12 @@ for (trait_index in 1:length(trait_names)) {
 
 }
 
-
+}
 
 print('UMAP START')
-#umap_loadings = umap(loadings)$layout
-#saveRDS( umap_loadings, "umap_loadings.rds")
-umap_loadings <- readRDS("umap_loadings.rds")
+umap_loadings = umap(loadings)$layout
+saveRDS( umap_loadings, "umap_loadings.rds")
+#umap_loadings <- readRDS("umap_loadings.rds")
 print('UMAP DONE')
 
 #indices <- (abs(umap_loadings[,1]) < 8) & (abs(umap_loadings[,2]) < 8)
@@ -862,7 +844,7 @@ print('UMAP DONE')
 #expr_pcs <- expr_pcs[indices,]
 #expr <- expr[indices,]
 
-
+if (FALSE) {
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_enrichment.pdf")
 trait_enrichment <- per_cell_blood_ma_sldsc_results$enrichment
 indices = !is.na(trait_enrichment)
@@ -924,7 +906,7 @@ for (trait_index in 1:length(trait_names)) {
 
 
 }
-
+}
 
 
 ######################################
@@ -1051,6 +1033,7 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ancest
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$pop_cov, umap_loadings, "Known Ancestry")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
+print('here')
 ######################################
 # Visualize UMAP scatter plot based on latent factors
 #######################################
@@ -1073,7 +1056,7 @@ lf_num <- 4
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
+if (FALSE) {
 lf_num <- 5
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
@@ -1107,7 +1090,7 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-
+}
 
 
 ######################################
