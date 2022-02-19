@@ -110,7 +110,59 @@ def get_resid_expression_from_vi_lmm(Y, G, Z, cov, lmm_root):
 
 	return Y_resid
 
-def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype):
+def filter_RP_genes(test_names_df):
+	num_genes = test_names_df.shape[0]
+	valid_gene_indices = []
+	for gene_num in range(num_genes):
+		if test_names_df[gene_num,0].startswith('RP'):
+			continue
+		valid_gene_indices.append(gene_num)
+	return np.asarray(valid_gene_indices)
+
+def gene_correlated_with_used_expression_vectors(gene_vec, used_gene_vecs):
+	gene_correlated = False
+	for used_gene_vec in used_gene_vecs:
+		corry = np.corrcoef(used_gene_vec, gene_vec)[0,1]
+		if np.square(corry) > .1:
+			gene_correlated = True
+	return gene_correlated
+
+def filter_RP_and_ind_genes(test_names_df, Y):
+	num_genes = test_names_df.shape[0]
+	valid_gene_indices = []
+	used_expression_vectors = []
+
+	for gene_num in np.random.permutation(num_genes):
+		if test_names_df[gene_num,0].startswith('RP'):
+			continue
+		if gene_correlated_with_used_expression_vectors(Y[:, gene_num], used_expression_vectors):
+			continue
+		used_expression_vectors.append(Y[:, gene_num])
+		valid_gene_indices.append(gene_num)
+	return valid_gene_indices
+
+def filter_RP_and_ind_genes_genos(test_names_df, Y, G):
+	num_genes = test_names_df.shape[0]
+	valid_gene_indices = []
+	used_expression_vectors = []
+	used_genotype_vectors = []
+
+	counter = 0
+	for gene_num in np.random.permutation(num_genes):
+		counter = counter + 1
+		if test_names_df[gene_num,0].startswith('RP'):
+			continue
+		if gene_correlated_with_used_expression_vectors(Y[:, gene_num], used_expression_vectors):
+			continue
+		if gene_correlated_with_used_expression_vectors(G[:, gene_num], used_genotype_vectors):
+			continue
+		used_expression_vectors.append(Y[:, gene_num])
+		used_genotype_vectors.append(G[:, gene_num])
+		valid_gene_indices.append(gene_num)
+	return valid_gene_indices
+
+
+def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file):
 	# Load in expression data (dimension: num_samplesXnum_tests)
 	Y = np.transpose(np.load(expression_training_file))
 	# Load in Genotype data (dimension: num_samplesXnum_tests)
@@ -120,9 +172,41 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	# Load in covariates (dimension: num_samplesXnum_covariates)
 	# We assume this covariate matrix has an intercept column
 	cov = np.loadtxt(covariate_file)
+	# Load in test names
+	test_names_df = np.loadtxt(test_names_file, delimiter='\t',dtype=str)[1:,:]
 
 	if round_genotype == "True":
 		G = np.round(G)
+
+
+	if data_filter == 'filter_RP':
+		columns_filtered = filter_RP_genes(test_names_df)
+		G = G[:, columns_filtered]
+		Y = Y[:, columns_filtered]
+		test_names_df = test_names_df[columns_filtered,:]
+		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')
+	elif data_filter == 'filter_RP_ind_genes':
+		columns_filtered = filter_RP_and_ind_genes(test_names_df, Y)
+		G = G[:, columns_filtered]
+		Y = Y[:, columns_filtered]
+		test_names_df = test_names_df[columns_filtered,:]
+		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')
+	elif data_filter == 'filter_RP_ind_genos':
+		columns_filtered = filter_RP_and_ind_genes(test_names_df, G)
+		G = G[:, columns_filtered]
+		Y = Y[:, columns_filtered]
+		test_names_df = test_names_df[columns_filtered,:]
+		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')
+	elif data_filter == 'filter_RP_ind_genes_genos':
+		columns_filtered = filter_RP_and_ind_genes_genos(test_names_df, Y, G)
+		G = G[:, columns_filtered]
+		Y = Y[:, columns_filtered]
+		test_names_df = test_names_df[columns_filtered,:]
+		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')		
+
+
+
+
 
 	if permutation_type == 'interaction_only':
 		G_fe = np.copy(G)
@@ -298,11 +382,13 @@ ratio_variance_standardization = sys.argv[12]
 permutation_type = sys.argv[13]
 warmup_iterations = int(sys.argv[14])
 round_genotype = sys.argv[15]
+data_filter = sys.argv[16]
+test_names_file = sys.argv[17]
 
 
 np.random.seed(seed)
 
 
-train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype)
+train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file)
 
 

@@ -419,7 +419,7 @@ pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
 ordering <- order(pve, decreasing=TRUE)
-ordering <- ordering[1:4]
+#ordering <- ordering[1:4]
 #print(ordering)
 
 
@@ -455,13 +455,13 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
 
-#expr <- read.table(gene_expr_file, header=FALSE)
-#saveRDS( expr, "expr.rds")
-expr <- readRDS("expr.rds")
+expr <- read.table(gene_expr_file, header=FALSE)
+saveRDS( expr, "expr.rds")
+#expr <- readRDS("expr.rds")
 
-#expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-#saveRDS(expr_pcs, "expr_pcs.rds")
-expr_pcs <- readRDS("expr_pcs.rds")
+expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+saveRDS(expr_pcs, "expr_pcs.rds")
+#expr_pcs <- readRDS("expr_pcs.rds")
 
 
 umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
@@ -516,7 +516,6 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-if (FALSE) {
 surge_num <- 5
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
@@ -547,7 +546,7 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")#
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-}
+
 
 ######################################
 # Visualize UMAP scatter plot colored by cell type
@@ -571,7 +570,6 @@ umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(c
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
-print("DONE")
 
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
@@ -1056,7 +1054,7 @@ lf_num <- 4
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-if (FALSE) {
+
 lf_num <- 5
 output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
@@ -1090,7 +1088,6 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-}
 
 
 ######################################
@@ -1299,4 +1296,4 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_multip
 merged <- plot_grid(umap_scatter_cd14, umap_scatter_nkg7, umap_scatter_cd8b, umap_scatter_bank1, ncol=2, labels = c('A', 'B', 'C', 'D'))
 ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
 
-}
+
