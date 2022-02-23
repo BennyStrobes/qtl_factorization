@@ -130,12 +130,12 @@ saveRDS(svd1, paste0(visualization_dir, "svd1.rds"))
 
 
 # Load in Expression File
-resid_expr_file <- paste0(data_dir, "cross_tissue_tpm_technical_covariate_residuals.txt")
-resid_expr <- read.table(resid_expr_file, header=TRUE, sep="\t")
-resid_expr <- as.matrix(resid_expr[,2:(dim(resid_expr)[2])])
+#resid_expr_file <- paste0(data_dir, "cross_tissue_tpm_technical_covariate_residuals.txt")
+#resid_expr <- read.table(resid_expr_file, header=TRUE, sep="\t")
+#resid_expr <- as.matrix(resid_expr[,2:(dim(resid_expr)[2])])
 # Generate Expression PCs
-svd2 <- svd(resid_expr)
-saveRDS(svd2, paste0(visualization_dir, "svd2.rds"))
+#svd2 <- svd(resid_expr)
+#saveRDS(svd2, paste0(visualization_dir, "svd2.rds"))
 # If already run (to save time)
 #svd2 <- readRDS(paste0(visualization_dir, "svd2.rds"))
 
@@ -164,10 +164,12 @@ output_file <- paste0(visualization_dir, "expr_", num_pcs, "_pc_variance_explain
 ve_lineplot <- plot_pca_variance_explained(svd1, num_pcs)
 ggsave(ve_lineplot, file=output_file, width=7.2, height=6.0, units="in")
 
+if (FALSE) {
 num_pcs <- 200
 output_file <- paste0(visualization_dir, "resid_expr_", num_pcs, "_pc_variance_explained_line_plot.pdf")
 ve_lineplot <- plot_pca_variance_explained(svd2, num_pcs)
 ggsave(ve_lineplot, file=output_file, width=7.2, height=6.0, units="in")
+}
 ######################################
 # Make correlation heatmap correlating covariates with loadings
 #######################################
@@ -176,10 +178,12 @@ output_file <- paste0(visualization_dir, "expr_", num_pcs, "_pc_individual_covar
 heatmap <- make_covariate_loading_correlation_heatmap(individual_covariates, svd1$v[,1:num_pcs])
 ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
 
+if (FALSE) {
 num_pcs <- 100
 output_file <- paste0(visualization_dir, "resid_expr_", num_pcs, "_pc_individual_covariates_correlation_heatmap.pdf")
 heatmap <- make_covariate_loading_correlation_heatmap(individual_covariates, svd2$v[,1:num_pcs])
 ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
+}
 
 ######################################
 # Make correlation heatmap correlating covariates with loadings
@@ -202,8 +206,9 @@ output_file <- paste0(visualization_dir, "expr_", num_pcs, "_pc_sample_technical
 heatmap <- make_covariate_loading_correlation_heatmap(technical_covariates, svd1$v[,1:num_pcs])
 ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
 
+if (FALSE) {
 num_pcs <- 100
 output_file <- paste0(visualization_dir, "resid_expr_", num_pcs, "_pc_sample_technical_covariates_correlation_heatmap.pdf")
 heatmap <- make_covariate_loading_correlation_heatmap(technical_covariates, svd2$v[,1:num_pcs])
 ggsave(heatmap, file=output_file, width=7.2, height=9.0, units="in")
-
+}

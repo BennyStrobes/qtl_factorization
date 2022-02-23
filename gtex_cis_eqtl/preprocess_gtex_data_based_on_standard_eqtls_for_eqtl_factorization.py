@@ -121,7 +121,7 @@ num_genes = int(sys.argv[2])
 
 
 # Input files
-latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'cross_tissue_eqtl_results_genome_wide_signficant_bf_fdr_0.05.txt'
+latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'cross_tissue_eqtl_results_genome_wide_signficant_bf_fdr_0.05_lmm_results.txt'
 latent_factor_interaction_eqtl_results_file = working_dir + 'all_tests.txt'
 
 
@@ -132,6 +132,7 @@ all_test_names_file = working_dir + 'all_tests.txt'
 eqtl_factorization_test_names_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_input_test_names.txt'
 generate_eqtl_factorization_test_names_file(all_test_names_file, eqtl_factorization_test_names_file, test_eqtl_binary_arr)
 
+print('expression')
 # Generate eqtl factorization gene expression file
 #all_gene_expression_file = working_dir + 'cross_tissue_eqtl_residual_expression_input.txt'
 all_gene_expression_file = working_dir + 'cross_tissue_eqtl_expression_input.txt'
@@ -139,14 +140,14 @@ eqtl_factorization_expression_file = working_dir + 'eqtl_factorization_standard_
 generate_eqtl_factorization_expression_file(all_gene_expression_file, eqtl_factorization_expression_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_expression_file)
 
-
+print('genotype')
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'cross_tissue_eqtl_genotype_input.txt'
 eqtl_factorization_genotype_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
-
+print('covariate')
 # Add intercept to covariate file
 covariate_file = working_dir + 'cross_tissue_eqtl_covariate_input.txt'
 covariate_with_intercept_file = working_dir + 'cross_tissue_eqtl_' + str(num_genes) + '_covariate_w_intercept_input.txt'

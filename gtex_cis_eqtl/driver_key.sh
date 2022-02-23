@@ -11,7 +11,7 @@
 # Output directories
 #########################
 # Root directory for simulation analysis
-root_dir="/work-zfs/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl/"
+root_dir="/work-zfs/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl_feb_2022/"
 # Directory containing input data
 input_data_dir=$root_dir"input_data/"
 # Directory containing simulated data
@@ -52,12 +52,21 @@ gtex_xcell_enrichment_file="/work-zfs/abattle4/lab_data/GTEx_v8_cell_type_intera
 ## 10 tissues case
 #####################
 tissues_file=$input_data_dir"tissues_subset_10.txt"
-output_dir=$processed_data_dir"tissues_subset_10_v2_"
-output_visualization_dir=$visualization_expression_dir"tissues_subset_10_v2_"
-output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_10_v2_"
+output_dir=$processed_data_dir"tissues_subset_10_"
+output_visualization_dir=$visualization_expression_dir"tissues_subset_10_"
+output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_10_"
 if false; then
 sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir
 fi
+
+
+
+
+
+
+
+
+
 
 
 
@@ -83,23 +92,12 @@ if false; then
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
 fi
 
-num_latent_factors="50"
-lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
-ratio_variance_standardization="True"
-permutation_type="False"
-warmup_iterations="3000"
-output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-if false; then
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-fi
 
+
+if false; then
 module load R/3.5.1
 Rscript visualize_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file
-
+fi
 
 
 
