@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=20:00:00
+#SBATCH --time=40:00:00
 #SBATCH --partition=shared
 #SBATCH --mem=10GB
 
