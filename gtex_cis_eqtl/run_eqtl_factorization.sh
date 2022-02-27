@@ -1,9 +1,9 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=30:00:00
+#SBATCH --time=20:00:00
 #SBATCH --partition=shared
-#SBATCH --mem=5GB
+#SBATCH --mem=10GB
 
 #SBATCH --nodes=1
 
@@ -24,7 +24,8 @@ ard_variance_param="${11}"
 ratio_variance_standardization="${12}"
 permutation_type="${13}"
 warmup_iterations="${14}"
+re="${15}"
 
-module load python/3.7-anaconda
+conda activate surge 
 
-python run_eqtl_factorization.py $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+python run_eqtl_factorization.py $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $re

@@ -215,8 +215,8 @@ seed="1"
 
 
 
-
 if false; then
+
 permutation_type="False"
 model_name="eqtl_factorization_vi_ard"
 ratio_variance_standardization="True"
@@ -226,6 +226,8 @@ num_latent_factors="10"
 data_filter="filter_RP"
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"$data_filter"_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file
+
+
 
 
 
@@ -263,7 +265,41 @@ sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_fi
 fi
 
 
+if false; then
+ard_variance_param="1e-3"
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+data_filter="filter_RP"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"$data_filter"_3_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file
 
+
+ard_variance_param="1e-5"
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+data_filter="filter_RP"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"$data_filter"_5_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file
+
+ard_variance_param="1e-7"
+permutation_type="False"
+model_name="eqtl_factorization_vi_ard"
+ratio_variance_standardization="True"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+data_filter="filter_RP"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_round_gen_"$round_genotype"_"$data_filter"_7_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file
+fi
 
 
 

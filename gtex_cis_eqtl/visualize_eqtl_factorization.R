@@ -215,6 +215,9 @@ make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loadings) {
 	}
 	df$ancestry = factor(ancestry)
 
+	#indices <- as.numeric(df$latent_factor)==8
+	#print(cor.test(as.numeric(df$ancestry[indices]), df$loading[indices]))
+
 
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=ancestry)) + geom_boxplot(outlier.size = .1) +
 				gtex_v8_figure_theme() + 
@@ -1290,7 +1293,7 @@ for (tiss_num in 1:length(tissue_colors$tissue_id)) {
 ############################
 # Load in files
 ############################
-stem <- "tissues_subset_10_v2"
+stem <- "tissues_subset_10"
 tissue_10_file <- paste0(processed_data_dir, stem, "_sample_names.txt")
 tissue_10_sample_covariate_file <- paste0(processed_data_dir, stem, "_sample_covariates.txt")
 tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, stem, "_sample_surveyed_covariates.txt")
@@ -1304,15 +1307,16 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 
 ############################
 # Model Specification
-############################
-tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_tests_temper_")
+############################\
+tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_False_temper_")
 tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
 pve_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 ordering <- order(pve, decreasing=TRUE)
-ordering <- ordering[1:7]
+print(ordering)
+ordering <- ordering[1:8]
 
 
 

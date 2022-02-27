@@ -19,7 +19,8 @@ gtex_xcell_enrichment_file="${10}"
 output_dir="${11}"
 visualization_expression_dir="${12}"
 eqtl_visualization_dir="${13}"
-
+qtl_model_version="${14}"
+num_jobs="${15}"
 
 
 module load python/2.7-anaconda
@@ -54,22 +55,16 @@ qtl_genotype_file=$output_dir"cross_tissue_eqtl_genotype_input.txt"
 qtl_covariate_file=$output_dir"cross_tissue_eqtl_covariate_input.txt"
 qtl_test_names_file=$output_dir"all_tests.txt"
 qtl_sample_overlap_file=$output_dir"individual_id.txt"
-
-num_jobs="100"
-
-
-if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
 	qtl_output_root=$output_dir"cross_tissue_eqtl_results_"$job_number"_"$num_jobs"_"
-	sbatch run_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
+	sbatch run_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs $qtl_model_version
 done
-fi
+
 
 
 # merge parallel runs
-model_version="lmm"
 if false; then
-python merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_eqtl_results_" $num_jobs $model_version
+python merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_eqtl_results_" $num_jobs $qtl_model_version
 fi
 
 

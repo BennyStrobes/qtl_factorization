@@ -6,11 +6,11 @@ import scipy.special as special
 from sklearn.linear_model import LinearRegression
 import time
 import sklearn.decomposition
-#from joblib import Parallel, delayed
-#import multiprocessing
-#import time
-#import pandas as pd 
-#from pymer4.models import Lmer
+from joblib import Parallel, delayed
+import multiprocessing
+import time
+import pandas as pd 
+from pymer4.models import Lmer
 
 def sigmoid_function(x):
 	return 1.0/(1.0 + np.exp(-x))
@@ -787,7 +787,6 @@ class EQTL_FACTORIZATION_VI(object):
 		self.U_mu = pca.components_.T
 		for k in range(self.K):
 			self.U_mu[:,k] = ((self.U_mu[:,k]-np.mean(self.U_mu[:,k]))/np.std(self.U_mu[:,k]))
-		self.U_mu = self.U_mu*0.0
 		self.U_var = np.ones((self.N, self.K))*(1.0/1.0)
 		self.gamma_U_alpha = np.ones(self.K)*self.gamma_v
 		self.gamma_U_beta = np.ones(self.K)
@@ -854,4 +853,3 @@ class EQTL_FACTORIZATION_VI(object):
 		print(str(self.N) + ' samples detected')
 		print(str(self.T) + ' tests detected')
 		print(str(self.K) + ' latent factors detected')
-
