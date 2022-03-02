@@ -249,6 +249,17 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	G = standardize_columns(G)
 	G_fe = standardize_columns(G_fe)
 
+	# Filter tests
+	valid_indices = []
+	for test_num in range(G.shape[1]):
+		if np.sum(G[:, test_num] == 0.0) > 0.0:
+			valid_indices.append(False)
+		else:
+			valid_indices.append(True)
+	valid_indices = np.asarray(valid_indices)
+	G = G[:, valid_indices]
+	G_fe = G_fe[:, valid_indices]
+	Y = Y[:, valid_indices]
 
 	# Get number of samples, number of tests, number of individuals
 	num_samples = Y.shape[0]

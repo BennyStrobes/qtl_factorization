@@ -73,14 +73,14 @@ fi
 
 
 #############################################
-## Run eqtl factorization!
+## Run SURGE!
 #############################################
 input_data_stem="tissues_subset_10_"
 sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
 expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
 genotype_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_genotype.npy"
 covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covariate_w_intercept_input.txt"
-num_latent_factors="10"
+num_latent_factors="20"
 lambda_v="1"
 variance_param="1e-3"
 ard_variance_param="1e-3"
@@ -131,15 +131,45 @@ sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_fi
 fi
 
 
+#############################################
+## Run interaction eqtl analysis with SURGE-latent factors
+#############################################
+
+# SURGE Model parameters
+input_data_stem="tissues_subset_10_"
+lambda_v="1"
+model_name="surge"
+ratio_variance_standardization="True"
+num_latent_factors="20"
+permutation_type="False"
+warmup_iterations="5"
+re="False"
+ard_variance_param="1e-3"
+variance_param="1e-3"
+seed="1"
+
+# eqtl input dir
+eqtl_input_dir=$processed_data_dir$input_data_stem
+
+# Surge output stem
+surge_results_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"
+surge_results_suffix="_re_False_"
+
+# How much parallelization
+num_parallel_jobs="10"
+
+# Output root
+output_stem=$interaction_eqtl_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_"
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_results_stem $output_stem $surge_results_suffix $num_parallel_jobs
 
 
 
 
-
-
-module load R/3.5.1
-eqtl_results_dir="/work-zfs/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl_feb_2022/eqtl_results_old/"
+#############################################
+## Visualize results
+#############################################
 if false; then
+module load R/3.5.1
 Rscript visualize_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file
 fi
 
@@ -169,10 +199,14 @@ sh run_interaction_eqtl_analysis_with_cell_type_proportions.sh $eqtl_input_dir $
 fi
 
 
+
+
+
+
+
 #############################################
-## Run eqtl factorization in a single tissue
+## Run SURGE in a single tissue
 #############################################
-if false; then
 input_data_stem="tissues_subset_colon_transverse_"
 sample_overlap_file=$processed_data_dir$input_data_stem"individual_id.txt"
 expression_training_file=$processed_data_dir$input_data_stem"eqtl_factorization_standard_eqtl_2000_input_expression.npy"
@@ -181,35 +215,26 @@ covariate_file=$processed_data_dir$input_data_stem"cross_tissue_eqtl_2000_covari
 num_latent_factors="10"
 lambda_v="1"
 variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
+ard_variance_param="1e-3"
+seed="1"
+model_name="surge"
 ratio_variance_standardization="True"
+re="False"
 
 # No permutation, ard prior
+if false; then
 permutation_type="False"
-warmup_iterations="0"
+warmup_iterations="5"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $re
 
-# No permutation, ard prior
-permutation_type="False"
-warmup_iterations="3000"
-output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-
-# Permutation where you permute only interaction genotype term
+# Permutation, ard prior
 permutation_type="interaction_only"
-warmup_iterations="0"
+warmup_iterations="5"
 output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
-
-# Permutation where you permute both genotype interaction term and genotype fixed effect term
-permutation_type="fixed_and_interaction"
-warmup_iterations="0"
-output_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_"
-sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $re
 fi
+
 
 
 
@@ -217,31 +242,43 @@ fi
 #############################################
 ## Run interaction eqtl analysis with SURGE-latent factors
 #############################################
-# Model parameters
+# SURGE Model parameters
 input_data_stem="tissues_subset_colon_transverse_"
-num_latent_factors="10"
 lambda_v="1"
-variance_param="1e-3"
-ard_variance_param="1e-16"
-seed="2"
-model_name="eqtl_factorization_vi_ard_full_component_update"
+model_name="surge"
 ratio_variance_standardization="True"
+num_latent_factors="10"
 permutation_type="False"
-warmup_iterations="0"
+warmup_iterations="5"
+re="False"
+ard_variance_param="1e-3"
+variance_param="1e-3"
+seed="1"
 
-# Eqtl input dir
+# eqtl input dir
 eqtl_input_dir=$processed_data_dir$input_data_stem
 
-# Surge output files
-surge_latent_factors_file=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_temper_U_S.txt"
-factor_pve_file=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_tests_temper_factor_pve.txt"
-# Latent factor to test for interaction eqtl analysis
-latent_factor_num="1"  # Base 1
+# Surge output stem
+surge_results_stem=$eqtl_results_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"
+surge_results_suffix="_2000_tests_"
+
+# How much parallelization
+num_parallel_jobs="20"
+
 # Output root
-output_stem=$interaction_eqtl_dir"surge_interaction_eqtl_factor_"$latent_factor_num"_"$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_permute_"$permutation_type"_2000_"
+output_stem=$interaction_eqtl_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_"
 if false; then
-sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_latent_factors_file $factor_pve_file $latent_factor_num $output_stem
+sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_results_stem $output_stem $surge_results_suffix $num_parallel_jobs
 fi
+
+
+
+
+
+
+########################################
+# Visualize results of single tissue analysis
+########################################
 
 if false; then
 module load R/3.5.1

@@ -1,4 +1,3 @@
-#!/bin/bash -l
 
 #SBATCH
 #SBATCH --time=20:00:00
@@ -20,6 +19,8 @@ qtl_sample_overlap_file=$eqtl_input_dir"individual_id.txt"
 xcell_sample_enrichment_file=$eqtl_input_dir"sample_covariates.txt"
 
 
+source ~/.bash_profile
+
 
 ######################################
 # Run Xcellxgenotype interaction in each cell independently
@@ -31,10 +32,12 @@ cell_types=( "Adipocytes" "Epithelial_cells" "Hepatocytes" "Keratinocytes" "Myoc
 # Extract xcell environmental variable for each cell type
 if false; then
 for cell_type in "${cell_types[@]}"; do
+	echo $cell_type
 	cell_type_context_file=$output_stem"xcell_"$cell_type"_environment_variable.txt"
 	python extract_xcell_environmental_variable.py $xcell_sample_enrichment_file $cell_type $cell_type_context_file
 done
 fi
+
 
 # Run interaction eqtl analysis in each cell type
 num_jobs="1"
@@ -47,12 +50,15 @@ for cell_type in "${cell_types[@]}"; do
 done
 fi
 
+
+# TO DO
+if false; then
 for cell_type in "${cell_types[@]}"; do
 	echo $cell_type
 	qtl_output_root=$output_stem$cell_type"_interaction_eqtl_results_"
 	python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 done
-
+fi
 
 
 

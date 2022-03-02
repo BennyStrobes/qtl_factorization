@@ -1308,21 +1308,23 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 ############################
 # Model Specification
 ############################\
-tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_False_temper_")
+tissue_10_model_stem <- paste0(stem, "_surge_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_False_re_False_")
 tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
 pve_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 ordering <- order(pve, decreasing=TRUE)
-print(ordering)
-ordering <- ordering[1:8]
+ordering <- ordering[1:7]
+
+
 
 
 
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
+print(ordered_pve)
 
 muscle_indices <- as.character(tissue_10_names) == "Muscle_Skeletal"
 not_muscle_indices <- as.character(tissue_10_names) != "Muscle_Skeletal"

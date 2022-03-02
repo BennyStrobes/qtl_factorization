@@ -14,9 +14,9 @@ qtl_interaction_factor_file="$5"
 qtl_sample_overlap_file="$6"
 qtl_output_root="$7"
 job_number="$8"
-num_jobs="$9"
+num_jobs="${9}"
 
-total_lines=`wc -l $qtl_genotype_file`
+total_lines=`wc -l $qtl_test_names_file`
 
 
 module load R/3.5.1

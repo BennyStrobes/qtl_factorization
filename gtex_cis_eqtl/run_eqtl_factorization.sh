@@ -26,6 +26,7 @@ permutation_type="${13}"
 warmup_iterations="${14}"
 re="${15}"
 
+source ~/.bash_profile
 conda activate surge 
 
 python run_eqtl_factorization.py $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $re

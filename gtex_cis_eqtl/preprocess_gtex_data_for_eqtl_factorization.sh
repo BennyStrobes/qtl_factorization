@@ -55,11 +55,12 @@ qtl_genotype_file=$output_dir"cross_tissue_eqtl_genotype_input.txt"
 qtl_covariate_file=$output_dir"cross_tissue_eqtl_covariate_input.txt"
 qtl_test_names_file=$output_dir"all_tests.txt"
 qtl_sample_overlap_file=$output_dir"individual_id.txt"
+if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
 	qtl_output_root=$output_dir"cross_tissue_eqtl_results_"$job_number"_"$num_jobs"_"
 	sbatch run_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs $qtl_model_version
 done
-
+fi
 
 
 # merge parallel runs
@@ -75,25 +76,8 @@ fi
 #############################################
 num_genes="2000"
 if false; then
-python preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes
+python preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes $qtl_model_version
 fi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

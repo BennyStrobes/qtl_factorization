@@ -122,7 +122,7 @@ model_version = sys.argv[3]
 suffix = model_version + "_results.txt"
 
 merged_file = output_root  + 'merged_' + suffix
-#merge_parallelized_results(output_root, suffix, total_jobs)
+merge_parallelized_results(output_root, suffix, total_jobs)
 
 fdr = .05
 fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) +'_' + suffix

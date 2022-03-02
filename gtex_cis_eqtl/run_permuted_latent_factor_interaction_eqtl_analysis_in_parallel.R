@@ -17,14 +17,12 @@ run_eqtl_lmm <- function(expr, geno, covariates, groups) {
 	return(list(eqtl_pvalue=pvalue, eqtl_beta=beta, eqtl_std_err=std_err))
 }
 
-run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs, num_lf) {
-	fit_full <- lm(expr ~ geno + covariates + lfs + lfs:geno)
+run_lf_interaction_eqtl_lm <- function(expr, geno, perm_geno, covariates, lfs, num_lf) {
+	fit_full <- lm(expr ~ geno + covariates + lfs + lfs:perm_geno)
 
 	num_cov = dim(covariates)[2]
 
 	summary_df <- data.frame(coef(summary(fit_full)))
-
-	#print(summary_df)
 
 	coefficient_betas = summary_df[,1]
 	coefficient_std_err = summary_df[,2]
@@ -92,12 +90,12 @@ covariate_file = args[4]
 interaction_factor_file = args[5]
 sample_overlap_file = args[6]
 output_root = args[7]
-job_number = as.numeric(args[8])
-num_jobs = as.numeric(args[9])
-total_lines = as.numeric(args[10]) - 1
+sample_permutation_file = args[8]
+job_number = as.numeric(args[9])
+num_jobs = as.numeric(args[10])
+total_lines = as.numeric(args[11]) - 1
 
 print(total_lines)
-
 
 
 # Determine number of lines each parrallelized job will complete
@@ -110,10 +108,10 @@ end_num = (job_number + 1)*lines_per_job
 covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1
+perm <- read.table(sample_permutation_file, header=FALSE)$V1 +1
 
 
 num_lfs <- dim(lfs)[2]
-print(num_lfs)
 
 output_file <- paste0(output_root, "results.txt")
 sink(output_file)
@@ -138,6 +136,8 @@ while(!stop) {
 		expr = as.numeric(strsplit(line_expr,'\t')[[1]])
 		geno = as.numeric(strsplit(line_geno,'\t')[[1]])
 		norm_geno = (geno - mean(geno))/(sd(geno))
+		perm_geno = geno[perm]
+		norm_perm_geno = (perm_geno - mean(perm_geno))/(sd(perm_geno))
 
 		# Run eqtl analysis
 		line_info <- strsplit(line_test,'\t')[[1]]
@@ -147,7 +147,7 @@ while(!stop) {
 		new_line <- paste0(rs_id, "\t", ensamble_id)
 		tryCatch(
 			{
-				lm_results = run_lf_interaction_eqtl_lm(expr, norm_geno, covariates, lfs, num_lfs)
+				lm_results = run_lf_interaction_eqtl_lm(expr, norm_geno, norm_perm_geno, covariates, lfs, num_lfs)
 				new_line <- paste0(new_line, "\t", lm_results$marginal_beta, "\t", lm_results$marginal_std_err, "\t", lm_results$marginal_pvalue)
 				for (lf_num in 1:num_lfs) {
 					new_line <- paste0(new_line,"\t",lm_results$beta[lf_num], "\t", lm_results$std_err[lf_num], "\t", lm_results$pvalue[lf_num])

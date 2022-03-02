@@ -117,11 +117,12 @@ def add_intercept_to_covariate_file(input_file, output_file):
 ######################
 working_dir = sys.argv[1]
 num_genes = int(sys.argv[2])
+qtl_model_version = sys.argv[3]
 
 
 
 # Input files
-latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'cross_tissue_eqtl_results_genome_wide_signficant_bf_fdr_0.05_lmm_results.txt'
+latent_factor_interaction_eqtl_genome_wide_sig_results_file = working_dir + 'cross_tissue_eqtl_results_genome_wide_signficant_bf_fdr_0.05_' + qtl_model_version + '_results.txt'
 latent_factor_interaction_eqtl_results_file = working_dir + 'all_tests.txt'
 
 

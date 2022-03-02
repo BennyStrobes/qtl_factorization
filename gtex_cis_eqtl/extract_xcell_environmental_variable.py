@@ -16,6 +16,8 @@ xcell_sample_enrichment_file = sys.argv[1]
 cell_type = sys.argv[2]
 cell_type_context_file = sys.argv[3]
 
+
+
 # Load in sample data
 sample_data = np.loadtxt(xcell_sample_enrichment_file,dtype=str,delimiter='\t')
 sample_data_header = sample_data[0,:]
