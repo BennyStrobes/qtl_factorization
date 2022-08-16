@@ -1,8 +1,6 @@
 #!/bin/bash -l
-
 #SBATCH
 #SBATCH --time=20:00:00
-#SBATCH --partition=shared
 #SBATCH --mem=20GB
 #SBATCH --nodes=1
 
@@ -23,16 +21,15 @@ qtl_model_version="${14}"
 num_jobs="${15}"
 
 
-module load python/2.7-anaconda
 ##############################################
 # Preprocess gene expression data
 ##############################################
 if false; then
-python preprocess_gtex_expression_data.py $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir
+python2 preprocess_gtex_expression_data.py $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir
 fi
 
 if false; then
-module load R/3.5.1
+module load r/3.6.3
 Rscript visualize_processed_gtex_expression.R $tissues_file $output_dir $visualization_expression_dir
 fi
 

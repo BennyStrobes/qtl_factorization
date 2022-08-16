@@ -54,7 +54,6 @@ output_visualization_dir=$visualization_expression_dir"tissues_subset_10_"
 output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_10_"
 qtl_model_version="lm"
 num_qtl_jobs="50"
-echo $tissues_file
 if false; then
 sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir $qtl_model_version $num_qtl_jobs
 fi
@@ -158,8 +157,9 @@ num_parallel_jobs="10"
 
 # Output root
 output_stem=$interaction_eqtl_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_"
+if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_results_stem $output_stem $surge_results_suffix $num_parallel_jobs
-
+fi
 
 
 
