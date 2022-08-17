@@ -38,7 +38,7 @@ fi
 # Prepare data for standard eqtl analysis
 #############################################
 if false; then
-python prepare_gtex_data_for_cross_tissue_eqtl_analysis.py $tissues_file $gtex_genotype_dir $output_dir
+python2 prepare_gtex_data_for_cross_tissue_eqtl_analysis.py $tissues_file $gtex_genotype_dir $output_dir
 fi
 
 
