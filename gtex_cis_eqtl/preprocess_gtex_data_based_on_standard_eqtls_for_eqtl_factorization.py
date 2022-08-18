@@ -130,26 +130,26 @@ test_eqtl_dicti, test_eqtl_binary_arr = extract_eqtl_factorization_tests(latent_
 
 # Generate eqtl factorization test names file
 all_test_names_file = working_dir + 'all_tests.txt'
-eqtl_factorization_test_names_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_input_test_names.txt'
+eqtl_factorization_test_names_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_' + qtl_model_version + '_input_test_names.txt'
 generate_eqtl_factorization_test_names_file(all_test_names_file, eqtl_factorization_test_names_file, test_eqtl_binary_arr)
 
 print('expression')
 # Generate eqtl factorization gene expression file
 #all_gene_expression_file = working_dir + 'cross_tissue_eqtl_residual_expression_input.txt'
 all_gene_expression_file = working_dir + 'cross_tissue_eqtl_expression_input.txt'
-eqtl_factorization_expression_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_input_expression.txt'
+eqtl_factorization_expression_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes)+ '_' + qtl_model_version + '_input_expression.txt'
 generate_eqtl_factorization_expression_file(all_gene_expression_file, eqtl_factorization_expression_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_expression_file)
 
 print('genotype')
 # Generate eqtl factorization genotype expression file
 all_test_genotype_file = working_dir + 'cross_tissue_eqtl_genotype_input.txt'
-eqtl_factorization_genotype_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes) + '_input_genotype.txt'
+eqtl_factorization_genotype_file = working_dir + 'eqtl_factorization_standard_eqtl_' + str(num_genes)+ '_' + qtl_model_version + '_input_genotype.txt'
 generate_eqtl_factorization_genotype_file(all_test_genotype_file, eqtl_factorization_genotype_file, test_eqtl_binary_arr)
 save_as_npy_file(eqtl_factorization_genotype_file)
 
 print('covariate')
 # Add intercept to covariate file
 covariate_file = working_dir + 'cross_tissue_eqtl_covariate_input.txt'
-covariate_with_intercept_file = working_dir + 'cross_tissue_eqtl_' + str(num_genes) + '_covariate_w_intercept_input.txt'
+covariate_with_intercept_file = working_dir + 'cross_tissue_eqtl_' + str(num_genes)+ '_' + qtl_model_version + '_covariate_w_intercept_input.txt'
 add_intercept_to_covariate_file(covariate_file, covariate_with_intercept_file)
