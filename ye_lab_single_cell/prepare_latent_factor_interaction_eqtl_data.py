@@ -193,6 +193,26 @@ def extract_variant_gene_pairs_for_eqtl_testing(gene_file, gene_annotation_file,
 		f.close()
 	t.close()
 
+def extract_gene_name_and_type_from_info(gene_info):
+	ensamble_id = 'NA'
+	gene_id = 'NA'
+	gene_type = 'NA'
+	gene_status = 'NA'
+	for stringer in gene_info:
+		if stringer.startswith('ID='):
+			ensamble_id = stringer.split('ID=')[1]
+		if stringer.startswith('gene_type='):
+			gene_type = stringer.split('gene_type=')[1]
+		if stringer.startswith('gene_status='):
+			gene_status = stringer.split('gene_status=')[1]
+		if stringer.startswith('gene_name='):
+			gene_id = stringer.split('gene_name=')[1]
+	if ensamble_id == 'NA' or gene_id == 'NA' or gene_type == 'NA' or gene_status == 'NA':
+		print('assumption erroror')
+		pdb.set_trace()
+	return ensamble_id, gene_id, gene_type, gene_status
+
+
 # Get mapping from genes to (chrom_num, position)
 def get_mapping_from_gene_to_chromosome_position(gene_annotation_file, genes):
 	# Convert gene array to dictionary
@@ -206,38 +226,39 @@ def get_mapping_from_gene_to_chromosome_position(gene_annotation_file, genes):
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
-		# Skip header
-		if head_count == 0:
-			head_count = head_count + 1
+		if line.startswith('#'):
 			continue
 		# Simple error check
-		if len(data) != 8 and len(data) != 9:
+		if len(data) != 9:
 			print('assumption errror in processing gene annotation file')
 			pdb.set_trace()
-		gene_id = data[5]
+		sequence_class = data[2]
+		if sequence_class != 'gene':
+			continue
+		if data[0] == 'chrX' or data[0] == 'chrY' or data[0] == 'chrM':
+			continue
+		gene_info = data[8].split(';')
+
+		ensamble_id, gene_id, gene_type, gene_status = extract_gene_name_and_type_from_info(gene_info)
+
+		if gene_status != 'KNOWN':
+			continue
+		if gene_type != 'protein_coding':
+			continue
+
+		strand = data[6]
+		if strand == '+':
+			tss = int(data[3])
+		elif strand == '-':
+			tss = int(data[4])
+		else:
+			print('assumption eroror')
+
+		chrom_num = int(data[0].split('hr')[1])
+
 		if gene_id not in gene_mapping:
 			continue
-		used_genes[gene_id] = 1
-		# Some more error checks
-		start = int(data[2])
-		end = int(data[3])
-		if start > end:
-			print('assumption errror in processing gene annotation file')
-			pdb.set_trace()
-		if data[6] != 'protein_coding' or data[7] != 'KNOWN':
-			continue
-		if data[1] == 'chrX' or data[1] == 'chrY' or data[1] == 'chrM':
-			continue
-		# Extract relevent info on gene: Chrom num and TSS
-		chrom_num = int(data[1].split('hr')[1])
-		strand = data[4]
-		gene_id = data[5]
-		if strand == '+':
-			tss = start
-		elif strand == '-':
-			tss = end
-		else:
-			print('assumption error while processing gene annotation file')
+
 		# Add info to gene dictionary
 		if gene_mapping[gene_id][0] != 0:
 			if gene_mapping[gene_id][0] != chrom_num and gene_mapping[gene_id][1] != tss:
@@ -522,13 +543,13 @@ def generate_latent_factor_interaction_eqtl_input_files(genotype_data_dir, expre
 	# Step 1: Create file with all variant gene pairs such that gene is within $distanceKB of gene
 	########################
 	print('variant gene pairs')
-	#extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file, geno_filter)
+	extract_variant_gene_pairs_for_eqtl_testing(gene_id_file, gene_annotation_file, distance, genotype_data_dir, eqtl_variant_gene_pairs_file, geno_filter)
 
 	########################
 	# Step 2: Generate expression matrix
 	########################
 	print('expr')
-	#generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
+	generate_single_cell_expression_eqtl_training_data(eqtl_variant_gene_pairs_file, expression_file, gene_id_file, eqtl_expression_file)
 
 	########################
 	# Step 3: Generate Genotype matrix

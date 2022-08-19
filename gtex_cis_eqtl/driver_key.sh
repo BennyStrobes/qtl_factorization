@@ -54,9 +54,8 @@ output_visualization_dir=$visualization_expression_dir"tissues_subset_10_"
 output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_10_"
 qtl_model_version="lm"
 num_qtl_jobs="20"
-if false; then
-sbatch preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir $qtl_model_version $num_qtl_jobs
-fi
+sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir $qtl_model_version $num_qtl_jobs
+
 
 
 

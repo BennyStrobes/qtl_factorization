@@ -2,8 +2,7 @@
 
 #SBATCH
 #SBATCH --time=20:00:00
-#SBATCH --mem=90GB
-#SBATCH --partition=shared
+#SBATCH --mem=100GB
 #SBATCH --nodes=1
 
 
@@ -23,7 +22,7 @@ visualize_latent_factor_interaction_eqtl_dir="$6"
 # Prepare input data for latent factor interaction eqtl analysis
 #############################################
 # This first part needs 250GB of memory to run..
-python prepare_latent_factor_interaction_eqtl_data.py $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
+python2 prepare_latent_factor_interaction_eqtl_data.py $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir
 
 
 #############################################

@@ -10,68 +10,57 @@
 # Input data
 ######################
 # Input single cell expression data (emailed by Meena Subramaniam on Nov. 18, 2019)
-input_h5py_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/expression/Lupus_study_adjusted.h5ad"
+input_h5py_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/expression/Lupus_study_adjusted.h5ad"
 ##
 # Gene annotation file (hg19)
-gene_annotation_file="/work-zfs/abattle4/lab_data/annotation/gencode.v19/gencode.v19.annotation.gene.txt"
+gene_annotation_file="/scratch16/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/gencode.v19.annotation.gff3"
 
 # Directory containing genotype data
-genotype_data_dir="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/"
+genotype_data_dir="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/"
 
 # File containing mapping from old genotype ids to new genotype ids
 # Basically rna-seq had old genotype ids and genotype data had new genotype ids
 # We will convert rna-seq to new genotype ids
-genotype_id_mapping_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/sample_mappings_ye_SLE.txt"
+genotype_id_mapping_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/sample_mappings_ye_SLE.txt"
 
 # File containing genotyped individuals
-genotyped_individuals_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/genotyped_individuals.txt"
+genotyped_individuals_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/imputed_genotypes/genotyped_individuals.txt"
 
 # File containing isg scores for each individual
-isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/isg_scores.csv"
+isg_score_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/isg_scores.csv"
 
 # File containing isg scores for each cell
-cell_isg_score_file="/work-zfs/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/cell_isg_scores.csv"
+cell_isg_score_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/cell_isg_scores.csv"
 
-# GSEA data
-gsea_data_dir="/work-zfs/abattle4/bstrober/tools/tools-master/gsea/data/"
-
-# File containing list of GWAS files (downloaded here: https://alkesgroup.broadinstitute.org/sumstats_formatted/ on 9/15/21)
-gwas_files="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/gwas_files.txt"
-
-# directory containing gwas snp info
-gwas_snp_info_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_genotype/"
 
 # Directory containing coloc input data
-coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/coloc/input_data/"
+#coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/coloc/input_data/"
 
-# File containing remap 2022 tfbs
-# downloaded here https://remap.univ-amu.fr/download_page on 9/27/21
-remap_tfbs_file="/work-zfs/abattle4/lab_data/tfbs_remap_2022/remap2022_nr_macs2_hg19_v1_0.bed"
 
 # Directory containing ldsc source code
-ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/ldsc/"
-custom_ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/custom_sldsc/ldsc/"
+#ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/ldsc/"
+#custom_ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/custom_sldsc/ldsc/"
 
 # Directory containing sldsc input data
-sldsc_input_data_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/sldsc_input_data/"
+#sldsc_input_data_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/sldsc_input_data/"
 
 # Directory containing Alkes group processed sumstats
-sumstats_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/"
+#sumstats_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/"
 
 ######################
 # Output directories
 ######################
 # Root of all output directoreis
-output_root="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/"
+output_root="/scratch16/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/"
 
 # Directory containing processed genotype data
-processed_genotype_dir=$output_root"processed_genotype/"
+processed_genotype_dir="/scratch16/abattle4/ben/processed_genotype/"
 
 # Directory containing processed single cell expression
-processed_expression_dir=$output_root"processed_expression/"
+processed_expression_dir="/scratch16/abattle4/ben/processed_expression/"
 
 # Directory containing processed pseudobulk single cell expression
-processed_pseudobulk_expression_dir=$output_root"processed_pseudobulk_expression/"
+processed_pseudobulk_expression_dir="/scratch16/abattle4/ben/processed_pseudobulk_expression/"
 
 # Directory containing visualizations of processed single cell expression
 visualize_processed_expression_dir=$output_root"visualize_processed_expression/"
@@ -170,7 +159,7 @@ fi
 # Call latent-factor (PCA) interaction-eqtls
 ######################
 if false; then
-sbatch latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
+sh latent_factor_interaction_eqtl_driver_key.sh $processed_expression_dir $processed_pseudobulk_expression_dir $processed_genotype_dir $gene_annotation_file $latent_factor_interaction_eqtl_dir $visualize_latent_factor_interaction_eqtl_dir
 fi
 
 #############################################
@@ -270,7 +259,6 @@ data_filter="filter_RP"
 delta_elbo_thresh="5e-1"
 output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
-
 fi
 
 
