@@ -40,6 +40,7 @@ done
 fi
 
 
+
 # TO DO
 qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
 if false; then
@@ -49,7 +50,7 @@ fi
 
 
 # Interaction analysis on permuted data
-sample_permutation_file=$surge_results_stem"interaction_only"$surge_results_suffix"sample_permutation.txt"
+sample_permutation_file=$surge_results_stem"interaction_only"$surge_results_suffix"var_param_1e-3_sample_permutation.txt"
 if false; then
 for job_number in $(seq 0 $(($num_jobs-1))); do 
 	qtl_output_root=$output_stem"perm_interaction_only_interaction_eqtl_results_"$job_number"_"$num_jobs"_"

@@ -13,14 +13,14 @@ perm_surge_latent_factor_factor_file = sys.argv[3]
 surge_results_suffix = sys.argv[4]
 
 # Real Surge loadings
-surge_U_real_file_name = surge_results_stem + 'False' + surge_results_suffix + 'U_S.txt'
+surge_U_real_file_name = surge_results_stem + 'False' + surge_results_suffix + 'var_param_1e-3_U_S.txt'
 # Real Surge PVes
-surge_pve_real_file_name = surge_results_stem + 'False' + surge_results_suffix +'factor_pve.txt'
+surge_pve_real_file_name = surge_results_stem + 'False' + surge_results_suffix +'var_param_1e-3_factor_pve.txt'
 
 # Perm Surge loadings
-surge_U_perm_file_name = surge_results_stem + 'interaction_only' + surge_results_suffix +'U_S.txt'
+surge_U_perm_file_name = surge_results_stem + 'interaction_only' + surge_results_suffix +'var_param_1e-3_U_S.txt'
 # Perm Surge PVes
-surge_pve_perm_file_name = surge_results_stem + 'interaction_only' + surge_results_suffix + 'factor_pve.txt'
+surge_pve_perm_file_name = surge_results_stem + 'interaction_only' + surge_results_suffix + 'var_param_1e-3_factor_pve.txt'
 
 # SURGE loadings
 U_real = np.loadtxt(surge_U_real_file_name, dtype=str, delimiter='\t')
@@ -32,7 +32,8 @@ pve_perm = np.loadtxt(surge_pve_perm_file_name, delimiter='\t')
 
 
 # Number of contexts to include
-num_contexts = np.sum(pve_real >= 1e-3)
+num_contexts = np.sum(pve_real >= 1e-5)
+
 
 # Factor re-ordering
 ordered_real_factors = np.argsort(-pve_real)[:num_contexts]

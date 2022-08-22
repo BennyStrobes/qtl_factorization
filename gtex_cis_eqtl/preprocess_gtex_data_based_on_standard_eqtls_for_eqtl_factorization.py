@@ -12,6 +12,8 @@ def extract_eqtl_factorization_tests(cross_tissue_eqtl_results_file, cross_tissu
 	temp_dicti = {}
 	f = open(cross_tissue_genome_wide_sig_results_file)
 	head_count = 0
+	used_genes = {}
+	used_variants = {}
 	for line in f:
 		line = line.rstrip()
 		data = line.split('\t')
@@ -21,12 +23,18 @@ def extract_eqtl_factorization_tests(cross_tissue_eqtl_results_file, cross_tissu
 		# Extract relevent fields
 		gene_id = data[1]
 		variant_id = data[0]
+		if gene_id in used_genes:
+			continue
+		if variant_id in used_variants:
+			continue
 		test_name = variant_id + ':' + gene_id
 		if test_name in dicti:
 			print('assumption error')
 			pdb.set_trace()
 		if len(dicti) < num_genes:
 			dicti[test_name] = 1
+			used_genes[gene_id] = 1
+			used_variants[variant_id] = 1
 	f.close()
 
 	f = open(cross_tissue_eqtl_results_file)

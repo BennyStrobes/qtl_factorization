@@ -3,7 +3,6 @@ import os
 import sys
 import pdb
 import surge.surge_inference
-from statsmodels.stats import diagnostic
 
 
 

@@ -269,11 +269,10 @@ output_dir = sys.argv[3]
 
 
 
-
 # Already generated data
-all_unordered_variant_gene_pairs_file = output_dir + 'all_tests_unordered.txt'
-expression_file = output_dir + 'cross_tissue_tpm_standardized.txt'
-covariate_file = output_dir + 'covariates.txt'
+all_unordered_variant_gene_pairs_file = output_dir + 'outliers_removed_' + 'all_tests_unordered.txt'
+expression_file = output_dir + 'outliers_removed_' + 'cross_tissue_tpm_standardized.txt'
+covariate_file = output_dir + 'outliers_removed_' + 'covariates.txt'
 
 
 # Re-order variant gene pairs file

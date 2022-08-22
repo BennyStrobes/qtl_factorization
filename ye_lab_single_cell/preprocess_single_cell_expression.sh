@@ -1,9 +1,10 @@
 #!/bin/bash -l
 
 #SBATCH
-#SBATCH --time=30:00:00
-#SBATCH --mem=600GB
-#SBATCH --partition=lrgmem
+#SBATCH --time=10:00:00
+#SBATCH --mem=300GB
+#SBATCH --partition=bigmem
+#SBATCH -A abattle44_bigmem
 #SBATCH --nodes=1
 
 input_h5py_file="$1"
@@ -17,9 +18,7 @@ regress_out_batch="$8"
 isg_score_file="$9"
 cell_isg_score_file="${10}"
 
-module load R/3.6.1
-module load python/3.7.4-anaconda
-
+source ~/.bash_profile
 
 # Preprocess single cell expression
 if false; then
@@ -27,7 +26,7 @@ python preprocess_scran_single_cell_expression.py $input_h5py_file $processed_ex
 fi
 
 # Visualize preprocessed single cell expression
-module load R/3.5.1
+#module load R/3.5.1
 if false; then
 Rscript visualize_scran_processed_single_cell_expression.R $processed_expression_dir $visualize_processed_expression_dir $regress_out_batch
 fi
@@ -36,8 +35,8 @@ cluster_resolution="10.0"
 cluster_type="no_cap"
 min_cells_per_cluster="15"
 num_hvg="6000"
-module load R/3.6.1
-module load python/3.7.4-anaconda
+#module load R/3.6.1
+#module load python/3.7.4-anaconda
 # Generate pseudobulk expression
 python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $cluster_type $regress_out_batch $num_hvg $isg_score_file $cell_isg_score_file $min_cells_per_cluster
 

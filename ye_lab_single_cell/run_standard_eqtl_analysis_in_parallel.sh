@@ -14,7 +14,7 @@ qtl_sample_overlap_file="$5"
 qtl_output_root="$6"
 
 
+module load r/3.6.3
 
 
-module load R/3.5.1
 Rscript run_standard_eqtl_analysis_in_parallel.R $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $qtl_sample_overlap_file $qtl_output_root

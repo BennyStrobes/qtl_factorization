@@ -26,6 +26,9 @@ num_jobs="${15}"
 ##############################################
 if false; then
 python2 preprocess_gtex_expression_data.py $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir
+
+
+python2 preprocess_gtex_expression_data_with_outlier_detection.py $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir
 fi
 
 if false; then

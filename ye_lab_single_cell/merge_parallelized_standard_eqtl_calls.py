@@ -64,7 +64,7 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 def make_sure_files_exist(output_root, total_jobs, suffix):
 	booly = True
 	for job_number in range(total_jobs):
-		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_lmm_results' + suffix
 		if os.path.isfile(file_name) == False:
 			print(file_name)
 			booly = False
@@ -80,7 +80,7 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 	t2 = open(output_root + 'merged_include_nan' + suffix, 'w')
 	# Loop through parrallelized jobs
 	for job_number in range(total_jobs):
-		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_lmm_results' + suffix
 		# Open file for one job
 		f = open(file_name)
 		# To identify header
