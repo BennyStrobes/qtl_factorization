@@ -2,11 +2,12 @@ import numpy as np
 import os
 import sys
 import pdb
+import scipy.stats
 
-def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file, fdr_thresh):
+def alphabetical_ordered_gene_level_stats(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file):
 	f = open(variant_gene_pairs_eqtl_results_file)
 	t = open(multple_testing_correction_results_file, 'w')
-	t.write('snp_id\tgene_id\tpvalue\tcoefficient_pvalues\tnum_snps_in_gene\tfdr\n')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
 	head_count = 0
 	genes = {}
 	for line in f:
@@ -14,24 +15,83 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 		data = line.split()
 		gene_id = data[1]
 		variant_id = data[0]
-		pvalue = float(data[2])
+		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
 		if gene_id not in genes:
-			genes[gene_id] = (variant_id, pvalue, 1, line)
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
 		else:
-			old_pvalue = genes[gene_id][1]
-			old_count = genes[gene_id][2]
-			if pvalue <= old_pvalue:
-				genes[gene_id] = (variant_id, pvalue, old_count+1, line)
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
 			else:
-				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], old_count+1, genes[gene_id][3])
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
 	f.close()
 	# Loop through genes and do BF correction
 	bf_gene_array = []
 	for gene in genes.keys():
 		lead_variant = genes[gene][0]
 		lead_nominal_pvalue = genes[gene][1]
-		num_variants_at_gene = genes[gene][2]
-		test_line = genes[gene][3]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
+		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
+		if bf_corrected_pvalue > 1.0:
+			bf_corrected_pvalue = 1.0
+		bf_gene_array.append((bf_corrected_pvalue, lead_variant, gene, num_variants_at_gene, test_line))
+	sorted_bf_gene_array = sorted(bf_gene_array, key=lambda tup: tup[2])
+	# BH correction
+	kk = 1
+	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
+	sig = True
+	for gene_tuple in sorted_bf_gene_array:
+		bf_pvalue = gene_tuple[0]
+		fdr = num_genes*bf_pvalue/kk 
+		kk = kk + 1
+		if sig == True:
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+	t.close()
+
+
+def ordered_gene_level_stats(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file):
+	f = open(variant_gene_pairs_eqtl_results_file)
+	t = open(multple_testing_correction_results_file, 'w')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
+	head_count = 0
+	genes = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split()
+		gene_id = data[1]
+		variant_id = data[0]
+		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
+		if gene_id not in genes:
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
+		else:
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
+			else:
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
+	f.close()
+	# Loop through genes and do BF correction
+	bf_gene_array = []
+	for gene in genes.keys():
+		lead_variant = genes[gene][0]
+		lead_nominal_pvalue = genes[gene][1]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
 		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
 		if bf_corrected_pvalue > 1.0:
 			bf_corrected_pvalue = 1.0
@@ -40,6 +100,61 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 	# BH correction
 	kk = 1
 	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
+	sig = True
+	for gene_tuple in sorted_bf_gene_array:
+		bf_pvalue = gene_tuple[0]
+		fdr = num_genes*bf_pvalue/kk 
+		kk = kk + 1
+		if sig == True:
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+	t.close()
+
+def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, multple_testing_correction_results_file, fdr_thresh):
+	f = open(variant_gene_pairs_eqtl_results_file)
+	t = open(multple_testing_correction_results_file, 'w')
+	t.write('snp_id\tgene_id\tbeta\tstd_err_beta\tpvalue\tnum_snps_in_gene\tfdr\n')
+	head_count = 0
+	genes = {}
+	for line in f:
+		line = line.rstrip()
+		data = line.split()
+		gene_id = data[1]
+		variant_id = data[0]
+		pvalue = float(data[4])
+		beta = float(data[2])
+		std_err = float(data[3])
+		abs_t_value = np.abs(beta/std_err)
+		if gene_id not in genes:
+			genes[gene_id] = (variant_id, pvalue, abs_t_value, 1, line)
+		else:
+			old_t_value = genes[gene_id][2]
+			old_count = genes[gene_id][3]
+			if abs_t_value >= old_t_value:
+				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
+			else:
+				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
+	f.close()
+	# Loop through genes and do BF correction
+	bf_gene_array = []
+	for gene in genes.keys():
+		lead_variant = genes[gene][0]
+		lead_nominal_pvalue = genes[gene][1]
+		lead_nominal_abs_tvalue = genes[gene][2]
+		num_variants_at_gene = genes[gene][3]
+		test_line = genes[gene][4]
+		bf_corrected_pvalue = lead_nominal_pvalue*num_variants_at_gene
+		if bf_corrected_pvalue > 1.0:
+			bf_corrected_pvalue = 1.0
+		bf_gene_array.append((bf_corrected_pvalue, lead_variant, gene, num_variants_at_gene, test_line))
+	sorted_bf_gene_array = sorted(bf_gene_array, key=lambda tup: tup[0])
+	# BH correction
+	kk = 1
+	num_genes = len(sorted_bf_gene_array)
+	print(num_genes)
 	sig = True
 	for gene_tuple in sorted_bf_gene_array:
 		bf_pvalue = gene_tuple[0]
@@ -48,7 +163,10 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 		if fdr > fdr_thresh:
 			sig = False
 		if sig == True:
-			t.write(gene_tuple[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
+			line = gene_tuple[4]
+			data = line.split('\t')
+			std_err_beta = (data[3])
+			t.write(data[0] + '\t' + data[1] + '\t' + data[2]  + '\t' + std_err_beta + '\t' + data[4] + '\t' + str(gene_tuple[3]) + '\t' + str(fdr) + '\n')
 	t.close()
 
 def make_sure_files_exist(output_root, total_jobs, suffix):
@@ -60,14 +178,14 @@ def make_sure_files_exist(output_root, total_jobs, suffix):
 			booly = False
 	return booly
 
-def merge_parallelized_results(output_root, suffix, total_jobs):
+def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
 	if to_run == False:
 		print('Missing required input files. Please re-evaluate :)')
 		return
 	# Open output (merged result) file handle
-	t = open(output_root + 'merged' + suffix, 'w')
-	t2 = open(output_root + 'merged_include_nan' + suffix, 'w')
+	t = open(output_root + 'latent_factor_' + str(lf_num+1) + '_merged' + suffix, 'w')
+	t2 = open(output_root + 'latent_factor_' + str(lf_num+1) + '_merged_include_nan' + suffix, 'w')
 	# Loop through parrallelized jobs
 	for job_number in range(total_jobs):
 		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
@@ -80,9 +198,26 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 		for line in f:
 			line = line.rstrip()
 			data = line.split('\t')
-			t2.write(line + '\n')
+			if data[(2 + (1+lf_num)*3)] == 'NA':
+				print('na error')
+				data[(2 + (1+lf_num)*3)] = '1e-20'
+				data[(3 + (1+lf_num)*3)] = '1'
+				data[(4 + (1+lf_num)*3)] = '1'
+			beta = float(data[(2 + (1+lf_num)*3)])
+			std_err_beta = float(data[(3 + (1+lf_num)*3)])
+			old_pvalue = float(data[(4 + (1+lf_num)*3)])
+			if old_pvalue < 1e-10:
+				new_pvalue = scipy.stats.norm.cdf(-np.abs( beta/std_err_beta))*2
+				new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(new_pvalue)
+			else:
+				new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(old_pvalue)
+			new_data = new_line.split('\t')
+			t2.write(new_line + '\n')
 			counter = counter +1
-			if data[2] == 'NA':
+			#if len(data) < (lf_num*3):
+				#print('miss')
+				#continue
+			if new_data[2] == 'NA':
 				continue
 			# HEADER
 			#if head_count == 0:
@@ -92,26 +227,91 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			#		t.write(line + '\n')
 			#	continue
 			# Standard line
-			t.write(line + '\n')
+			t.write(new_line + '\n')
 		f.close()
 		# Delete file from single job
 		#os.system ('rm ' + file_name)
 	t2.close()
 	t.close()
 
-def get_number_of_latent_factors(fdr_file):
-	f = open(fdr_file)
-	head_count = 0
-	for line in f:
-		line = line.rstrip()
-		data = line.split('\t')
-		if head_count == 0:
-			head_count = head_count + 1
-			continue
-		num_lf = len(data[3].split(','))
-		break
-	f.close()
-	return num_lf
+def merge_pvalue_results(output_root, suffix, total_jobs, num_lf):
+	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
+	if to_run == False:
+		print('Missing required input files. Please re-evaluate :)')
+		return
+	# Open output (merged result) file handle
+	t = open(output_root + 'pvalues_merged' + suffix, 'w')
+	t2 = open(output_root + 'pvalues_merged_include_nan' + suffix, 'w')
+	# Loop through parrallelized jobs
+	for job_number in range(total_jobs):
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		# Open file for one job
+		f = open(file_name)
+		# To identify header
+		head_count = 0
+		# Stream file from one job
+		counter = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			betas = []
+			betas.append(data[4])
+			for lf_num in range(num_lf):
+				beta = (data[(7 + lf_num*3)])
+				betas.append(beta)
+			betas = np.asarray(betas)
+			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
+			t2.write(new_line + '\n')
+			counter = counter +1
+			if betas[0] == 'NA':
+				continue
+			# Standard line
+			t.write(new_line + '\n')
+		f.close()
+		# Delete file from single job
+		#os.system ('rm ' + file_name)
+	t2.close()
+	t.close()
+
+def merge_betas_results(output_root, suffix, total_jobs, num_lf):
+	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
+	if to_run == False:
+		print('Missing required input files. Please re-evaluate :)')
+		return
+	# Open output (merged result) file handle
+	t = open(output_root + 'betas_merged' + suffix, 'w')
+	t2 = open(output_root + 'betas_merged_include_nan' + suffix, 'w')
+	# Loop through parrallelized jobs
+	for job_number in range(total_jobs):
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		# Open file for one job
+		f = open(file_name)
+		# To identify header
+		head_count = 0
+		# Stream file from one job
+		counter = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			betas = []
+			betas.append(data[2])
+			for lf_num in range(num_lf):
+				beta = (data[(5 + lf_num*3)])
+				betas.append(beta)
+			betas = np.asarray(betas)
+			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
+			t2.write(new_line + '\n')
+			counter = counter +1
+			if betas[0] == 'NA':
+				continue
+			# Standard line
+			t.write(new_line + '\n')
+		f.close()
+		# Delete file from single job
+		#os.system ('rm ' + file_name)
+	t2.close()
+	t.close()
+
 
 def number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds):
 	# open output file handle
@@ -198,25 +398,52 @@ def number_of_hits_per_latent_factor_seperated_by_quantiles(fdr_file, num_hits_p
 			t.write(str(latent_factor_num+1) + '\t' + str(quantile_num) + '\t' + str(num_hits[latent_factor_num]) + '\n')
 	t.close()
 
+def get_number_of_latent_factors(file_name):
+	f = open(file_name)
+	head_count = 0
+	for line in f:
+		line = line.rstrip()
+		data = line.split('\t')
+		if head_count == 0:
+			head_count = head_count + 1
+			num_lf = int((len(data)-2.0)/3)
+			continue
+	f.close()
+	return num_lf
 
 output_root = sys.argv[1]
 total_jobs = int(sys.argv[2])
 
 
-merged_file = output_root + 'merged.txt'
-merge_parallelized_results(output_root, '.txt', total_jobs)
+# Extract number of latent factors
+num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
 
-fdr = .05
-fdr_file = output_root + 'genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
-bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+merged_file = output_root + '_betas_merged.txt'
+#merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
+merged_file = output_root + '_pvalues_merged.txt'
+merge_pvalue_results(output_root, '.txt', total_jobs, num_lf)
 
-nominal_coefficient_pvalue_thresholds = [1e-4, 1e-6, 1e-8]
-num_hits_per_lf_file = output_root + 'number_of_hits_per_latent_factor.txt'
-number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds)
+for lf_num in range(num_lf):
+	print(lf_num)
+	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
+	merge_parallelized_results(output_root, '.txt', total_jobs, lf_num)
 
+	output_file = output_root + 'latent_factor_' + str(lf_num+1) + '_ordered_gene_level_stats.txt'
+	ordered_gene_level_stats(merged_file, output_file)
 
-num_quantiles = 5
-num_hits_per_lf_per_quantile_file = output_root + 'number_of_hits_per_latent_factor_stratefied_by_' + str(num_quantiles) + '_quantiles.txt'
-number_of_hits_per_latent_factor_seperated_by_quantiles(fdr_file, num_hits_per_lf_per_quantile_file, num_quantiles)
+	output_file = output_root + 'latent_factor_' + str(lf_num+1) + '_alphabetical_ordered_gene_level_stats.txt'
+	alphabetical_ordered_gene_level_stats(merged_file, output_file)
+
+	fdr = .05
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+	fdr = .1
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+	fdr = .2
+	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
 

@@ -41,17 +41,9 @@ fi
 
 
 
-# TO DO
-qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
-if false; then
-python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
-fi
-
-
-
 # Interaction analysis on permuted data
-sample_permutation_file=$surge_results_stem"interaction_only"$surge_results_suffix"var_param_1e-3_sample_permutation.txt"
 if false; then
+sample_permutation_file=$surge_results_stem"interaction_only"$surge_results_suffix"var_param_1e-3_sample_permutation.txt"
 for job_number in $(seq 0 $(($num_jobs-1))); do 
 	qtl_output_root=$output_stem"perm_interaction_only_interaction_eqtl_results_"$job_number"_"$num_jobs"_"
 	sbatch run_permuted_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_file $perm_surge_latent_factor_factor_file $qtl_sample_overlap_file $qtl_output_root $sample_permutation_file $job_number $num_jobs
@@ -59,13 +51,22 @@ done
 fi
 
 
-
-# TO DO
-qtl_output_root=$output_stem"perm_interaction_only_interaction_eqtl_results_"
 if false; then
-python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
+python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+
+
+
+qtl_output_root=$output_stem"perm_interaction_only_interaction_eqtl_results_"
+python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+
 fi
 
+
+
+
+module load r/3.6.3
+Rscript visualize_surge_interaction_eqtls.R $output_stem"perm_"
 
 
 

@@ -32,7 +32,7 @@ pve_perm = np.loadtxt(surge_pve_perm_file_name, delimiter='\t')
 
 
 # Number of contexts to include
-num_contexts = np.sum(pve_real >= 1e-5)
+num_contexts = np.sum(pve_real >= 2e-5)
 
 
 # Factor re-ordering

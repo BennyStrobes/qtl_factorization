@@ -15,8 +15,10 @@ qtl_expression_file=$eqtl_input_dir"cross_tissue_eqtl_expression_input.txt"
 qtl_genotype_file=$eqtl_input_dir"cross_tissue_eqtl_genotype_input.txt"
 qtl_covariate_file=$eqtl_input_dir"cross_tissue_eqtl_covariate_input.txt"
 qtl_test_names_file=$eqtl_input_dir"all_tests.txt"
-qtl_sample_overlap_file=$eqtl_input_dir"individual_id.txt"
-xcell_sample_enrichment_file=$eqtl_input_dir"sample_covariates.txt"
+qtl_sample_overlap_file=$eqtl_input_dir"outliers_removed_individual_id.txt"
+xcell_sample_enrichment_file=$eqtl_input_dir"outliers_removed_sample_covariates.txt"
+
+
 
 
 source ~/.bash_profile

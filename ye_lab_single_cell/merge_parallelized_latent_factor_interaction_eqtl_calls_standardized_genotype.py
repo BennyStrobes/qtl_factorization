@@ -309,19 +309,6 @@ def merge_betas_results(output_root, suffix, total_jobs, num_lf):
 	t2.close()
 	t.close()
 
-def get_number_of_latent_factors(fdr_file):
-	f = open(fdr_file)
-	head_count = 0
-	for line in f:
-		line = line.rstrip()
-		data = line.split('\t')
-		if head_count == 0:
-			head_count = head_count + 1
-			continue
-		num_lf = len(data[3].split(','))
-		break
-	f.close()
-	return num_lf
 
 def number_of_hits_per_latent_factor(fdr_file, num_hits_per_lf_file, nominal_coefficient_pvalue_thresholds):
 	# open output file handle

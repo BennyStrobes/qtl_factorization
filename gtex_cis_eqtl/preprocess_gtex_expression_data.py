@@ -1092,7 +1092,6 @@ processed_data_dir = sys.argv[11]
 tissues, tissues_alt = get_tissues(tissues_file)
 
 
-
 # Extract file of sample names
 sample_name_file = processed_data_dir + 'sample_names.txt'
 sample_names, sample_to_index, individual_covariates = get_sample_names(tissues, gtex_expression_dir, sample_name_file, gtex_individual_information_file)
@@ -1168,42 +1167,6 @@ extract_all_variant_gene_pairs(tissues, gtex_eqtl_dir, tss_distance_thresh, vali
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-########################
-# OLD: No longer used
-########################
-
-
-
-
-
-
-# Regress out technical covariates from gene expression
-standardized_tpm_expression_technical_cov_residual_matrix_file = processed_data_dir + 'cross_tissue_tpm_technical_covariate_residuals.txt'
-#regress_out_technical_covariates_from_gene_expression(standardized_tpm_expression_matrix_file, standardized_tpm_expression_technical_cov_residual_matrix_file, sample_covariate_file, technical_covariate_file)
-
-
-
-# Extract covariates (expression pcs)
-num_expression_pcs = 60
-covariate_file = processed_data_dir + 'residual_expression_covariates.txt'
-#extract_covariates(standardized_tpm_expression_technical_cov_residual_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
-
-
-# Extract covariates (expression pcs)
-num_expression_pcs = 120
-covariate_file = processed_data_dir + 'residual_expression_covariates_120_pc.txt'
-#extract_covariates(standardized_tpm_expression_technical_cov_residual_matrix_file, covariate_file, num_expression_pcs, gtex_covariate_dir, sample_names, tissues)
 
 
 
