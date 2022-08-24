@@ -214,8 +214,8 @@ surge_results_suffix="_re_False_"
 num_parallel_jobs="20"
 
 # Output root
-output_stem=$interaction_eqtl_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_"
 if false; then
+output_stem=$interaction_eqtl_dir$input_data_stem$model_name"_results_k_init_"$num_latent_factors"_seed_"$seed"_warmup_"$warmup_iterations"_ratio_variance_std_"$ratio_variance_standardization"_"
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $eqtl_input_dir $surge_results_stem $output_stem $surge_results_suffix $num_parallel_jobs
 fi
 
@@ -346,9 +346,7 @@ fi
 ########################################
 # Visualize results of single tissue analysis
 ########################################
-
-if false; then
-module load R/3.5.1
+module load r/3.6.3
 Rscript visualize_single_tissue_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file $interaction_eqtl_dir
-fi
+
 

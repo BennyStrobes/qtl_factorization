@@ -1277,17 +1277,7 @@ tissue_colors_file <- args[4]
 tissue_colors = read.table(tissue_colors_file, header = T, stringsAsFactors = F, sep = "\t")
 
 tissue_colors$tissue_id = tissue_colors$tissue_site_detail_id
-# slight mislabeling
-if (FALSE) {
-for (tiss_num in 1:length(tissue_colors$tissue_id)) {
-	if (tissue_colors$tissue_id[tiss_num] == "Brain_Spinal_cord_cervical_c-1") {
-		tissue_colors$tissue_id[tiss_num] = "Brain_Spinal_cord_cervical_c.1"
-	}
-	if (tissue_colors$tissue_id[tiss_num] == "Cells_EBV-transformed_lymphocytes") {
-		tissue_colors$tissue_id[tiss_num] = "Cells_EBV.transformed_lymphocytes"
-	}
-}
-}
+
 
 
 ############################

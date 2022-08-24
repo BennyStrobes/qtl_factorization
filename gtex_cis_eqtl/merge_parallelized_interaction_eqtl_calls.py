@@ -15,12 +15,11 @@ def bf_fdr_multiple_testing_correction(variant_gene_pairs_eqtl_results_file, mul
 			head_count = head_count + 1
 			t.write(line + '\tnum_snps_in_gene\tfdr\n')
 			continue
-		if len(data) != 4:
-			print('assumption error')
-			continue
 		gene_id = data[1]
 		variant_id = data[0]
-		pvalue = float(data[2])
+		if data[7] == 'NA':
+			data[7] = '1.0'
+		pvalue = float(data[7])
 
 		if gene_id not in genes:
 			genes[gene_id] = (variant_id, pvalue, 1, line)
@@ -94,8 +93,8 @@ def merge_parallelized_results(output_root, suffix, total_jobs):
 			#	continue
 			# Standard line
 			data = line.split('\t')
-			if data[2] == 'NA':
-				continue
+			#if data[2] == 'NA':
+				#continue
 			t.write(line + '\n')
 		f.close()
 		# Delete file from single job
@@ -112,7 +111,9 @@ def get_pvalue_only_file(input_file, output_file):
 		if head_count == 0:
 			head_count = head_count + 1
 			continue
-		t.write(data[2] + '\n')
+		if data[7] == 'NA':
+			data[7] = '1.0'
+		t.write(data[7] + '\n')
 	f.close()
 	t.close()
 

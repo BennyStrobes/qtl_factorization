@@ -200,28 +200,3 @@ fi
 
 
 
-
-
-
-
-# Standard eqtl analysis
-if false; then
-for job_number in $(seq 0 $(($num_jobs-1))); do 
-	qtl_output_root=$output_stem"standard_eqtl_results_"$job_number"_"$num_jobs"_"
-	parallelized_expression_file=$output_stem"expression_parallelized_"$job_number".txt"
-	parallelized_genotype_file=$output_stem"genotype_parallelized_"$job_number".txt"
-	parallelized_test_names_file=$output_stem"variant_gene_pairs_parallelized_"$job_number".txt"
-	sbatch run_standard_eqtl_analysis_in_parallel.sh $parallelized_expression_file $parallelized_genotype_file $parallelized_test_names_file $qtl_new_covariate_file $qtl_sample_overlap_file $qtl_output_root
-done
-fi
-
-
-if false; then
-python merge_parallelized_standard_eqtl_calls.py $output_stem"standard_eqtl_results_" $num_jobs
-fi
-
-if false; then
-module load R/3.5.1
-Rscript temp_viz.R $output_stem
-fi
-

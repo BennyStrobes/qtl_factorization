@@ -5,8 +5,8 @@ library(cowplot)
 library(umap)
 library(ggplot2)
 library(RColorBrewer)
-library(sigmoid)
 library(lme4)
+library(sigmoid)
 options(bitmapType = 'cairo', device = 'pdf')
 
 
@@ -383,10 +383,10 @@ static_eqtl_sldsc_results_dir <- args[9]
 ############################
 # Load in files
 ############################
-sample_covariate_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_covariates.txt")
-gene_names_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt")
-gene_expr_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
-gene_expr_pc_file <- paste0(processed_data_dir, "pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_pca_scores.txt")
+sample_covariate_file <- paste0(processed_data_dir, "no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_sample_covariates.txt")
+gene_names_file <- paste0(processed_data_dir, "no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt")
+gene_expr_file <- paste0(processed_data_dir, "no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt")
+gene_expr_pc_file <- paste0(processed_data_dir, "no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_pca_scores.txt")
 
 if (FALSE) {
 per_cell_sldsc_results_file <- paste0(per_cell_sldsc_results_dir, "per_cell_sldsc_results.txt")
@@ -409,7 +409,6 @@ static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_
 # Model Specification
 ############################
 #model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_2_var_param_1e-3_ratio_variance_std_True_permute_False_temper_")
-eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "theta_normalized.txt")
 eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 
@@ -419,7 +418,7 @@ pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
 ordering <- order(pve, decreasing=TRUE)
-#ordering <- ordering[1:4]
+ordering <- ordering[1:6]
 #print(ordering)
 
 
@@ -454,24 +453,24 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-
+if (FALSE) {
 expr <- read.table(gene_expr_file, header=FALSE)
 saveRDS( expr, "expr.rds")
-#expr <- readRDS("expr.rds")
+}
 
 expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
 saveRDS(expr_pcs, "expr_pcs.rds")
 #expr_pcs <- readRDS("expr_pcs.rds")
 
-
+if (FALSE) {
 umap_expr_file <- paste0(processed_data_dir, "temp_15_umap.txt")
 umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
-#print("DONE")
+}
 
 #gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-#umap_expr = umap(expr_pcs)$layout
-#saveRDS(umap_expr, "umap_expr_loadings.rds")
+umap_expr = umap(expr_pcs)$layout
+saveRDS(umap_expr, "umap_expr_loadings.rds")
 
 
 loadings <- loadings[, ordering]
@@ -526,6 +525,8 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+if (FALSE) {
+
 surge_num <- 7
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
@@ -546,8 +547,7 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")#
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
+}
 ######################################
 # Visualize UMAP scatter plot colored by cell type
 #######################################
@@ -570,12 +570,11 @@ umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(c
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
-
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
 #######################################
 output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
-pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:3])
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:6])
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
 
 #######################################
@@ -585,7 +584,7 @@ output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
 #hist <- make_factor_distribution_histograms(factors)
 #ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
-
+if (FALSE) {
 loading_num <- 1
 output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
 histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
@@ -598,7 +597,7 @@ loading_vec <- loadings[,loading_num]
 output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
 histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
 ggsave(histy, file=output_file, width=7.2, height=4, units="in")
-
+}
 
 ######################################
 # Make loading boxplot colored by Ancestry

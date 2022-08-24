@@ -210,7 +210,6 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		G, sample_permutation = permute_donor(G, Z)
 		G_fe = np.copy(G)
 		np.savetxt(output_root + 'sample_permutation.txt', (sample_permutation), fmt="%s", delimiter='\t')
-
 	elif permutation_type == 'False':
 		G_fe = np.copy(G)
 	else:
@@ -227,7 +226,6 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	if ratio_variance_standardization == 'True':
 		G = standardize_variance_ratio_between_expression_and_genotype(Y, G)
 		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y, G_fe)
-
 
 
 	#####################################

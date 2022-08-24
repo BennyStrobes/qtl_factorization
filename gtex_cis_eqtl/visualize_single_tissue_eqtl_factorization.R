@@ -1313,8 +1313,8 @@ sample_non_significant_hits <- function(pvalues, fraction_kept=.01,fraction_samp
 }
 
 make_interaction_eqtl_qq_plot <- function(interaction_eqtl_dir, tissue_stem) {
-	surge_qtl_file <- paste0(interaction_eqtl_dir, "surge_interaction_eqtl_factor_1_", tissue_stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_interaction_eqtl_results_merged_pvalue_only.txt")
-	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V1
+	surge_qtl_file <- paste0(interaction_eqtl_dir, tissue_stem, "_surge_results_k_init_10_seed_1_warmup_5_ratio_variance_std_True_perm_False_interaction_eqtl_results_latent_factor_1_merged.txt")
+	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V5
 	sorted_surge_qtl_pvalues <- sample_non_significant_hits(sort(surge_qtl_pvalues))
 
 	sorted_null_qtl_pvalues <- sample_non_significant_hits(sort(runif(length(surge_qtl_pvalues))))
@@ -1339,8 +1339,8 @@ make_interaction_eqtl_qq_plot <- function(interaction_eqtl_dir, tissue_stem) {
 
 
 make_interaction_eqtl_cell_type_comparison_qq_plot <- function(interaction_eqtl_dir, tissue_stem) {
-	surge_qtl_file <- paste0(interaction_eqtl_dir, "surge_interaction_eqtl_factor_1_", tissue_stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_interaction_eqtl_results_merged_pvalue_only.txt")
-	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V1
+	surge_qtl_file <- paste0(interaction_eqtl_dir, tissue_stem, "_surge_results_k_init_10_seed_1_warmup_5_ratio_variance_std_True_perm_False_interaction_eqtl_results_latent_factor_1_merged.txt")
+	surge_qtl_pvalues <- read.table(surge_qtl_file, header=FALSE)$V5
 	sorted_surge_qtl_pvalues <- sample_non_significant_hits(sort(surge_qtl_pvalues))
 
 	cell_types <- c("Adipocytes", "Epithelial_cells", "Hepatocytes", "Keratinocytes", "Myocytes", "Neurons", "Neutrophils")
@@ -1354,14 +1354,17 @@ make_interaction_eqtl_cell_type_comparison_qq_plot <- function(interaction_eqtl_
 		cell_type_qtl_pvalues <- read.table(cell_type_qtl_file, header=FALSE)$V1
 		sorted_cell_type_qtl_pvalues <- sort(cell_type_qtl_pvalues)
 
+
+
 		surge_pvalue_vec <- c(surge_pvalue_vec, sorted_surge_qtl_pvalues)
-		cell_type_pvalue_vec <- c(cell_type_pvalue_vec, sample_non_significant_hits(sorted_cell_type_qtl_pvalues))
+		temper = sample_non_significant_hits(sorted_cell_type_qtl_pvalues)
+		cell_type_pvalue_vec <- c(cell_type_pvalue_vec, temper)
 		cell_type_vec <- c(cell_type_vec, rep(cell_type, length(sorted_surge_qtl_pvalues)))
 	}
-	df <- data.frame(surge_pvalue=-log10(surge_pvalue_vec+1e-40), cell_type_pvalue=-log10(cell_type_pvalue_vec+1e-40), cell_type=factor(cell_type_vec, levels=cell_types))
+	df <- data.frame(surge_pvalue=-log10(surge_pvalue_vec+1e-100), cell_type_pvalue=-log10(cell_type_pvalue_vec+1e-100), cell_type=factor(cell_type_vec, levels=cell_types))
 
     # PLOT!
-    max_val <-max(max(-log10(surge_pvalue_vec + 1e-40)), max(-log10(cell_type_pvalue_vec + 1e-40)))
+    max_val <-max(max(-log10(surge_pvalue_vec + 1e-100)), max(-log10(cell_type_pvalue_vec + 1e-100)))
     #PLOT!
     scatter <- ggplot(df, aes(x = cell_type_pvalue, y = surge_pvalue, colour = cell_type)) + geom_point()
     scatter <- scatter + theme(text = element_text(size=14), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"))
@@ -1387,17 +1390,7 @@ interaction_eqtl_dir <- args[5]
 # Read in tissue colors and names
 tissue_colors = read.table(tissue_colors_file, header = T, stringsAsFactors = F, sep = "\t")
 
-
-# slight mislabeling
-for (tiss_num in 1:length(tissue_colors$tissue_id)) {
-	if (tissue_colors$tissue_id[tiss_num] == "Brain_Spinal_cord_cervical_c-1") {
-		tissue_colors$tissue_id[tiss_num] = "Brain_Spinal_cord_cervical_c.1"
-	}
-	if (tissue_colors$tissue_id[tiss_num] == "Cells_EBV-transformed_lymphocytes") {
-		tissue_colors$tissue_id[tiss_num] = "Cells_EBV.transformed_lymphocytes"
-	}
-}
-
+tissue_colors$tissue_id = tissue_colors$tissue_site_detail_id
 
 
 ############################
@@ -1405,10 +1398,10 @@ for (tiss_num in 1:length(tissue_colors$tissue_id)) {
 ############################
 options(warn=1)
 stem <- "tissues_subset_colon_transverse"
-tissue_10_file <- paste0(processed_data_dir, stem, "_sample_names.txt")
-tissue_10_sample_covariate_file <- paste0(processed_data_dir, stem, "_sample_covariates.txt")
-tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, stem, "_sample_surveyed_covariates.txt")
-tissue_10_technical_covariate_file <- paste0(processed_data_dir, stem, "_sample_technical_covariates.txt")
+tissue_10_file <- paste0(processed_data_dir, stem, "_outliers_removed_sample_names.txt")
+tissue_10_sample_covariate_file <- paste0(processed_data_dir, stem, "_outliers_removed_sample_covariates.txt")
+tissue_10_surveyed_covariate_file <- paste0(processed_data_dir, stem, "_outliers_removed_sample_surveyed_covariates.txt")
+tissue_10_technical_covariate_file <- paste0(processed_data_dir, stem, "_outliers_removed_sample_technical_covariates.txt")
 tissue_10_expression_pcs_file <- paste0(processed_data_dir, stem, "_covariates.txt")
 #tissue_10_residual_expression_pcs_file <- paste0(processed_data_dir, "tissues_subset_10_v2_residual_expression_covariates_120_pc.txt")
 
@@ -1419,7 +1412,7 @@ tissue_10_indi_names <- get_indi_names(tissue_10_file)
 ############################
 # Model Specification
 ############################
-tissue_10_model_stem <- paste0(stem, "_eqtl_factorization_vi_ard_full_component_update_results_k_init_10_seed_2_warmup_0_ratio_variance_std_True_permute_False_2000_tests_temper_")
+tissue_10_model_stem <- paste0(stem, "_surge_results_k_init_10_seed_1_warmup_5_ratio_variance_std_True_permute_False_2000_tests_var_param_1e-3_")
 tissue_10_loading_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "U_S.txt")
 tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
@@ -1444,6 +1437,7 @@ pcs <- read.table(tissue_10_expression_pcs_file, header=TRUE)
 pcs <- pcs[,2:(dim(pcs)[2])]
 
 
+covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
 
 #######################################
 # Make interaction eqtl QQ plot
@@ -1466,13 +1460,70 @@ output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl
 pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
 
+##################
+# Stacked barplot of precicted cell type proportions along latent factor
+loading_number <- 1
+num_bins <- 10
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
+boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+
+
+##################
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_by_cell_type_enrichment_pvalues.pdf")
+cell_type_pvalues_plot <- make_cell_type_enrichment_pvalue_plot(loadings[,1], covariates, 1)
+ggsave(cell_type_pvalues_plot, file=output_file, width=7.2, height=5.5, units="in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##################
+# OLD
+##################
+
+
+
+
+
+if (FALSE) {
 
 #####################
 # Make heatmap correlation eqtl factorization loadings with expression pcs
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "expression_pc_eqtl_factorization_loading_correlation_heatmap.pdf")
-heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "eQTL Factorization Loadings", "Expression PC Loadings")
-ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
-
+#heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "eQTL Factorization Loadings", "Expression PC Loadings")
+#ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 
 
 ######################
@@ -1509,7 +1560,6 @@ merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race
 ggsave(merged, file=output_file, width=13.2, height=5.5, units="in")
 
 ##################
-covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_by_genotype_pc1_colored_by_race.pdf")
 boxplots <- loading_by_genotype_pc1_colored_by_race(loadings[,1],factor(covariates$race), pcs$genotype_PC0)
 ggsave(boxplots, file=output_file, width=7.2, height=5.5, units="in")
@@ -1521,12 +1571,9 @@ epi_scatter <- make_loading_by_cell_type_scatter(loadings[,1], covariates$Epithe
 ggsave(epi_scatter, file=output_file, width=7.2, height=5.5, units="in")
 
 
-##################
-output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_1_by_cell_type_enrichment_pvalues.pdf")
-cell_type_pvalues_plot <- make_cell_type_enrichment_pvalue_plot(loadings[,1], covariates, 1)
-ggsave(cell_type_pvalues_plot, file=output_file, width=7.2, height=5.5, units="in")
 
 
+}
 
 ##################
 # Stacked barplot of precicted cell type proportions along latent factor
@@ -1535,6 +1582,16 @@ num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
 boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
 ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+
+if (FALSE) {
+
+loading_number <- 2
+num_bins <- 10
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
+boxplots <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(boxplots, file=output_file, width=7.2, height=4.0, units="in")
+
+
 
 loading_number <- 2
 num_bins <- 10
@@ -1677,7 +1734,7 @@ ggsave(scatters, file=output_file, width=7.2, height=10.5, units="in")
 
 
 
-
+}
 
 
 

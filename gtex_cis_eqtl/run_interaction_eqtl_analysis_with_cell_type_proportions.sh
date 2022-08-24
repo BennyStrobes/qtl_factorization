@@ -53,14 +53,11 @@ done
 fi
 
 
-# TO DO
-if false; then
+# Merge results
 for cell_type in "${cell_types[@]}"; do
 	echo $cell_type
 	qtl_output_root=$output_stem$cell_type"_interaction_eqtl_results_"
 	python merge_parallelized_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 done
-fi
-
 
 

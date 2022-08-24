@@ -63,6 +63,7 @@ done
 fi
 
 
+if false; then
 # merge parallel runs
 python2 merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_eqtl_results_" $num_jobs $qtl_model_version
 
@@ -75,8 +76,7 @@ python2 merge_parallelized_eqtl_calls.py $output_dir"cross_tissue_eqtl_results_"
 #############################################
 num_genes="2000"
 python2 preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes $qtl_model_version
-
-
+fi
 
 
 
