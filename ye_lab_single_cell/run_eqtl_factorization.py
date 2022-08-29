@@ -5,6 +5,9 @@ import pdb
 import surge.surge_inference
 
 
+import surge_inference
+
+
 
 # Load in sample overlap data
 def load_in_sample_overlap_data(sample_overlap_file):
@@ -233,7 +236,9 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	#####################################
 	if model_name == 'surge':
 		re_boolean = True
-		eqtl_vi = surge.surge_inference.SURGE_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=3000, gamma_v=lambda_v, warmup_iterations=warmup_iterations, re_boolean=re_boolean, delta_elbo_threshold=delta_elbo_threshold, verbose=True, output_root=output_root)
+		# also note need to change import functions!!!!!!!!
+		#eqtl_vi = surge.surge_inference.SURGE_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=3000, gamma_v=lambda_v, warmup_iterations=warmup_iterations, re_boolean=re_boolean, delta_elbo_threshold=delta_elbo_threshold, parallel_boolean=True, verbose=True, output_root=output_root)
+		eqtl_vi = surge_inference.SURGE_VI(K=num_latent_factors, alpha=variance_param, beta=variance_param, ard_alpha=ard_variance_param, ard_beta=ard_variance_param, max_iter=6000, gamma_v=lambda_v, warmup_iterations=warmup_iterations, re_boolean=re_boolean, delta_elbo_threshold=delta_elbo_threshold, verbose=True, output_root=output_root)
 		eqtl_vi.fit(G=G, G_fe=G_fe, Y=Y, z=Z, cov=cov)
 		
 		# Save to output file

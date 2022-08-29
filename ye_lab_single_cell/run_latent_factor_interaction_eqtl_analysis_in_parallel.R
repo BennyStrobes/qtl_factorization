@@ -17,57 +17,29 @@ run_eqtl_lmm <- function(expr, geno, covariates, groups) {
 	return(list(eqtl_pvalue=pvalue, eqtl_beta=beta, eqtl_std_err=std_err))
 }
 
-run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs) {
-	fit_full <- lm(expr ~ geno + covariates + lfs:geno)
-	fit_null <- lm(expr ~ geno + covariates)
-	obj <- lrtest(fit_null, fit_full)
-	#lrt2 <- anova(fit_null, fit_full)
-	aggregate_pvalue <- obj[[5]][2]
+run_lf_interaction_eqtl_lm <- function(expr, geno, covariates, lfs, num_lf) {
+	fit_full <- lm(expr ~ geno + covariates + lfs + lfs:geno)
+
 	num_cov = dim(covariates)[2]
-	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
-	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
-	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
-}
 
-run_lf_interaction_eqtl_lm_perm <- function(expr, geno, covariates, lfs, groups, individual_groups) {
-	individual_genotype <- geno[individual_groups]
-	if (all.equal(geno, individual_genotype[groups]) == FALSE) {
-		print("EROROROR")
-	}
-	perm_geno <- (sample(individual_genotype))[groups]
+	summary_df <- data.frame(coef(summary(fit_full)))
 
-	fit_full <- lm(expr ~ geno + covariates + lfs:perm_geno)
-	fit_null <- lm(expr ~ geno + covariates)
-	obj <- lrtest(fit_null, fit_full)
-	#lrt2 <- anova(fit_null, fit_full)
-	aggregate_pvalue <- obj[[5]][2]
-	num_cov = dim(covariates)[2]
-	coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
-	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
-	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=lf_interaction_coefficient_pvalues))
-}
+	#print(summary_df)
 
-run_lf_interaction_eqtl_lmm_perm <- function(expr, geno, covariates, lfs, groups, individual_groups) {
-	individual_genotype <- geno[individual_groups]
-	if (all.equal(geno, individual_genotype[groups]) == FALSE) {
-		print("EROROROR")
-	}
-	perm_geno <- (sample(individual_genotype))[groups]
-	#fit_full <- lmer(expr ~ geno + covariates + lfs:geno + (1 | groups) + (0+lfs|groups), REML=FALSE)
-	#fit_null <- lmer(expr ~ geno + covariates + (1 | groups) + (0+lfs|groups), REML=FALSE)
+	coefficient_betas = summary_df[,1]
+	coefficient_std_err = summary_df[,2]
+	coefficient_pvalues = summary_df[,4]
 
-	fit_full <- lmer(expr ~ geno + covariates + lfs:perm_geno + (1 | groups), REML=FALSE)
-	fit_null <- lmer(expr ~ geno + covariates + (1 | groups), REML=FALSE)
+	lf_interaction_coefficient = coefficient_betas[(3+num_cov+num_lf):length(coefficient_betas)]
+	lf_interaction_std_err = coefficient_std_err[(3+num_cov+num_lf):length(coefficient_std_err)]
+	lf_interaction_pvalue = coefficient_pvalues[(3+num_cov+num_lf):length(coefficient_pvalues)]
 
-	lrt <- anova(fit_null,fit_full)
+	marginal_beta = coefficient_betas[2]
+	marginal_std_err = coefficient_std_err[2]
+	marginal_pvalue = coefficient_pvalues[2]
 
-	aggregate_pvalue <- lrt[[8]][2]
-	#obj <- lrtest(fit_null, fit_full)
-	#aggregate_pvalue <- obj[[5]][2]
-	#num_cov = dim(covariates)[2]
-	#coefficient_pvalues = data.frame(coef(summary(fit_full)))[,4]
-	#lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov):length(coefficient_pvalues)]
-	return(list(eqtl_pvalue=aggregate_pvalue, coefficient_pvalues=c(1.0, 1.0)))
+	return(list(pvalue=lf_interaction_pvalue, beta=lf_interaction_coefficient, std_err=lf_interaction_std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue))
+
 }
 
 run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups, num_lf) {
@@ -84,13 +56,34 @@ run_lf_interaction_eqtl_lmm <- function(expr, geno, covariates, lfs, groups, num
 	coefficient_pvalues <- 2 * (1 - pnorm(abs(coefs$t.value)))
 
 	num_cov = dim(covariates)[2]
+
 	lf_interaction_coefficient_pvalues = coefficient_pvalues[(3+num_cov + num_lf):length(coefficient_pvalues)]
 	betas <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),1]
 	std_err <- coefs[(3+num_cov + num_lf):length(coefficient_pvalues),2]
 
-	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err))
+	marginal_beta = coefs[2, 1]
+	marginal_std_err = coefs[2,2]
+	marginal_pvalue = coefficient_pvalues[2]
+
+
+	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue))
 }
 
+
+pass_maf_filter <- function(geno, thresh) {
+	booly = TRUE
+	num_samples = length(geno)
+	af = sum(geno)/(2.0*num_samples)
+	if (af > .5) {
+		maf = 1.0 - af
+	} else {
+		maf = af
+	}
+	if (maf < thresh) {
+		booly = FALSE
+	}
+	return(booly)
+}
 
 pass_genotype_filter <- function(geno, thresh) {
 	rounded_geno <- round(geno)
@@ -127,18 +120,25 @@ covariate_file = args[4]
 interaction_factor_file = args[5]
 sample_overlap_file = args[6]
 output_root = args[7]
+job_number = as.numeric(args[8])
+num_jobs = as.numeric(args[9])
+total_lines = as.numeric(args[10]) - 1
+
+print(total_lines)
 
 
 
-
+# Determine number of lines each parrallelized job will complete
+lines_per_job = ceiling(total_lines/num_jobs)
+print(lines_per_job)
+start_num = job_number*lines_per_job
+end_num = (job_number + 1)*lines_per_job
 
 
 covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
-groups <- read.table(sample_overlap_file, header=FALSE)$V1 +1
+groups <- read.table(sample_overlap_file, header=FALSE)$V1
 
-
-print("Data loaded in.. starting")
 
 num_lfs <- dim(lfs)[2]
 print(num_lfs)
@@ -156,52 +156,41 @@ f_geno = file(genotype_file, "r")
 
 
 line_test = readLines(f_test, n=1)
+line_test = readLines(f_test, n=1)
 line_expr = readLines(f_expr, n=1)
 line_geno = readLines(f_geno, n=1)
 
 while(!stop) {
+	if (count >= start_num & count < end_num) {
 	# Unpack data
-	expr = as.numeric(strsplit(line_expr,'\t')[[1]])
-	geno = as.numeric(strsplit(line_geno,'\t')[[1]])
+		expr = as.numeric(strsplit(line_expr,'\t')[[1]])
+		geno = as.numeric(strsplit(line_geno,'\t')[[1]])
+		norm_geno = (geno - mean(geno))/(sd(geno))
 
-	# Run eqtl analysis
-	line_info <- strsplit(line_test,'\t')[[1]]
-	ensamble_id = line_info[1]
-	rs_id = line_info[2]
+		# Run eqtl analysis
+		line_info <- strsplit(line_test,'\t')[[1]]
+		ensamble_id = line_info[1]
+		rs_id = line_info[2]
 
-	new_line <- paste0(rs_id, "\t", ensamble_id)
-
-	if (FALSE) {
-	for (lf_num in 1:num_lfs) {
-	tryCatch(
-	{
-		lmm_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs[,lf_num], groups, 1)
-
-		new_line <- paste0(new_line,"\t",lmm_results$beta, "\t", lmm_results$std_err, "\t", paste0(lmm_results$pvalue, collapse=","))
-        		     },
-     error = function(e) {
-        new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, 1), collapse=","))
-       }
-      )
+		new_line <- paste0(rs_id, "\t", ensamble_id)
+		tryCatch(
+			{
+				lm_results = run_lf_interaction_eqtl_lmm(expr, norm_geno, covariates, lfs, groups, num_lfs)
+				new_line <- paste0(new_line, "\t", lm_results$marginal_beta, "\t", lm_results$marginal_std_err, "\t", lm_results$marginal_pvalue)
+				for (lf_num in 1:num_lfs) {
+					new_line <- paste0(new_line,"\t",lm_results$beta[lf_num], "\t", lm_results$std_err[lf_num], "\t", lm_results$pvalue[lf_num])
+				}
+				cat(paste0(new_line, "\n"))
+        	},
+        	error = function(e) {
+        		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
+				for (lf_num in 1:num_lfs) {
+					new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
+				}
+				cat(paste0(new_line, "\n"))
+        	}
+        )
 	}
-	}
-
-	tryCatch(
-	{
-	lmm_full_results = run_lf_interaction_eqtl_lmm(expr, geno, covariates, lfs, groups, num_lfs)
-	for (lf_num in 1:num_lfs) {
-		new_line <- paste0(new_line,"\t",lmm_full_results$beta[lf_num], "\t", lmm_full_results$std_err[lf_num], "\t", lmm_full_results$pvalue[lf_num])
-	}
-	},
-	error = function(e) {
-	for (lf_num in 1:num_lfs) {
-		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", paste0(rep(1.0, 1), collapse=","))
-	}
-	}
-	)
-
-
-	cat(paste0(new_line, "\n"))
 	# Get info for next line
 	count = count + 1
 	line_test = readLines(f_test, n=1)

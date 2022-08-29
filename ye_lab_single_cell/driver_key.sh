@@ -185,29 +185,18 @@ variance_param="1e-3"
 ard_variance_param="1e-3"
 seed="1"
 
-
 if false; then
 
 permutation_type="False"
 model_name="surge"
-ratio_variance_standardization="True"
+ratio_variance_standardization="False"
 round_genotype="False"
 warmup_iterations="5"
 num_latent_factors="10"
 data_filter="filter_RP"
-delta_elbo_thresh="1e-2"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
-sh run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
+delta_elbo_thresh="1e-3"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
 
-permutation_type="False"
-model_name="surge"
-ratio_variance_standardization="True"
-round_genotype="False"
-warmup_iterations="5"
-num_latent_factors="10"
-data_filter="filter_RP"
-delta_elbo_thresh="1e-1"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
 
 
@@ -218,22 +207,34 @@ round_genotype="False"
 warmup_iterations="5"
 num_latent_factors="10"
 data_filter="filter_RP"
-delta_elbo_thresh="5e-1"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
+delta_elbo_thresh="1e-1"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
-
-
-permutation_type="interaction_only"
+fi
+if false; then
+permutation_type="False"
 model_name="surge"
 ratio_variance_standardization="True"
 round_genotype="False"
 warmup_iterations="5"
 num_latent_factors="10"
 data_filter="filter_RP"
-delta_elbo_thresh="1e-2"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
+delta_elbo_thresh="5e-1"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
+fi
+if false; then
 
+permutation_type="interaction_only"
+model_name="surge"
+ratio_variance_standardization="False"
+round_genotype="False"
+warmup_iterations="5"
+num_latent_factors="10"
+data_filter="filter_RP"
+delta_elbo_thresh="1e-3"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
+sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
 
 permutation_type="interaction_only"
 model_name="surge"
@@ -243,9 +244,10 @@ warmup_iterations="5"
 num_latent_factors="10"
 data_filter="filter_RP"
 delta_elbo_thresh="1e-1"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
-
+fi
+if false; then
 
 permutation_type="interaction_only"
 model_name="surge"
@@ -255,7 +257,7 @@ warmup_iterations="5"
 num_latent_factors="10"
 data_filter="filter_RP"
 delta_elbo_thresh="5e-1"
-output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_"
+output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_alt_init_"
 sbatch run_eqtl_factorization.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh
 fi
 
@@ -271,11 +273,11 @@ fi
 # Compute interaction eqtls with surge latent factors
 ############################################
 # Output root
+output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v2_"
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
 if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $eqtl_factorization_results_dir $output_stem
 fi
-
 
 ############################################
 # Correlation of eQTLs across components
@@ -345,11 +347,12 @@ fi
 #############################################
 ## Visualize eqtl factorization
 #############################################
+if false; then
 module load r/3.6.3
 model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-1_temp_"
 output_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-1_temp_"
 Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir $static_eqtl_sldsc_results_dir
-
+fi
 
 
 

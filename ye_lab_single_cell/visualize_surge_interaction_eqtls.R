@@ -5,7 +5,6 @@ library(cowplot)
 library(umap)
 library(ggplot2)
 library(RColorBrewer)
-library(sigmoid)
 library(lme4)
 options(bitmapType = 'cairo', device = 'pdf')
 
@@ -28,7 +27,9 @@ extract_alphabetical_ordered_gene_level_pvalues_across_factors <- function(stem,
 
 		temp_data <- read.table(file_name, header=TRUE)
 
-		pvalues[[factor_num]] <- -log10(temp_data$pvalue*temp_data$num_snps_in_gene + 1e-300)
+		aaa = -log10(temp_data$pvalue*temp_data$num_snps_in_gene + 1e-300)
+
+		pvalues[[factor_num]] <- aaa
 
 	}
 
@@ -69,16 +70,16 @@ make_real_perm_correlation_matrix_at_gene_level <- function(real_list, perm_list
 }
 
 
-efdr_calculation <- function(real_pvalues, perm_pvalues) {
-	sorted_real = sort(real_pvalues)
-	M1 = length(real_pvalues)
-	M2 = length(perm_pvalues)
+efdr_calculation <- function(real_log10_pvalues, perm_log10_pvalues) {
+	sorted_real = sort(real_log10_pvalues)
+	M1 = length(real_log10_pvalues)
+	M2 = length(perm_log10_pvalues)
 	eFDRs <- c()
 	prev_min = 10000
 	for (index in 1:length(sorted_real)) {
 		real_value = sorted_real[index]
 		frac_real = sum(sorted_real >= real_value)/M1
-		frac_perm = sum(perm_pvalues >= real_value)/M2
+		frac_perm = sum(perm_log10_pvalues >= real_value)/M2
 
 		curr_efdr = frac_perm/frac_real
 		if (curr_efdr > prev_min) {
@@ -182,14 +183,73 @@ gene_qq_plot_colored_by_factors <- function(gene_level_pvalues, num_factors, pva
 }
 
 
+
+get_num_latent_factors <- function(real_pvalue_file, perm_pvalue_file) {
+	real_df <- read.table(real_pvalue_file, header=FALSE, sep="\t", nrows=30)
+	perm_df <- read.table(perm_pvalue_file, header=FALSE, sep="\t", nrows=30)
+
+	n_col_real <- dim(real_df)[2]
+	n_col_perm <- dim(perm_df)[2]
+
+	if (n_col_real != n_col_perm) {
+		print("FATAL ASSUMPTION ERRROR IN EXTRACTING NUM COLUMNS")
+	}
+
+	num_lf <- n_col_real - 3
+
+	return(num_lf)
+}
+
 output_stem <- args[1]
 
-num_factors = 10
 
-real_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "interaction_eqtl_results_v2_latent_factor_"), num_factors)
-perm_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "perm_fi_interaction_eqtl_results_latent_factor_"), num_factors)
+num_factors <- get_num_latent_factors(paste0(output_stem, "False_interaction_eqtl_results_pvalues_merged.txt"), paste0(output_stem, "interaction_only_interaction_eqtl_results_pvalues_merged.txt"))
+
+print(paste0("extracted ", num_factors, " latent factor"))
+
+real_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "False_interaction_eqtl_results_latent_factor_"), num_factors)
+perm_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "interaction_only_interaction_eqtl_results_latent_factor_"), num_factors)
 
 
+
+
+gene_qq_plots <- list()
+union_perm_gene_level_pvalues <- c()
+for (latent_factor in 1:num_factors) {
+	union_perm_gene_level_pvalues <- c(union_perm_gene_level_pvalues, perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
+}
+
+for (latent_factor in 1:num_factors) {
+	#efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)
+	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
+	num_egenes_05 <- sum(efdrs < .05)
+	num_egenes_1 <- sum(efdrs < .1)
+	num_egenes_2 <- sum(efdrs < .2)
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_05, " genes at efdr < .05"))
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_1, " genes at efdr < .1"))
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_2, " genes at efdr < .2"))
+}
+
+
+
+
+file_name <- paste0(output_stem, "interaction_only_interaction_eqtl_results_latent_factor_", "1", "_alphabetical_ordered_gene_level_stats.txt")
+temp_data = read.table(file_name, header=TRUE)
+pvals=temp_data$pvalue*temp_data$num_snps_in_gene
+
+print(sort(pvals)[1:100])
+
+
+
+
+file_name <- paste0(output_stem, "False_interaction_eqtl_results_latent_factor_", "2", "_alphabetical_ordered_gene_level_stats.txt")
+temp_data = read.table(file_name, header=TRUE)
+pvals=temp_data$pvalue*temp_data$num_snps_in_gene
+
+print(sort(pvals)[1:100])
+
+
+if (FALSE) {
 
 output_file <- paste0(output_stem, "real_and_perm_vs_null_gene_qq_plot.pdf")
 real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
@@ -207,20 +267,19 @@ ggsave(perm_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in"
 
 
 output_file <- paste0(output_stem, "real_perm_gene_level_correlation_heatmap.pdf")
-real_perm_corr_heatmap <- make_real_perm_correlation_matrix_at_gene_level(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
-ggsave(real_perm_corr_heatmap, file=output_file, width=7.2, height=6, units="in")
+#real_perm_corr_heatmap <- make_real_perm_correlation_matrix_at_gene_level(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
+#ggsave(real_perm_corr_heatmap, file=output_file, width=7.2, height=6, units="in")
 
 gene_qq_plots <- list()
-for (latent_factor in 1:10) {
+for (latent_factor in 1:num_factors) {
 	output_file <- paste0(output_stem, "gene_qq_plot_real_vs_perm_", latent_factor, ".pdf")
 	gene_qq_plots[[latent_factor]] <- make_real_vs_perm_gene_qq_plot(real_gene_level_pvalues_alphabetical_list[[latent_factor]], perm_gene_level_pvalues_alphabetical_list[[latent_factor]], latent_factor)
 	ggsave(gene_qq_plots[[latent_factor]], file=output_file, width=7.2, height=6, units="in")
 }
-
 output_file <- paste0(output_stem, "gene_qq_plot_real_vs_perm_all_factors.pdf")
 merged_qq = plot_grid(plotlist=gene_qq_plots, ncol=3)
 ggsave(merged_qq, file=output_file, width=7.2, height=9.3, units="in")
 
 
 
-
+}

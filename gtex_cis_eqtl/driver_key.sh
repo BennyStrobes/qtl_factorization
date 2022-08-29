@@ -346,7 +346,8 @@ fi
 ########################################
 # Visualize results of single tissue analysis
 ########################################
+if false; then
 module load r/3.6.3
 Rscript visualize_single_tissue_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file $interaction_eqtl_dir
-
+fi
 
