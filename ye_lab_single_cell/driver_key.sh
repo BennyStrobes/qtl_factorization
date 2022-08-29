@@ -273,11 +273,11 @@ fi
 # Compute interaction eqtls with surge latent factors
 ############################################
 # Output root
-output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v2_"
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
-if false; then
+output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v2_"
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $eqtl_factorization_results_dir $output_stem
-fi
+
+
 
 ############################################
 # Correlation of eQTLs across components

@@ -220,8 +220,8 @@ for (latent_factor in 1:num_factors) {
 }
 
 for (latent_factor in 1:num_factors) {
-	#efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)
-	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
+	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)
+	#efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
 	num_egenes_05 <- sum(efdrs < .05)
 	num_egenes_1 <- sum(efdrs < .1)
 	num_egenes_2 <- sum(efdrs < .2)
