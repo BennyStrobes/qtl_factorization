@@ -409,11 +409,11 @@ static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_
 # Model Specification
 ############################
 #model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_2_var_param_1e-3_ratio_variance_std_True_permute_False_temper_")
-eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
+eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S_cp.txt")
 
 
 eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
-pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
+pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve_cp.txt")
 
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
@@ -469,9 +469,10 @@ umap_expr <- read.table(umap_expr_file, header=FALSE, sep="\t")
 
 #gene_expr_pc_file <- "/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/eqtl_factorization_results/eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_factorization_vi_ard_results_k_init_30_seed_1_warmup_3000_ratio_variance_std_True_permute_False_lambda_1_round_geno_True_temper_U_S.txt"
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+if (FALSE) {
 umap_expr = umap(expr_pcs)$layout
 saveRDS(umap_expr, "umap_expr_loadings.rds")
-
+}
 
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
@@ -495,6 +496,7 @@ covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop
 #######################################
 # Expression UMAP scatter colored by surge factor loadings
 #######################################
+if (FALSE) {
 surge_num <- 1
 surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
@@ -525,6 +527,7 @@ surge_vec <- loadings[,surge_num]
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+}
 if (FALSE) {
 
 surge_num <- 7
@@ -551,6 +554,7 @@ ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 ######################################
 # Visualize UMAP scatter plot colored by cell type
 #######################################
+if (FALSE) {
 output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type.pdf")
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$cg_cov_mode, umap_expr, "cell type")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
@@ -569,7 +573,7 @@ output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_b
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ind_cov, umap_expr, "cell type")
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-
+}
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
 #######################################

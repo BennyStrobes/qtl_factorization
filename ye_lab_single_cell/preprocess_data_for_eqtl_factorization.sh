@@ -18,8 +18,13 @@ eqtl_factorization_input_dir="$2"
 num_genes="2000"
 
 echo "STARTING"
+if false; then
 python preprocess_data_for_eqtl_factorization_based_on_standard_eqtls.py $num_genes $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
+fi
 
+if false; then
+python preprocess_data_for_eqtl_factorization_based_on_standard_eqtls_hwe_filter.py $num_genes $latent_factor_interaction_eqtl_dir $eqtl_factorization_input_dir
+fi
 
 
 if false; then

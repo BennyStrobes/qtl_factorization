@@ -4,7 +4,7 @@ import sys
 import pdb
 import surge.surge_inference
 
-import gzip
+
 import surge_inference
 
 
@@ -116,56 +116,6 @@ def filter_RP_genes(test_names_df):
 		valid_gene_indices.append(gene_num)
 	return np.asarray(valid_gene_indices)
 
-def get_valid_variants_from_genotype_file(genotype_file):
-	f = gzip.open(genotype_file)
-	valid_variants = {}
-	for line in f:
-		line = line.decode('utf-8').rstrip()
-		if line.startswith('##'):
-			continue
-		if line.startswith('#CHROM'):
-			continue
-		data = line.split()
-		valid_variants[data[2]] = 1
-	f.close()
-	print(len(valid_variants))
-
-	return valid_variants
-
-def filter_hwe_genes(test_names_df):
-	genotype_file = '/scratch16/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/processed_genotype/clues_immvar_donor_site_hwe_filter_merged.vcf.gz'
-	valid_variants = get_valid_variants_from_genotype_file(genotype_file)
-	num_genes = test_names_df.shape[0]
-	valid_gene_indices = []
-	for gene_num in range(num_genes):
-		if test_names_df[gene_num,1] not in valid_variants:
-			continue
-		valid_gene_indices.append(gene_num)
-	return np.asarray(valid_gene_indices)
-
-def get_maf(g_vec):
-	af = np.sum(g_vec)/(2.0*len(g_vec))
-	if af > .5:
-		maf = 1.0 - af
-	else:
-		maf = af
-	return maf
-
-def filter_very_common_snps(test_names_df, G):
-	genotype_file = '/scratch16/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/processed_genotype/clues_immvar_donor_site_hwe_filter_merged.vcf.gz'
-	valid_variants = get_valid_variants_from_genotype_file(genotype_file)
-	num_genes = test_names_df.shape[0]
-	valid_gene_indices = []
-	for gene_num in range(num_genes):
-		if test_names_df[gene_num,1] not in valid_variants:
-			continue
-		test_maf = get_maf(G[:, gene_num])
-		if test_maf > .45:
-			continue
-		valid_gene_indices.append(gene_num)
-	return np.asarray(valid_gene_indices)
-
-
 def gene_correlated_with_used_expression_vectors(gene_vec, used_gene_vecs):
 	gene_correlated = False
 	for used_gene_vec in used_gene_vecs:
@@ -209,7 +159,7 @@ def filter_RP_and_ind_genes_genos(test_names_df, Y, G):
 	return valid_gene_indices
 
 
-def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file, delta_elbo_threshold):
+def train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file, delta_elbo_threshold, held_out_chromosome):
 	# Load in expression data (dimension: num_samplesXnum_tests)
 	Y = np.transpose(np.load(expression_training_file))
 	# Load in Genotype data (dimension: num_samplesXnum_tests)
@@ -221,6 +171,13 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	cov = np.loadtxt(covariate_file)
 	# Load in test names
 	test_names_df = np.loadtxt(test_names_file, delimiter='\t',dtype=str)[1:,:]
+
+	training_tests = test_names_df[:,2] != held_out_chromosome
+
+	test_names_df = np.copy(test_names_df)[training_tests,:]
+
+	Y = Y[:, training_tests]
+	G = G[:, training_tests]
 
 	if round_genotype == "True":
 		G = np.round(G)
@@ -249,22 +206,8 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 		G = G[:, columns_filtered]
 		Y = Y[:, columns_filtered]
 		test_names_df = test_names_df[columns_filtered,:]
-		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')
-	elif data_filter == 'filter_hwe':
-		columns_filtered = filter_hwe_genes(test_names_df)
-		G = G[:, columns_filtered]
-		Y = Y[:, columns_filtered]
-		print(G.shape)
-		print(Y.shape)
-		test_names_df = test_names_df[columns_filtered,:]
-		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')
-	elif data_filter == 'filter_very_common':
-		columns_filtered = filter_very_common_snps(test_names_df, G)
-		G = G[:, columns_filtered]
-		Y = Y[:, columns_filtered]
-		print(G.shape)
-		print(Y.shape)
-		test_names_df = test_names_df[columns_filtered,:]		
+		np.savetxt(output_root + 'columns_filtered.txt', (columns_filtered), fmt="%s", delimiter='\t')		
+
 
 
 
@@ -293,7 +236,6 @@ def train_eqtl_factorization_model(sample_overlap_file, expression_training_file
 	if ratio_variance_standardization == 'True':
 		G = standardize_variance_ratio_between_expression_and_genotype(Y, G)
 		G_fe = standardize_variance_ratio_between_expression_and_genotype(Y, G_fe)
-
 
 	#####################################
 	# Run SURGE model
@@ -343,11 +285,12 @@ round_genotype = sys.argv[15]
 data_filter = sys.argv[16]
 test_names_file = sys.argv[17]
 delta_elbo_threshold = float(sys.argv[18])
+held_out_chromosome = (sys.argv[19])
 
 
 np.random.seed(seed)
 
 
-train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file, delta_elbo_threshold)
+train_eqtl_factorization_model(sample_overlap_file, expression_training_file, genotype_training_file, covariate_file, num_latent_factors, output_root, model_name, lambda_v, variance_param, ard_variance_param, ratio_variance_standardization, permutation_type, warmup_iterations, round_genotype, data_filter, test_names_file, delta_elbo_threshold, held_out_chromosome)
 
 

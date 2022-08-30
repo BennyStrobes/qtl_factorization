@@ -12,6 +12,7 @@ visualize_processed_genotype_dir="$4"
 
 source ~/.bash_profile
 
+if false; then
 #########################
 # Merge genotype vcfs from two different studies into 1
 ########################
@@ -24,22 +25,34 @@ bcftools merge $genotype_data_dir"all_clues.processed.vcf.gz" $genotype_data_dir
 ########################
 sc_rna_seq_individual_file=$processed_genotype_dir"sc_rna_seq_individual_list.txt"
 python generate_list_of_individuals_with_rna_seq.py $cell_covariates_file $sc_rna_seq_individual_file
-
+fi
 
 #########################
 # Filter vcf file to individuals we have sc-rna-seq for
 ########################
 donor_filtered_merged_vcf=$processed_genotype_dir"clues_immvar_donor_filter_merged.vcf.gz"
+if false; then
 vcftools --gzvcf $merged_vcf --keep $sc_rna_seq_individual_file --recode --stdout | gzip -c > $donor_filtered_merged_vcf
+fi
 
 
 #########################
 # Filter vcf file to sites with maf .1 and no missing
 ########################
 donor_site_filtered_merged_vcf=$processed_genotype_dir"clues_immvar_donor_site_filter_merged.vcf.gz"
+if false; then
 vcftools --gzvcf $donor_filtered_merged_vcf --remove-filtered-all --max-missing 1 --maf .1 --recode --stdout | gzip -c > $donor_site_filtered_merged_vcf
+fi
 
 
+donor_site_hwe_filtered_merged_vcf=$processed_genotype_dir"clues_immvar_donor_site_hwe_filter_merged.vcf.gz"
+vcftools --gzvcf $donor_filtered_merged_vcf --remove-filtered-all --max-missing 1 --maf .1 --hwe 0.001 --recode --stdout | gzip -c > $donor_site_hwe_filtered_merged_vcf
+
+
+
+
+
+if false; then
 #########################
 # Output dosage matrix for each chromosome
 ########################
@@ -82,7 +95,7 @@ plink --bfile $donor_site_filtered_merged_plink_stem --extract $donor_site_filte
 # Tidy up genotype PCs (at indiviudal level and cell level)
 genotype_pcs_file=$donor_site_filtered_merged_independent_plink_stem".eigenvec"
 python add_genotype_pcs_to_cell_covariates_file.py $cell_covariates_file $sc_rna_seq_individual_file $genotype_pcs_file $processed_genotype_dir
-
+fi
 
 
 #########################
