@@ -223,9 +223,15 @@ for (latent_factor in 1:num_factors) {
 	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)
 	#efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
 	num_egenes_05 <- sum(efdrs < .05)
+	num_egenes_06 <- sum(efdrs < .06)
+	num_egenes_07 <- sum(efdrs < .07)
+
 	num_egenes_1 <- sum(efdrs < .1)
 	num_egenes_2 <- sum(efdrs < .2)
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_05, " genes at efdr < .05"))
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_06, " genes at efdr < .06"))
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_06, " genes at efdr < .07"))
+
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_1, " genes at efdr < .1"))
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_2, " genes at efdr < .2"))
 }

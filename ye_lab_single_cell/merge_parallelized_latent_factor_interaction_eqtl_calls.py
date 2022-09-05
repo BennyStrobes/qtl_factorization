@@ -427,7 +427,7 @@ merged_file = output_root + '_betas_merged.txt'
 merged_file = output_root + '_pvalues_merged.txt'
 merge_pvalue_results(output_root, '.txt', total_jobs, num_lf)
 
-for lf_num in range(num_lf):
+for lf_num in range(1):
 	print(lf_num)
 	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
 	merge_parallelized_results(output_root, '.txt', total_jobs, lf_num)

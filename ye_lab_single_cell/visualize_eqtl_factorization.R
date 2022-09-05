@@ -409,11 +409,11 @@ static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_
 # Model Specification
 ############################
 #model_stem <- paste0("eqtl_factorization_standard_eqtl_10.0_none_zscore_capped_eqtl_factorization_vi_ard_results_k_init_10_lambda_v_1_seed_2_var_param_1e-3_ratio_variance_std_True_permute_False_temper_")
-eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S_cp.txt")
+eqtl_factorization_loading_file <- paste0(eqtl_results_dir, model_stem, "U_S.txt")
 
 
 eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
-pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve_cp.txt")
+pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
 
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
