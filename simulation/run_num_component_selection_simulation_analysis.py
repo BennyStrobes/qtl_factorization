@@ -59,13 +59,17 @@ def generate_eqtl_factorization_data_with_no_sample_repeat(num_samples, num_test
 
 sim_data_dir = sys.argv[1]
 eqtl_results_dir = sys.argv[2]
+num_samples = int(sys.argv[3])
+t_statistic = float(sys.argv[4])
+missingness_fraction = float(sys.argv[5])
+
 
 num_tests=1000
 np.random.seed(2)
 
-num_samples = 250
-t_statistic = .5
-missingness_fraction = .3
+#num_samples = 250
+#t_statistic = .5
+#missingness_fraction = .3
 
 simulated_ks = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20]
 
@@ -98,5 +102,5 @@ for rep in range(num_reps):
 df = pd.DataFrame({'repitition':rep_vec, 'number_simulated_components':num_sim_components_vec, 'number_learned_components':num_learned_components_vec})
 
 
-df.to_csv(path_or_buf=eqtl_results_dir + 'number_of_learned_components_recovery_results.txt', sep='\t', index=False)
+df.to_csv(path_or_buf=eqtl_results_dir + 'number_of_learned_components_recovery_results_' + str(num_samples) + '_' + str(t_statistic) + '_' + str(missingness_fraction) + '.txt', sep='\t', index=False)
 

@@ -61,21 +61,10 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 	sbatch run_component_gridspace_sldsc_analysis_in_parallel.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $sample_names_file $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $job_number $num_jobs $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file
 done
 fi
-if false; then
-job_number="1"
-sbatch run_component_gridspace_sldsc_analysis_in_parallel.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $sample_names_file $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $job_number $num_jobs $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file
-
-job_number="12"
-sbatch run_component_gridspace_sldsc_analysis_in_parallel.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $sample_names_file $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $job_number $num_jobs $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file
-
-job_number="15"
-sbatch run_component_gridspace_sldsc_analysis_in_parallel.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $sample_names_file $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $job_number $num_jobs $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file
-fi
 
 if false; then
 python organize_component_gridspace_sldsc_results_across_parallel_runs.py $sample_names_file $component_gridspace_sldsc_results_dir $component_gridspace_sldsc_processed_data_dir $num_jobs
 fi
-
 
 
 

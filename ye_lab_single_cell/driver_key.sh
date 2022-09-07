@@ -118,7 +118,11 @@ component_gridspace_sldsc_processed_data_dir=$output_root"component_gridspace_sl
 # Directory containing gridspace sldsc results
 component_gridspace_sldsc_results_dir=$output_root"component_gridspace_sldsc_results/"
 
+# Directory containing static_eqtl sldsc processed data
+static_eqtl_sldsc_processed_data_dir=$output_root"static_eqtl_sldsc_processed_data/"
 
+# Directory containing static eqtl sldsc results
+static_eqtl_sldsc_results_dir=$output_root"static_eqtl_sldsc_results/"
 
 
 
@@ -145,11 +149,7 @@ component_gridspace_sldsc_processed_data_dir=$output_root"component_gridspace_sl
 # Directory containing gridspace sldsc results
 component_gridspace_sldsc_results_dir=$output_root"component_gridspace_sldsc_results/"
 
-# Directory containing static_eqtl sldsc processed data
-static_eqtl_sldsc_processed_data_dir=$output_root"static_eqtl_sldsc_processed_data/"
 
-# Directory containing static eqtl sldsc results
-static_eqtl_sldsc_results_dir=$output_root"static_eqtl_sldsc_results/"
 
 ######################
 # Preprocess single cell expression
@@ -416,6 +416,15 @@ sh run_component_gridspace_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_
 fi
 
 
+############################################
+# Run static eqtl S-LDSC
+############################################
+static_eqtl_effect_sizes_file=$latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_results_merged.txt"
+sbatch run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir $static_eqtl_effect_sizes_file
+
+
+
+
 
 ############################################
 # Check for overlap with coloc
@@ -469,14 +478,6 @@ fi
 
 
 
-
-############################################
-# Run static eqtl S-LDSC
-############################################
-static_eqtl_effect_sizes_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_standard_eqtl_standardized_genotype_results_betas_merged.txt"
-if false; then
-sh run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir $static_eqtl_effect_sizes_file
-fi
 
 ############################################
 # Run per-cell S-LDSC

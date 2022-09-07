@@ -24,6 +24,48 @@ missingness_fraction="0.5"
 sbatch run_variance_explained_power_analysis.sh $sim_data_dir $eqtl_results_dir $missingness_fraction
 fi
 
+
+
+
 if false; then
-sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir
+num_samples="250"
+t_statistic=".5"
+missingness_fraction=".3"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
+
+num_samples="250"
+t_statistic=".5"
+missingness_fraction=".1"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
+
+
+num_samples="250"
+t_statistic=".25"
+missingness_fraction=".3"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
+
+num_samples="250"
+t_statistic=".25"
+missingness_fraction=".1"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
+
+
+num_samples="250"
+t_statistic=".1"
+missingness_fraction=".3"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
+
+num_samples="250"
+t_statistic=".1"
+missingness_fraction=".1"
+sbatch run_num_component_selection_simulation_analysis.sh $sim_data_dir $eqtl_results_dir $num_samples $t_statistic $missingness_fraction
+
 fi
+
+
+

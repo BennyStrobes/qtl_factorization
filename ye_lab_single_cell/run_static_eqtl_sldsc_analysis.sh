@@ -2,7 +2,6 @@
 
 #SBATCH
 #SBATCH --time=10:00:00
-#SBATCH --partition=lrgmem
 #SBATCH --nodes=1
 #SBATCH --mem=40GB
 
@@ -18,9 +17,13 @@ static_eqtl_sldsc_results_dir="$5"
 eqtl_effect_sizes_file="$6"
 
 
-module load python/2.7-anaconda
+
+source ~/.bash_profile
+conda activate ldsc
+
+
 if false; then
-python filter_out_qtl_annotations_from_baselineLD_annotation_file.py ${sldsc_processed_data_dir}"baselineLD." $component_gridspace_sldsc_processed_data_dir"baselineLD_no_qtl."
+python filter_out_qtl_annotations_from_baselineLD_annotation_file.py ${sldsc_processed_data_dir}"baselineLD." $static_eqtl_sldsc_processed_data_dir"baselineLD_no_qtl."
 fi
 
 sample_specific_eqtl_effect_sizes_file=$static_eqtl_sldsc_processed_data_dir"static_eqtl_effect_sizes.txt"
@@ -67,9 +70,9 @@ fi
 
 
 
-
+if false; then
 python organize_static_eqtl_sldsc_results_across_parallel_runs.py $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir
-
+fi
 
 
 
