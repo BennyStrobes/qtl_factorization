@@ -12,15 +12,13 @@
 
 ldsc_source_code_dir="$1"
 sldsc_input_data_dir="$2"
-coloc_input_dir="$3"
+ukbb_sumstats_dir="$3"
 sldsc_processed_data_dir="$4"
 sldsc_results_dir="$5"
 sldsc_visualization_dir="$6"
 surge_interaction_eqtl_dir="$7"
 sumstats_dir="$8"
 
-
-module load python/2.7-anaconda
 
 
 
@@ -31,7 +29,7 @@ module load python/2.7-anaconda
 # File to be created that contains a list of all of the GWAS studies that have been processed along with the location of the processed gwas studies files
 processed_gwas_studies_file=$sldsc_processed_data_dir"processed_gwas_studies.txt"
 if false; then
-sh prepare_gwas_data_for_sldsc_analysis.sh $coloc_input_dir $processed_gwas_studies_file $sldsc_processed_data_dir $ldsc_source_code_dir $sldsc_input_data_dir $sumstats_dir
+sh prepare_gwas_data_for_sldsc_analysis.sh $ukbb_sumstats_dir $processed_gwas_studies_file $sldsc_processed_data_dir $ldsc_source_code_dir $sldsc_input_data_dir $sumstats_dir
 fi
 
 
@@ -64,10 +62,10 @@ fi
 ################################
 # Visualize S-LDSC results
 ################################
+if false; then
 module load R/3.5.1
 Rscript visualize_sldsc_results.R $processed_gwas_studies_file $sldsc_results_dir $sldsc_visualization_dir
-
-
+fi
 
 
 

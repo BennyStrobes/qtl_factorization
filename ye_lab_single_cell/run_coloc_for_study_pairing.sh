@@ -19,5 +19,5 @@ python prepare_coloc_data_for_study_pairing.py $sig_eqtl_file $all_eqtl_file $gw
 
 
 echo "running coloc"
-module load R/3.5.1
+module load r/3.6.3
 Rscript run_coloc_for_study_pairing.R $output_root $eqtl_study_name $gwas_study_name

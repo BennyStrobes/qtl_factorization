@@ -32,6 +32,9 @@ isg_score_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/covariate_inf
 # File containing isg scores for each cell
 cell_isg_score_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/covariate_info/cell_isg_scores.csv"
 
+# Gene set enrichment data
+# https://github.com/princyparsana/gsea
+gsea_data_dir="/scratch16/abattle4/bstrober/tools/gsea/data/"
 
 # Directory containing coloc input data
 #coloc_input_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/coloc/input_data/"
@@ -39,13 +42,17 @@ cell_isg_score_file="/scratch16/abattle4/lab_data/ye_lab_lupus_data_set/covariat
 
 # Directory containing ldsc source code
 ldsc_source_code_dir="/scratch16/abattle4/bstrober/tools/ldsc/"
-#custom_ldsc_source_code_dir="/work-zfs/abattle4/bstrober/tools/custom_sldsc/ldsc/"
+custom_ldsc_source_code_dir="/scratch16/abattle4/bstrober/tools/custom_sldsc_multiple_independent_annotations/"
+
+# Directory containing Alkes group processed sumstats: Found on o2 at: /n/groups/price/ldsc/sumstats_formatted_2021/
+ldsc_sumstats_dir="/scratch16/abattle4/bstrober/sumstats/alkesgrp_sumstats/"
+
+# Directory containing UKBB sumstats: found on o2 at: /n/groups/price/UKBiobank/sumstats/sumstats_for_ukb/
+# Also contains bentham et al 2015 sle sumstats found here: http://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/GCST003001-GCST004000/GCST003156/
+ukbb_sumstats_dir="/scratch16/abattle4/bstrober/sumstats/ukbb_sumstats/"
 
 # Directory containing sldsc input data
-#sldsc_input_data_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/sldsc_input_data/"
-
-# Directory containing Alkes group processed sumstats
-#sumstats_dir="/work-zfs/abattle4/bstrober/qtl_factorization/ye_lab_single_cell/input_data/ukbb_data/"
+sldsc_input_data_dir="/scratch16/abattle4/bstrober/ldsc_input_data/"
 
 ######################
 # Output directories
@@ -93,22 +100,29 @@ eqtl_factorization_visualization_dir=$output_root"visualize_eqtl_factorization/"
 # Directory containing surge interaction eqtl results
 surge_interaction_eqtl_dir=$output_root"surge_interaction_eqtl_v2/"
 
+# Directory containing gene set enrichment results
+gene_set_enrichment_dir=$output_root"gene_set_enrichment/"
 
 # Coloc dir
 coloc_dir=$output_root"coloc/"
 
-
 # visualize Coloc dir
 visualize_coloc_dir=$output_root"visualize_coloc/"
 
-# sldsc processed results dir
+# sldsc processed data dir
 sldsc_processed_data_dir=$output_root"sldsc_processed_data/"
 
-# susie results dir
-sldsc_results_dir=$output_root"sldsc_results/"
+# Directory containing gridspace sldsc processed data
+component_gridspace_sldsc_processed_data_dir=$output_root"component_gridspace_sldsc_processed_data/"
 
-# susie visualization dir
-sldsc_visualization_dir=$output_root"sldsc_visualization/"
+# Directory containing gridspace sldsc results
+component_gridspace_sldsc_results_dir=$output_root"component_gridspace_sldsc_results/"
+
+
+
+
+
+
 
 # Directory containing results of eQTL correlation analysis
 eqtl_correlation_dir=$output_root"eqtl_correlation/"
@@ -363,9 +377,6 @@ fi
 
 
 
-
-
-
 ############################################
 # Compute interaction eqtls with surge latent factors
 ############################################
@@ -373,43 +384,79 @@ fi
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_"
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v2_"  # THIS CORRESPONDS TO THE PARR RUN
 output_stem=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v3_"  # THIS CORRESPONDS TO THE HWE RUN
+if false; then
 sh run_interaction_eqtl_analysis_with_surge_factors.sh $latent_factor_interaction_eqtl_dir"latent_factor_interaction_hvg_6000_10.0_no_cap_15_cis_window_200000_geno_filter_False_none_zscore_eqtl_input_" $eqtl_factorization_results_dir $output_stem
-
-
-
-
-#############################################
-## Run eqtl factorization with held out chromosome
-#############################################
-permutation_type="False"
-model_name="surge"
-ratio_variance_standardization="True"
-round_genotype="False"
-warmup_iterations="5"
-num_latent_factors="10"
-data_filter="filter_RP"
-delta_elbo_thresh="1e-2"
-if false; then
-for held_out_chromosome in $(seq 1 22); do 
-	output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_held_out_"$held_out_chromosome"_alt_init_"
-	sbatch run_eqtl_factorization_held_out_chromosome.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh $held_out_chromosome
-done
 fi
 
-permutation_type="interaction_only"
-model_name="surge"
-ratio_variance_standardization="True"
-round_genotype="False"
-warmup_iterations="5"
-num_latent_factors="10"
-data_filter="filter_RP"
-delta_elbo_thresh="1e-2"
+
+
+
+
+############################################
+# Run gene set enrichment analysis
+############################################
+model_loadings_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_U_S.txt"
+model_pve_file=$eqtl_factorization_results_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_factor_pve.txt"
+expr_file=$processed_pseudobulk_expression_dir"no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_none_sample_norm_zscore_gene_norm_normalized_expression.txt"
+gene_names_file=$processed_pseudobulk_expression_dir"no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_True_individual_clustering_leiden_resolution_10.0_no_cap_15_gene_names.txt"
+gene_set_enrichment_output_stem=$gene_set_enrichment_dir"eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_"
 if false; then
-for held_out_chromosome in $(seq 1 22); do 
-	output_stem=$eqtl_factorization_results_dir$input_data_stem"_"$model_name"_results_k_"$num_latent_factors"_seed_"$seed"_warm_"$warmup_iterations"_rv_std_"$ratio_variance_standardization"_perm_"$permutation_type"_delta_elbo_"$delta_elbo_thresh"_held_out_"$held_out_chromosome"_alt_init_"
-	sbatch run_eqtl_factorization_held_out_chromosome.sh $expression_training_file $genotype_training_file $covariate_file $sample_overlap_file $num_latent_factors $lambda_v $model_name $seed $output_stem $variance_param $ard_variance_param $ratio_variance_standardization $permutation_type $warmup_iterations $round_genotype $data_filter $test_names_file $delta_elbo_thresh $held_out_chromosome
-done
+sh gene_set_enrichment_analysis.sh $model_loadings_file $model_pve_file $expr_file $gene_names_file $gsea_data_dir $gene_set_enrichment_output_stem
 fi
+
+
+
+############################################
+# Run component-gridspace S-LDSC
+############################################
+loading_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v3_perm_False_surge_latent_factors.txt"
+surge_eqtl_effect_sizes_file=$surge_interaction_eqtl_dir"surge_interaction_eqtl_cis_window_200000_factor_v3_perm_False_interaction_eqtl_results_betas_merged.txt"
+if false; then
+sh run_component_gridspace_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file $ukbb_sumstats_dir $ldsc_sumstats_dir
+fi
+
+
+
+############################################
+# Check for overlap with coloc
+############################################
+if false; then
+sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $ukbb_sumstats_dir $coloc_dir $visualize_coloc_dir
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+if false; then
+sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $ukbb_sumstats_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_visualization_dir $surge_interaction_eqtl_dir $ldsc_sumstats_dir
+fi
+
+
+
+
+
+
+
+
+
+
 
 
 ############################################
@@ -420,12 +467,7 @@ sh run_eqtl_correlation_analysis.sh $surge_interaction_eqtl_dir $eqtl_correlatio
 fi
 
 
-############################################
-# Run S-LDSC
-############################################
-if false; then
-sh run_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $coloc_input_dir $sldsc_processed_data_dir $sldsc_results_dir $sldsc_visualization_dir $surge_interaction_eqtl_dir $sumstats_dir
-fi
+
 
 
 ############################################
@@ -463,12 +505,7 @@ if false; then
 sh run_component_gridspace_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $component_gridspace_sldsc_processed_data_dir $component_gridspace_sldsc_results_dir $custom_ldsc_source_code_dir $loading_file $surge_eqtl_effect_sizes_file 
 fi
 
-############################################
-# Check for overlap with coloc
-############################################
-if false; then
-sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $coloc_input_dir $coloc_dir $visualize_coloc_dir
-fi
+
 
 
 

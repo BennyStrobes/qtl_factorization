@@ -422,12 +422,12 @@ total_jobs = int(sys.argv[2])
 num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
 
 merged_file = output_root + '_betas_merged.txt'
-#merge_betas_results(output_root, '.txt', total_jobs, num_lf)
+merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
 merged_file = output_root + '_pvalues_merged.txt'
 merge_pvalue_results(output_root, '.txt', total_jobs, num_lf)
 
-for lf_num in range(1):
+for lf_num in range(num_lf):
 	print(lf_num)
 	merged_file = output_root + 'latent_factor_' + str(lf_num+1) + '_merged.txt'
 	merge_parallelized_results(output_root, '.txt', total_jobs, lf_num)

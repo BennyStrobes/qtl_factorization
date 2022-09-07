@@ -54,8 +54,8 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 	sbatch run_permuted_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_new_covariate_file $perm_surge_latent_factor_factor_file $qtl_sample_overlap_file $qtl_output_root $sample_permutation_file $job_number $num_jobs
 done
 fi
-if false; then
 
+if false; then
 qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 
@@ -65,10 +65,10 @@ python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_r
 fi
 
 
-
+if false; then
 module load r/3.6.3
 Rscript visualize_surge_interaction_eqtls.R $output_stem"perm_"
-
+fi
 
 if false; then
 python2 surge_interaction_eqtl_debugger.py $output_stem"perm_"

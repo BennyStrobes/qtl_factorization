@@ -91,7 +91,7 @@ input_study_file = coloc_input_dir + 'blood_MONOCYTE_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_monocyte_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 
 # blood lymphocyte count
@@ -99,63 +99,63 @@ input_study_file = coloc_input_dir + 'blood_LYMPHOCYTE_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_lymphocyte_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 # eczema
 input_study_file = coloc_input_dir + 'disease_ALLERGY_ECZEMA_DIAGNOSED.sumstats.gz'
 study_name = 'ukbb_eczema'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 # bmi
 input_study_file = coloc_input_dir + 'body_BMIz.sumstats.gz'
 study_name = 'ukbb_bmi'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_EOSINOPHIL_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_eosinophil_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_HIGH_LIGHT_SCATTER_RETICULOCYTE_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_high_light_scatter_reticulotye_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_MEAN_CORPUSCULAR_HEMOGLOBIN.sumstats.gz'
 study_name = 'ukbb_blood_mean_corpuscular_hemoglobin'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_MEAN_PLATELET_VOL.sumstats.gz'
 study_name = 'ukbb_blood_platelet_vol'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_PLATELET_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_platelet_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_RED_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_red_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'blood_WHITE_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_white_count'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
-#reprint_ukbb_study(input_study_file, output_study_file_root)
+reprint_ukbb_study(input_study_file, output_study_file_root)
 
 input_study_file = coloc_input_dir + 'bentham_2015_26502338_sle_efo0002690_1_gwas.sumstats.tsv.gz'
 study_name = 'sle'

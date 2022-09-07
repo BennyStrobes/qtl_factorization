@@ -157,6 +157,7 @@ for chrom_num in range(1,23):
 	print(chrom_num)
 	gene_mapping = extract_significant_genes(sig_eqtl_file, chrom_num)
 	gene_mapping, variant_to_gwas = map_genes_to_all_variants(all_eqtl_file, chrom_num, gene_mapping, eqtl_data_version)
+	pdb.set_trace()
 	variant_to_gwas = map_variants_to_gwas_summary_stats(gwas_study_file_root + str(chrom_num) + '.txt', variant_to_gwas)
 
 	for gene_name in gene_mapping.keys():
