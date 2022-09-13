@@ -135,17 +135,18 @@ gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_g
 		real <- c(real, sorted_real)
 		null <- c(null, sorted_null)
 		context <- c(context, rep(paste0("context_", lf), num_genes))
-		version <- c(version, rep("perm", num_genes))
+		version <- c(version, rep("permutation", num_genes))
 
 
 		ordered_contexts <- c(ordered_contexts, paste0("context_", lf))
 	}
+	version = factor(version, levels=c("real", "permutation"))
 	df <- data.frame(real=real, null=null, version=version)
 	 plotter <- ggplot(df) + 
              geom_point(aes(x=null, y=real, color=version), size=1) +
              geom_abline()+
              gtex_v8_figure_theme() + 
-             labs(x="Permutation", y = "Real", color="") + 
+             labs(x="-log10(expected p-value)", y = "-log10(observed p-value)", color="") + 
              theme(legend.text = element_text(size=8), legend.title = element_text(size=8)) 
     return(plotter)
 
@@ -219,16 +220,19 @@ for (latent_factor in 1:num_factors) {
 for (latent_factor in 1:num_factors) {
 	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)
 	num_egenes_05 <- sum(efdrs < .05)
-	num_egenes_2 <- sum(efdrs < .2)
+	num_egenes_1 <- sum(efdrs < .1)
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_05, " genes at efdr < .05"))
+	print(paste0("Factor ", latent_factor, ": ", num_egenes_1, " genes at efdr < .1"))
+
 }
 
 
 
 
 output_file <- paste0(output_stem, "real_and_perm_vs_null_gene_qq_plot.pdf")
-real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
+real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, 8)
 ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
+
 
 
 output_file <- paste0(output_stem, "real_vs_null_gene_qq_plot.pdf")

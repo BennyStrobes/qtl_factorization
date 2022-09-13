@@ -248,16 +248,17 @@ neighbor_ct_summary_file <- paste0(processed_pseudobulk_expression_dir, "scran_n
 neighbor_ct_summary_df <- read.table(neighbor_ct_summary_file, header=TRUE, sep="\t")
 
 # Load in pseudobulk covariate data
-pseudobulk_covariate_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_sample_covariates.txt")
-pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t")
+pseudobulk_covariate_file <- paste0(processed_pseudobulk_expression_dir, "no_outlier_pseudobulk_scran_normalization_hvg_6000_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_no_cap_15_sample_covariates.txt")
+pseudobulk_covariate_data <- read.table(pseudobulk_covariate_file, header=TRUE, sep="\t") 
+
 
 # Load in pseudobulk expression_pcs
-pseudobulk_pcs_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_scores.txt")
-pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
+#pseudobulk_pcs_file <- paste0(processed_pseudobulk_expression_dir, "no_outlier_pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_scores.txt")
+#pseudobulk_pcs <- read.table(pseudobulk_pcs_file, header=FALSE, sep="\t")
 
 # Load in pseudobulk PC PVE
-pseudobulk_pc_pve_file <- paste0(processed_pseudobulk_expression_dir, "pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_pve.txt")
-pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
+#pseudobulk_pc_pve_file <- paste0(processed_pseudobulk_expression_dir, "no_outlier_pseudobulk_scran_normalization_regress_batch_", regress_out_batch, "_individual_clustering_leiden_resolution_", cluster_resolution, "_", sample_level_normalization, "_sample_norm_", gene_level_normalization, "_gene_norm_pca_pve.txt")
+#pseudobulk_pc_pve <- read.table(pseudobulk_pc_pve_file, header=FALSE, sep="\t")
 
 
 ############################
@@ -277,9 +278,9 @@ ggsave(cluster_ct_stacked_bar, file=output_file, width=7.2, height=5, units="in"
 ##########################
 # PCA-covariate heatmap for pseudobulk data
 ##########################
-heatmap <- make_pseudobulk_covariate_loading_correlation_heatmap(pseudobulk_covariate_data, pseudobulk_pcs)
-output_file <- paste0(output_root, "pseudobulk_covariate_pca_pve_heatmap.pdf")
-ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
+#heatmap <- make_pseudobulk_covariate_loading_correlation_heatmap(pseudobulk_covariate_data, pseudobulk_pcs)
+#output_file <- paste0(output_root, "pseudobulk_covariate_pca_pve_heatmap.pdf")
+#ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 
 
 ##########################
@@ -287,8 +288,8 @@ ggsave(heatmap, file=output_file, width=7.2, height=10, units="in")
 ##########################
 num_pcs <- 200
 output_file <- paste0(output_root, "pseudobulk_pca_variance_explained_", num_pcs, "_pcs_line_plot.pdf")
-ve_line_plot <- make_pc_variance_explained_line_plot(pseudobulk_pc_pve[,1], num_pcs)
-ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
+#ve_line_plot <- make_pc_variance_explained_line_plot(pseudobulk_pc_pve[,1], num_pcs)
+#ggsave(ve_line_plot, file=output_file, width=7.2, height=5.0, units="in")
 
 
 
@@ -303,37 +304,44 @@ ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
 ##########################
 # Make Number of clusters per individual
 ##########################
-num_cells_bar_plot <- make_number_of_clusters_per_individual_bar_plot(pseudobulk_covariate_data)
+num_clusters_bar_plot <- make_number_of_clusters_per_individual_bar_plot(pseudobulk_covariate_data)
 output_file <- paste0(output_root, "number_of_clusters_per_individual_bar_plot.pdf")
-ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=5, units="in")
+ggsave(num_clusters_bar_plot, file=output_file, width=7.2, height=5, units="in")
+
+
+# Make joint plot with cowplot
+joint_plot <- plot_grid(num_cells_bar_plot, num_clusters_bar_plot, ncol=1, labels=c("A","B"))
+output_file <- paste0(output_root, "pseudobulk_summery_supplement.pdf")
+ggsave(joint_plot, file=output_file, width=7.2, height=6.0, units="in")
+
 
 ##########################
 # Make bar plot showing number of cells per cluster per cell type
 ##########################
-num_cells_bar_plot <- make_number_of_cells_per_cluster_per_cell_type_bar_plot(pseudobulk_covariate_data)
-output_file <- paste0(output_root, "number_of_cells_per_pseudobulk_cluster_per_cell_type_bar_plot.pdf")
-ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=10, units="in")
+#num_cells_bar_plot <- make_number_of_cells_per_cluster_per_cell_type_bar_plot(pseudobulk_covariate_data)
+#output_file <- paste0(output_root, "number_of_cells_per_pseudobulk_cluster_per_cell_type_bar_plot.pdf")
+#ggsave(num_cells_bar_plot, file=output_file, width=7.2, height=10, units="in")
 
 
 ##########################
 # Make PCA Plot colored by cell type
 ##########################
-pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$cg_cov_mode, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Cell Type", "PC1", "PC2")
-output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_cell_type.pdf")
-ggsave(pca_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
+#pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$cg_cov_mode, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Cell Type", "PC1", "PC2")
+#output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_cell_type.pdf")
+#ggsave(pca_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
 
 ##########################
 # Make PCA Plot colored by batch
 ##########################
-pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$batch_cov, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Batch", "PC1", "PC2")
-output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_batch.pdf")
-ggsave(pca_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
+#pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$batch_cov, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Batch", "PC1", "PC2")
+#output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_batch.pdf")
+#ggsave(pca_scatter_colored_by_cell_type, file=output_file, width=7.2, height=5, units="in")
 
 
 ##########################
 # Make PCA Plot colored by Indi
 ##########################
-pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$ind_cov, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Ind", "PC1", "PC2")
-output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_ind.pdf")
-ggsave(pca_scatter_colored_by_cell_type + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
+#pca_scatter_colored_by_cell_type <- make_dimensionality_reduction_scatter_colored_by_categorical_variable(pseudobulk_covariate_data$ind_cov, pseudobulk_pcs[,1], pseudobulk_pcs[,2], "Ind", "PC1", "PC2")
+#output_file <- paste0(output_root, "pca_1_2_scatter_colored_by_ind.pdf")
+#ggsave(pca_scatter_colored_by_cell_type + theme(legend.position="none"), file=output_file, width=7.2, height=5, units="in")
 

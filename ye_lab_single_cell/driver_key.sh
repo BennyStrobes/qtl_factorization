@@ -155,9 +155,8 @@ component_gridspace_sldsc_results_dir=$output_root"component_gridspace_sldsc_res
 # Preprocess single cell expression
 ######################
 regress_out_batch="True"
-if false; then
-sbatch preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file $cell_isg_score_file
-fi
+sh preprocess_single_cell_expression.sh $input_h5py_file $processed_expression_dir $visualize_processed_expression_dir $gene_annotation_file $genotyped_individuals_file $processed_pseudobulk_expression_dir $visualize_processed_pseudobulk_expression_dir $regress_out_batch $isg_score_file $cell_isg_score_file
+
 
 ######################
 # Preprocess Genotype data
@@ -420,8 +419,9 @@ fi
 # Run static eqtl S-LDSC
 ############################################
 static_eqtl_effect_sizes_file=$latent_factor_interaction_eqtl_dir"standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_eqtl_results_merged.txt"
-sbatch run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir $static_eqtl_effect_sizes_file
-
+if false; then
+sh run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data_dir $sldsc_processed_data_dir $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir $static_eqtl_effect_sizes_file
+fi
 
 
 
@@ -432,6 +432,25 @@ sbatch run_static_eqtl_sldsc_analysis.sh $ldsc_source_code_dir $sldsc_input_data
 if false; then
 sh run_coloc_analysis.sh $surge_interaction_eqtl_dir $ukbb_sumstats_dir $coloc_dir $visualize_coloc_dir
 fi
+
+
+
+
+
+
+#############################################
+## Visualize eqtl factorization
+#############################################
+module load r/3.6.3
+model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_"
+output_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_"
+Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir $static_eqtl_sldsc_results_dir
+
+
+
+
+
+
 
 
 
@@ -515,15 +534,7 @@ fi
 
 
 
-#############################################
-## Visualize eqtl factorization
-#############################################
-if false; then
-module load r/3.6.3
-model_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_"
-output_stem="eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_False_delta_elbo_1e-2_filter_hwe_alt_init_"
-Rscript visualize_eqtl_factorization.R $processed_pseudobulk_expression_dir $eqtl_factorization_results_dir $eqtl_factorization_visualization_dir $model_stem $output_stem $per_cell_sldsc_results_dir $per_cell_3_component_sldsc_results_dir $component_gridspace_sldsc_results_dir $static_eqtl_sldsc_results_dir
-fi
+
 
 
 

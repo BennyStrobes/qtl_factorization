@@ -135,17 +135,18 @@ gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_g
 		real <- c(real, sorted_real)
 		null <- c(null, sorted_null)
 		context <- c(context, rep(paste0("context_", lf), num_genes))
-		version <- c(version, rep("perm", num_genes))
+		version <- c(version, rep("permutation", num_genes))
 
 
 		ordered_contexts <- c(ordered_contexts, paste0("context_", lf))
 	}
 	df <- data.frame(real=real, null=null, version=version)
+	df$version = factor(df$version, levels=c("real", "permutation"))
 	 plotter <- ggplot(df) + 
              geom_point(aes(x=null, y=real, color=version), size=1) +
              geom_abline()+
              gtex_v8_figure_theme() + 
-             labs(x="Permutation", y = "Real", color="") + 
+             labs(x="-log10(expected p-value)", y = "-log10(observed p-value)", color="") + 
              theme(legend.text = element_text(size=8), legend.title = element_text(size=8)) 
     return(plotter)
 
@@ -243,8 +244,6 @@ file_name <- paste0(output_stem, "interaction_only_interaction_eqtl_results_late
 temp_data = read.table(file_name, header=TRUE)
 pvals=temp_data$pvalue*temp_data$num_snps_in_gene
 
-print(sort(pvals)[1:100])
-
 
 
 
@@ -252,14 +251,12 @@ file_name <- paste0(output_stem, "False_interaction_eqtl_results_latent_factor_"
 temp_data = read.table(file_name, header=TRUE)
 pvals=temp_data$pvalue*temp_data$num_snps_in_gene
 
-print(sort(pvals)[1:100])
 
-
-if (FALSE) {
 
 output_file <- paste0(output_stem, "real_and_perm_vs_null_gene_qq_plot.pdf")
 real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
-ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
+ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=5.0, units="in")
+if (FALSE) {
 
 
 output_file <- paste0(output_stem, "real_vs_null_gene_qq_plot.pdf")

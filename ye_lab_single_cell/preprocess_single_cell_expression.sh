@@ -35,12 +35,13 @@ cluster_resolution="10.0"
 cluster_type="no_cap"
 min_cells_per_cluster="15"
 num_hvg="6000"
+if false; then
+
 #module load R/3.6.1
 #module load python/3.7.4-anaconda
 # Generate pseudobulk expression
 python generate_pseudobulk_expression.py $processed_expression_dir $processed_pseudobulk_expression_dir $genotyped_individuals_file $cluster_resolution $cluster_type $regress_out_batch $num_hvg $isg_score_file $cell_isg_score_file $min_cells_per_cluster
 
-if false; then
 cluster_resolution="10.0"
 num_hvg="4000"
 module load R/3.6.1
@@ -58,7 +59,14 @@ fi
 
 
 if false; then
-module load R/3.5.1
+
+module load r/3.6.3
+
+sample_level_normalization="none"
+gene_level_normalization="zscore"
+Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
+
+
 sample_level_normalization="qn"
 gene_level_normalization="zscore"
 Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
@@ -67,9 +75,6 @@ sample_level_normalization="qn"
 gene_level_normalization="ign"
 Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
 
-sample_level_normalization="none"
-gene_level_normalization="zscore"
-Rscript visualize_pseudobulk_expression.R $processed_pseudobulk_expression_dir $cluster_resolution $visualize_processed_pseudobulk_expression_dir $regress_out_batch $gene_level_normalization $sample_level_normalization
 
 sample_level_normalization="none"
 gene_level_normalization="ign"

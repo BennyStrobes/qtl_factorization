@@ -315,6 +315,7 @@ make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status <- functi
   plot_arr <- list()
   for (cell_type_iter in 1:length(cell_types)) {
     cell_type <- cell_types[cell_type_iter]
+    print(cell_type)
     cell_type_indices = as.character(cg_cov) == cell_type
     histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loadings[cell_type_indices], sle_status[cell_type_indices], cell_type, loading_num)
     plot_arr[[cell_type_iter]] <- histy + theme(legend.position="none")
@@ -347,20 +348,35 @@ generate_isg_signature_vector <- function(expr, gene_names) {
 
 }
 
-sldsc_enrichment_se_plot_over_continuous_domain <- function(df, trait_name, component_num, static_eqtl_trait_subset="NA") {
+sldsc_enrichment_se_plot_over_continuous_domain <- function(df, trait_name, component_num, static_eqtl_trait_subset, component_loadings) {
+
+  meany = mean(component_loadings)
+  sdev = sd(component_loadings)
+  z_component_loadings = (component_loadings-meany)/sdev
+
+  indices = abs(z_component_loadings) < 4.0
+
+  new_loadings = component_loadings[indices]
+
+  new_upper_bound = max(new_loadings)
+  new_lower_bound = min(new_loadings)
+
+
   df$enrichment_lb <- df$enrichment - df$enrichment_std_err
   df$enrichment_ub <- df$enrichment + df$enrichment_std_err
+
+  df = df[df$component_position < new_upper_bound,]
+  df = df[df$component_position > new_lower_bound,]
 
   p <- ggplot(df,aes(x=component_position,y=enrichment)) + 
       geom_ribbon(aes(x=component_position,ymin=enrichment_lb,ymax=enrichment_ub),fill='thistle2')+
       geom_line(col='orchid3') + 
       gtex_v8_figure_theme() +
-      labs(x=paste0("SURGE context ", component_num), y=paste0(trait_name,"\nS-LDSC enrichment"))
-  if (static_eqtl_trait_subset != "NA") {
-      p = p + geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1], col='black', size=.5) + 
+      labs(x=paste0("SURGE context ", component_num), y=paste0(trait_name,"\nS-LDSC enrichment")) +
+      geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1], col='black', size=.5) + 
       geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1] - static_eqtl_trait_subset$enrichment_std_err, col='black', linetype="dashed", size=.5) +
       geom_hline(yintercept=static_eqtl_trait_subset$enrichment[1] + static_eqtl_trait_subset$enrichment_std_err, col='black', linetype="dashed", size=.5)
-  }
+
   return(p)
 
 }
@@ -399,9 +415,9 @@ per_cell_3_component_sldsc_results_file <- paste0(per_cell_3_component_sldsc_res
 per_cell_3_component_sldsc_blood_ma_results_file <- paste0(per_cell_3_component_sldsc_results_dir, "per_cell_sldsc_Blood_meta_analysis_results.txt")
 per_cell_3_component_sldsc_immune_ma_results_file <- paste0(per_cell_3_component_sldsc_results_dir, "per_cell_sldsc_Immune_meta_analysis_results.txt")
 per_cell_3_component_sldsc_non_blood_immune_ma_results_file <- paste0(per_cell_3_component_sldsc_results_dir, "per_cell_sldsc_Non_blood_immune_meta_analysis_results.txt")
+}
 
 static_eqtl_sldsc_results_file <- paste0(static_eqtl_sldsc_results_dir, "static_eqtl_sldsc_results.txt")
-}
 component_gridspace_sldsc_results_file <- paste0(component_gridspace_sldsc_results_dir, "component_gridspace_sldsc_results.txt")
 
 
@@ -419,6 +435,7 @@ pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 
 ordering <- order(pve, decreasing=TRUE)
 ordering <- ordering[1:6]
+ordering = ordering[c(1,2,4,5,6)]
 #print(ordering)
 
 
@@ -426,21 +443,9 @@ ordering <- ordering[1:6]
 # Load in data
 covariates <- read.table(sample_covariate_file, header=TRUE, sep="\t")
 
-if (FALSE) {
-per_cell_sldsc_results <- read.table(per_cell_sldsc_results_file, header=TRUE, sep="\t")
-per_cell_blood_ma_sldsc_results <- read.table(per_cell_sldsc_blood_ma_results_file, header=TRUE, sep="\t")
-per_cell_immune_ma_sldsc_results <- read.table(per_cell_sldsc_immune_ma_results_file, header=TRUE, sep="\t")
-per_cell_non_blood_immune_ma_sldsc_results <- read.table(per_cell_sldsc_non_blood_immune_ma_results_file, header=TRUE, sep="\t")
-
-per_cell_3_component_sldsc_results <- read.table(per_cell_3_component_sldsc_results_file, header=TRUE, sep="\t")
-per_cell_3_component_blood_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_blood_ma_results_file, header=TRUE, sep="\t")
-per_cell_3_component_immune_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_immune_ma_results_file, header=TRUE, sep="\t")
-per_cell_3_component_non_blood_immune_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_non_blood_immune_ma_results_file, header=TRUE, sep="\t")
 
 
-component_gridspace_sldsc_results <- read.table(component_gridspace_sldsc_results_file, header=TRUE, sep="\t")
 static_eqtl_sldsc_results <- read.table(static_eqtl_sldsc_results_file, header=TRUE, sep="\t")
-}
 component_gridspace_sldsc_results <- read.table(component_gridspace_sldsc_results_file, header=TRUE, sep="\t")
 
 
@@ -455,10 +460,10 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-if (FALSE) {
-expr <- read.table(gene_expr_file, header=FALSE)
-saveRDS( expr, "expr.rds")
-}
+#expr <- read.table(gene_expr_file, header=FALSE)
+#saveRDS( expr, "expr.rds")
+expr <- readRDS("expr.rds")
+
 
 expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
 saveRDS(expr_pcs, "expr_pcs.rds")
@@ -486,7 +491,6 @@ covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
 
-print("START")
 
 trait_arr <- unique(as.character(component_gridspace_sldsc_results$trait_name))
 
@@ -496,132 +500,51 @@ for (trait_iter in 1:length(trait_arr)) {
 
   output_file <- paste0(visualization_dir, "continous_", trait_name, "_sldsc_enrichment_plot.pdf")
 
-  #static_eqtl_trait_subset <- static_eqtl_sldsc_results[as.character(static_eqtl_sldsc_results$trait_name) == trait_name,]
+  static_eqtl_trait_subset <- static_eqtl_sldsc_results[as.character(static_eqtl_sldsc_results$trait_name) == trait_name,]
 
   component_num <- 1
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
   #continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset)
-  continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
   component_num <- 2
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot2 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot2 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
-  component_num <- 3
-  indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  #component_num <- 3
+  #indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
+  #continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
   component_num <- 4
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot4 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot4 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
 
   component_num <- 5
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot5 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot5 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
 
   component_num <- 6
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot6 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num)
+  continous_sldsc_enrichmennt_plot6 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
 
 
-  continous_sldsc_enrichmennt_plot_joint <- plot_grid(continous_sldsc_enrichmennt_plot1,continous_sldsc_enrichmennt_plot2, continous_sldsc_enrichmennt_plot3, continous_sldsc_enrichmennt_plot4, continous_sldsc_enrichmennt_plot5, continous_sldsc_enrichmennt_plot6, ncol=2)
+  continous_sldsc_enrichmennt_plot_joint <- plot_grid(continous_sldsc_enrichmennt_plot1,continous_sldsc_enrichmennt_plot2, continous_sldsc_enrichmennt_plot4, continous_sldsc_enrichmennt_plot5, continous_sldsc_enrichmennt_plot6, ncol=2)
 
   ggsave(continous_sldsc_enrichmennt_plot_joint, file=output_file, width=7.2, height=8.0, units="in")
 
 }
-print("DONE")
 
 #######################################
 # Generate isg signature vector
 #######################################
 #isg_signature_vector = generate_isg_signature_vector(expr, gene_names)
 
-#######################################
-# Expression UMAP scatter colored by surge factor loadings
-#######################################
-if (FALSE) {
-surge_num <- 1
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 2
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 3
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 4
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 5
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 6
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-}
-if (FALSE) {
 
-surge_num <- 7
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 8
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 9
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-surge_num <- 10
-surge_vec <- loadings[,surge_num]
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")#
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-}
-######################################
-# Visualize UMAP scatter plot colored by cell type
-#######################################
-if (FALSE) {
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$cg_cov_mode, umap_expr, "cell type")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-######################################
-# Visualize UMAP scatter plot colored by cell type
-#######################################
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type2.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_expr, "cell type")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-######################################
-# Visualize UMAP scatter plot colored by cell type
-#######################################
-output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_individual.pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ind_cov, umap_expr, "cell type")
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-}
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
 #######################################
 output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
-pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:6])
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:5])
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
 
 #######################################
@@ -631,11 +554,42 @@ output_file <- paste0(visualization_dir, "factor_distribution_histograms.pdf")
 #hist <- make_factor_distribution_histograms(factors)
 #ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
+#print(head(covariates))
+#print(head(covariates$SLE_status))
+
 if (FALSE) {
 loading_num <- 1
 output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
 histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
 ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+print("START")
+
+loading_num <- 2
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
+histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
+ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+
+loading_num <- 3
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
+histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
+ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+
+loading_num <- 4
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
+histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
+ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+
+loading_num <- 5
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
+histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
+ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+
+loading_num <- 6
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_each_cell_type_stratefied_by_sle_status.pdf")
+histo <- make_histogram_of_loadings_for_each_cell_type_stratefied_by_sle_status(loadings[,loading_num], covariates$cg_cov_mode, covariates$SLE_status, loading_num)
+ggsave(histo, file=output_file, width=7.2, height=12, units="in")
+}
+
 
 loading_num <- 1
 cell_type <- "monocyte"
@@ -644,7 +598,52 @@ loading_vec <- loadings[,loading_num]
 output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
 histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
 ggsave(histy, file=output_file, width=7.2, height=4, units="in")
-}
+
+loading_num <- 2
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
+
+loading_num <- 3
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
+loading_num <- 4
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
+loading_num <- 5
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
+#loading_num <- 6
+#cell_type <- "monocyte"
+#cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+#loading_vec <- loadings[,loading_num]
+#output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+#histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+#ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
+
+
+
+
 
 ######################################
 # Make loading boxplot colored by Ancestry
@@ -778,70 +777,6 @@ boxplot <- make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_co
 ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
 
-if (FALSE) {
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_enrichment_3_component.pdf")
-trait_enrichment <- per_cell_3_component_blood_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (blood meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_tau_3_component.pdf")
-trait_enrichment <- per_cell_3_component_blood_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (blood meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_enrichment_3_component.pdf")
-trait_enrichment <- per_cell_3_component_immune_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_tau_3_component.pdf")
-trait_enrichment <- per_cell_3_component_immune_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_enrichment_3_component.pdf")
-trait_enrichment <- per_cell_3_component_non_blood_immune_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (non-blood-immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_tau_3_component.pdf")
-trait_enrichment <- per_cell_3_component_non_blood_immune_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (non-blood-immune immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-
-
-
-trait_names = c('ukbb_blood_monocyte_count', 'ukbb_blood_lymphocyte_count', 'ukbb_bmi', 'ukbb_eczema', 'ukbb_blood_eosinophil_count', 'ukbb_blood_high_light_scatter_reticulotye_count', 'ukbb_blood_mean_corpuscular_hemoglobin', 'ukbb_blood_platelet_vol', 'ukbb_blood_platelet_count', 'ukbb_blood_red_count', 'ukbb_blood_white_count', 'ukbb_height', 'ukbb_T2D', 'Celiac', 'Crohns', 'Ulcerative_Colitis', 'Rheumatoid_Arthritis', 'Lupus', 'IBD', 'Multiple_sclerosis', 'PBC', 'CAD', 'Bipolar', 'Alzheimer', 'Schizophrenia')
-
-for (trait_index in 1:length(trait_names)) {
-  trait_name <- trait_names[trait_index]
-
-  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_enrichment_3_component.pdf")
-  trait_enrichment <- per_cell_3_component_sldsc_results[paste0(trait_name, "_enrichment")][,1]
-  indices = !is.na(trait_enrichment)
-  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (", trait_name, ")"), point_size=1)
-  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_tau_3_component.pdf")
-  trait_tau <- per_cell_3_component_sldsc_results[paste0(trait_name, "_tau_star")][,1]
-  indices = !is.na(trait_tau)
-  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_tau[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (", trait_name, ")"), point_size=1)
-  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-}
-
-}
 
 print('UMAP START')
 umap_loadings = umap(loadings)$layout
@@ -856,69 +791,6 @@ print('UMAP DONE')
 #expr_pcs <- expr_pcs[indices,]
 #expr <- expr[indices,]
 
-if (FALSE) {
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_enrichment.pdf")
-trait_enrichment <- per_cell_blood_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC enrichment (blood meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_tau.pdf")
-trait_enrichment <- per_cell_blood_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC Tau (blood meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_enrichment.pdf")
-trait_enrichment <- per_cell_immune_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC enrichment (immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_tau.pdf")
-trait_enrichment <- per_cell_immune_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC Tau (immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_enrichment.pdf")
-trait_enrichment <- per_cell_non_blood_immune_ma_sldsc_results$enrichment
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC enrichment (non-blood-immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_tau.pdf")
-trait_enrichment <- per_cell_non_blood_immune_ma_sldsc_results$tau_star
-indices = !is.na(trait_enrichment)
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC Tau (non-blood-immune immune meta analysis)"), point_size=1)
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-
-
-
-trait_names = c('ukbb_blood_monocyte_count', 'ukbb_blood_lymphocyte_count', 'ukbb_bmi', 'ukbb_eczema', 'ukbb_blood_eosinophil_count', 'ukbb_blood_high_light_scatter_reticulotye_count', 'ukbb_blood_mean_corpuscular_hemoglobin', 'ukbb_blood_platelet_vol', 'ukbb_blood_platelet_count', 'ukbb_blood_red_count', 'ukbb_blood_white_count', 'ukbb_height', 'ukbb_T2D', 'Celiac', 'Crohns', 'Ulcerative_Colitis', 'Rheumatoid_Arthritis', 'Lupus', 'IBD', 'Multiple_sclerosis', 'PBC', 'CAD', 'Bipolar', 'Alzheimer', 'Schizophrenia')
-
-for (trait_index in 1:length(trait_names)) {
-  trait_name <- trait_names[trait_index]
-
-  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_enrichment.pdf")
-  trait_enrichment <- per_cell_sldsc_results[paste0(trait_name, "_enrichment")][,1]
-  indices = !is.na(trait_enrichment)
-  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings[indices,], paste0("S-LDSC enrichment (", trait_name, ")"), point_size=1)
-  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_tau.pdf")
-  trait_tau <- per_cell_sldsc_results[paste0(trait_name, "_tau_star")][,1]
-  indices = !is.na(trait_tau)
-  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_tau[indices], umap_loadings[indices,], paste0("S-LDSC Tau (", trait_name, ")"), point_size=1)
-  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-}
-}
 
 
 ######################################
@@ -1074,33 +946,10 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-lf_num <- 6
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-lf_num <- 7
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-lf_num <- 8
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
-lf_num <- 9
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-lf_num <- 10
-output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+#lf_num <- 6
+#output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+#umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
+#ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 
 
@@ -1311,3 +1160,229 @@ merged <- plot_grid(umap_scatter_cd14, umap_scatter_nkg7, umap_scatter_cd8b, uma
 ggsave(merged, file=output_file, width=7.2, height=8.0, units="in")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# OLD
+
+if (FALSE) {
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_enrichment_3_component.pdf")
+trait_enrichment <- per_cell_3_component_blood_ma_sldsc_results$enrichment
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (blood meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_blood_meta_tau_3_component.pdf")
+trait_enrichment <- per_cell_3_component_blood_ma_sldsc_results$tau_star
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (blood meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_enrichment_3_component.pdf")
+trait_enrichment <- per_cell_3_component_immune_ma_sldsc_results$enrichment
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (immune meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_immune_meta_tau_3_component.pdf")
+trait_enrichment <- per_cell_3_component_immune_ma_sldsc_results$tau_star
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (immune meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_enrichment_3_component.pdf")
+trait_enrichment <- per_cell_3_component_non_blood_immune_ma_sldsc_results$enrichment
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (non-blood-immune meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_non_blood_immune_meta_tau_3_component.pdf")
+trait_enrichment <- per_cell_3_component_non_blood_immune_ma_sldsc_results$tau_star
+indices = !is.na(trait_enrichment)
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (non-blood-immune immune meta analysis)"), point_size=1)
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+
+
+
+trait_names = c('ukbb_blood_monocyte_count', 'ukbb_blood_lymphocyte_count', 'ukbb_bmi', 'ukbb_eczema', 'ukbb_blood_eosinophil_count', 'ukbb_blood_high_light_scatter_reticulotye_count', 'ukbb_blood_mean_corpuscular_hemoglobin', 'ukbb_blood_platelet_vol', 'ukbb_blood_platelet_count', 'ukbb_blood_red_count', 'ukbb_blood_white_count', 'ukbb_height', 'ukbb_T2D', 'Celiac', 'Crohns', 'Ulcerative_Colitis', 'Rheumatoid_Arthritis', 'Lupus', 'IBD', 'Multiple_sclerosis', 'PBC', 'CAD', 'Bipolar', 'Alzheimer', 'Schizophrenia')
+
+for (trait_index in 1:length(trait_names)) {
+  trait_name <- trait_names[trait_index]
+
+  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_enrichment_3_component.pdf")
+  trait_enrichment <- per_cell_3_component_sldsc_results[paste0(trait_name, "_enrichment")][,1]
+  indices = !is.na(trait_enrichment)
+  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_enrichment[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC enrichment (", trait_name, ")"), point_size=1)
+  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+  output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_sldsc_", trait_name, "_tau_3_component.pdf")
+  trait_tau <- per_cell_3_component_sldsc_results[paste0(trait_name, "_tau_star")][,1]
+  indices = !is.na(trait_tau)
+  umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(trait_tau[indices], umap_loadings_3_comp[indices,], paste0("S-LDSC Tau (", trait_name, ")"), point_size=1)
+  ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+
+}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#######################################
+# Expression UMAP scatter colored by surge factor loadings
+#######################################
+if (FALSE) {
+surge_num <- 1
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 2
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 3
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 4
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 5
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 6
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+}
+if (FALSE) {
+
+surge_num <- 7
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 8
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 9
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+surge_num <- 10
+surge_vec <- loadings[,surge_num]
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_surge_factor_num_", surge_num, ".pdf")#
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(surge_vec, umap_expr, paste0("SURGE ", surge_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+}
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+if (FALSE) {
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$cg_cov_mode, umap_expr, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_cell_type2.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ct_cov_mode, umap_expr, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+######################################
+# Visualize UMAP scatter plot colored by cell type
+#######################################
+output_file <- paste0(visualization_dir, "expr_pc_umap_loading_scatter_colored_by_individual.pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_categorical_variable(covariates$ind_cov, umap_expr, "cell type")
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
+
+}
+
+
+
+if (FALSE) {
+per_cell_sldsc_results <- read.table(per_cell_sldsc_results_file, header=TRUE, sep="\t")
+per_cell_blood_ma_sldsc_results <- read.table(per_cell_sldsc_blood_ma_results_file, header=TRUE, sep="\t")
+per_cell_immune_ma_sldsc_results <- read.table(per_cell_sldsc_immune_ma_results_file, header=TRUE, sep="\t")
+per_cell_non_blood_immune_ma_sldsc_results <- read.table(per_cell_sldsc_non_blood_immune_ma_results_file, header=TRUE, sep="\t")
+
+per_cell_3_component_sldsc_results <- read.table(per_cell_3_component_sldsc_results_file, header=TRUE, sep="\t")
+per_cell_3_component_blood_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_blood_ma_results_file, header=TRUE, sep="\t")
+per_cell_3_component_immune_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_immune_ma_results_file, header=TRUE, sep="\t")
+per_cell_3_component_non_blood_immune_ma_sldsc_results <- read.table(per_cell_3_component_sldsc_non_blood_immune_ma_results_file, header=TRUE, sep="\t")
+
+
+component_gridspace_sldsc_results <- read.table(component_gridspace_sldsc_results_file, header=TRUE, sep="\t")
+}

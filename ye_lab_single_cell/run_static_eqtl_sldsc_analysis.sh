@@ -70,9 +70,8 @@ fi
 
 
 
-if false; then
 python organize_static_eqtl_sldsc_results_across_parallel_runs.py $static_eqtl_sldsc_processed_data_dir $static_eqtl_sldsc_results_dir
-fi
+
 
 
 

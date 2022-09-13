@@ -1476,6 +1476,10 @@ ggsave(cell_type_pvalues_plot, file=output_file, width=7.2, height=5.5, units="i
 
 
 
+joint_plot <- plot_grid(boxplots, cell_type_pvalues_plot, labels=c("A","B"), ncol=1)
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "supplentary_cell_type_composition.pdf")
+ggsave(joint_plot, file=output_file, width=7.2, height=6.0, units="in")
+
 
 
 

@@ -374,6 +374,13 @@ make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loadings)
 
 	}
 
+	#df_muscle = df[as.character(df$tissue)=="Muscle_Skeletal",]
+	#df_else = df[as.character(df$tissue)!="Muscle_Skeletal",]
+	#print(mean(df_muscle$loading[df_muscle$latent_factor==1]))
+	#print(mean(df_else$loading[df_muscle$latent_factor==1]))
+	#print(sd(df_muscle$loading[df_muscle$latent_factor==1]))
+	#print(sd(df_else$loading[df_muscle$latent_factor==1]))
+
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
 				gtex_v8_figure_theme() + 
 				scale_fill_manual(values=colors) + 
@@ -1083,6 +1090,26 @@ make_eqtl_factor_expression_pc_correlation_heatmap <- function(loadings, express
 
 }
 
+make_pc_variance_explained_real_vs_perm_line_plot <- function(variance_explained, variance_explained_perm) {
+  num_pcs <- length(variance_explained)
+  variance_explained <- variance_explained[1:num_pcs]
+  variance_explained_perm <- variance_explained_perm[1:num_pcs]
+  realz = c(rep("real", num_pcs), rep("permutation", num_pcs))
+  realz = factor(realz, levels=c("real", "permutation"))
+  df <- data.frame(variance_explained = c(variance_explained, variance_explained_perm), pc_num = c(1:num_pcs, 1:num_pcs), real=realz)
+
+  # PLOT AWAY
+    line_plot <- ggplot(data=df, aes(x=pc_num, y=variance_explained, color=real)) +
+                geom_line() +
+                geom_point() +
+                ylim(0,max(variance_explained) + .002) + 
+                scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
+                labs(x = "SURGE latent context", y = "PVE",color="") + 
+                gtex_v8_figure_theme() 
+
+    return(line_plot)
+}
+
 make_pc_variance_explained_line_plot <- function(variance_explained) {
   num_pcs <- length(variance_explained)
   variance_explained <- variance_explained[1:num_pcs]
@@ -1243,7 +1270,7 @@ make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, cova
 	p <- ggplot(df, aes(fill=cell_type, y=counts, x=bin)) + 
     	geom_bar(position="fill", stat="identity") +
     	gtex_v8_figure_theme() +
-    	labs(fill="", y="Cell type proportions", x=paste0("SURGE latent contxt ", loading_number, " bin"))
+    	labs(fill="", y="Cell type prop.", x=paste0("SURGE latent contxt ", loading_number, " bin"))
     return(p)
 }
 
@@ -1309,6 +1336,10 @@ pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
 ordering <- order(pve, decreasing=TRUE)
 ordering <- ordering[1:8]
 
+perm_pve_file <- paste0(eqtl_results_dir, "tissues_subset_10_surge_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_interaction_only_re_False_var_param_1e-3_factor_pve.txt")
+perm_pve <- as.numeric(read.table(perm_pve_file, header=FALSE, sep="\t")$V1)
+perm_ordering <- order(perm_pve, decreasing=TRUE)
+perm_ordering <- perm_ordering[1:8]
 
 
 
@@ -1316,6 +1347,7 @@ ordering <- ordering[1:8]
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
+ordered_perm_pve <- perm_pve[perm_ordering]
 
 muscle_indices <- as.character(tissue_10_names) == "Muscle_Skeletal"
 not_muscle_indices <- as.character(tissue_10_names) != "Muscle_Skeletal"
@@ -1347,11 +1379,14 @@ output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl
 pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
 
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl_variance_explained_real_vs_perm_lineplot.pdf")
+pve_plot <- make_pc_variance_explained_real_vs_perm_line_plot(ordered_pve, ordered_perm_pve)
+ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
 
 #####################
 # Make heatmap correlation eqtl factorization loadings with expression pcs
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "expression_pc_eqtl_factorization_loading_correlation_heatmap.pdf")
-heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "eQTL Factorization Loadings", "Expression PC Loadings")
+heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "SURGE latent contexts", "Principal Component Loadings")
 ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 
 
@@ -1437,6 +1472,14 @@ num_bins <- 10
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
 stacked_barplot2 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
 ggsave(stacked_barplot2, file=output_file, width=7.2, height=4.0, units="in")
+
+
+loading_number <- 3
+num_bins <- 10
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_number, "_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
+stacked_barplot3 <- observed_cell_type_proportion_stacked_bar_plot(loadings[,loading_number], loading_number, covariates, num_bins)
+ggsave(stacked_barplot3, file=output_file, width=7.2, height=4.0, units="in")
+
 
 ##################
 # Make scatter plot showing correlation between loadings and cell type enrichments
@@ -1538,8 +1581,9 @@ ggsave(stacked_barplot8, file=output_file, width=7.2, height=4.0, units="in")
 ##################
 # Joint stacked bar plot
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "multi_loading_observed_", num_bins, "_bins_cell_type_proportions_stacked_barplot.pdf")
-joint_stacked_bar_plot <- plot_grid(stacked_barplot1 + theme(legend.position="none"), stacked_barplot2+ theme(legend.position="none"), stacked_barplot5+ theme(legend.position="none"), stacked_barplot6+ theme(legend.position="none"), stacked_barplot7+ theme(legend.position="none"), stacked_barplot8+ theme(legend.position="none"), ncol=1)
-ggsave(joint_stacked_bar_plot, file=output_file, width=7.2, height=10.0, units="in")
+ct_leg = get_legend(stacked_barplot1 + theme(legend.position="bottom"))
+joint_stacked_bar_plot <- plot_grid(stacked_barplot1 + theme(legend.position="none"), stacked_barplot2+ theme(legend.position="none"), stacked_barplot5+ theme(legend.position="none"), stacked_barplot6+ theme(legend.position="none"), stacked_barplot7+ theme(legend.position="none"), ct_leg, ncol=1)
+ggsave(joint_stacked_bar_plot, file=output_file, width=7.2, height=9.0, units="in")
 
 
 
@@ -1560,12 +1604,12 @@ ggsave(epi_loading_2_scatter, file=output_file, width=7.2, height=5.5, units="in
 
 #################
 # Make loading_vs_loading scatter colored by real valued covariate
-loading_num_1 <- 3
-loading_num_2 <- 4
+loading_num_1 <- 4
+loading_num_2 <- 7
 real_valued_cov_name <- "genotype_pc1"
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_num_1,"_vs_loading_", loading_num_2, "scatter_colored_by_", real_valued_cov_name,".pdf")
-loading_3_4_colored_by_geno_pc1 <- make_loading_loading_scatter_colored_by_real_valued_covaraite(loadings[,loading_num_1], loadings[,loading_num_2], pcs$genotype_PC0, paste0("SURGE latent context ", loading_num_1), paste0("SURGE latent context ", loading_num_2), "Genotype PC1")
-ggsave(loading_3_4_colored_by_geno_pc1, file=output_file, width=7.2, height=5.5, units="in")
+loading_4_7_colored_by_geno_pc1 <- make_loading_loading_scatter_colored_by_real_valued_covaraite(loadings[,loading_num_1], loadings[,loading_num_2], pcs$genotype_PC0, paste0("SURGE latent context ", loading_num_1), paste0("SURGE latent context ", loading_num_2), "Genotype PC1")
+ggsave(loading_4_7_colored_by_geno_pc1, file=output_file, width=7.2, height=5.5, units="in")
 
 
 cell_type_name = "Neurons"
@@ -1661,6 +1705,13 @@ loading_num <- 5
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_5_Epithelial_scatter_for_digestive_samples.pdf")
 intestine_5_ct_loading_scatter <- make_cell_type_loadings_scatter_for_samples_from_specified_tissue(loadings[, loading_num], covariates$Epithelial, "Epithelial", "Digestive tissues", paste0("Loading ", loading_num), tissue_10_names, valid_tissues, tissue_colors)
 ggsave(intestine_5_ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
+
+
+
+joint_plot <- plot_grid(intestine_5_ct_loading_scatter, pituitary_3_ct_loading_scatter, ncol=1, labels=c("A","B"))
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_cell_type_scatter_supplement.pdf")
+ggsave(joint_plot, file=output_file, width=7.2, height=6.0, units="in")
+print("DONE")
 
 
 
