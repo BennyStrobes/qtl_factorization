@@ -5,6 +5,7 @@ library(cowplot)
 library(ggplot2)
 library(RColorBrewer)
 options(bitmapType = 'cairo', device = 'pdf')
+options(warn=1)
 
 gtex_v8_figure_theme <- function() {
 	return(theme(plot.title = element_text(face="plain",size=11), text = element_text(size=11),axis.text=element_text(size=11), panel.grid.major = element_blank(), panel.grid.minor = element_blank(),panel.background = element_blank(), axis.line = element_line(colour = "black"), legend.text = element_text(size=11), legend.title = element_text(size=11)))

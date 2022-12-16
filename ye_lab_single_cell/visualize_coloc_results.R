@@ -30,7 +30,14 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
 		for (study_iter in 1:length(study_names)) {
 			gwas_study_name <- study_names[study_iter]
 			surge_genes <- c()
-			for (latent_factor_num in 1:3) {
+			for (latent_factor_num in 1:2) {
+				eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
+				results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
+				coloc_results_df <- read.table(results_file, header=TRUE)
+				coloc_genes <- as.character(coloc_results_df[coloc_results_df$pph4 > pph4_thresh,]$gene_name)
+				surge_genes <- c(surge_genes, coloc_genes)
+			}
+			for (latent_factor_num in 4:6) {
 				eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 				results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
 				coloc_results_df <- read.table(results_file, header=TRUE)
@@ -76,7 +83,7 @@ extract_num_coloc_hits_df <- function(study_names, coloc_dir) {
 
 	pph4_threshs <- c(.8, .9, .95, .99)
 
-	for (latent_factor_num in 1:3) {
+	for (latent_factor_num in 1:2) {
 		eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
 		informal_eqtl_study_name <- paste0("SURGE_interaction_", latent_factor_num)
 		for (pph4_iter in 1:length(pph4_threshs)) {
@@ -94,6 +101,26 @@ extract_num_coloc_hits_df <- function(study_names, coloc_dir) {
 			}
 		}
 	}
+
+	for (latent_factor_num in 4:6) {
+		eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
+		informal_eqtl_study_name <- paste0("SURGE_interaction_", (latent_factor_num-1))
+		for (pph4_iter in 1:length(pph4_threshs)) {
+			pph4_thresh = pph4_threshs[pph4_iter]
+			for (study_iter in 1:length(study_names)) {
+				gwas_study_name <- study_names[study_iter]
+				results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
+				coloc_results_df <- read.table(results_file, header=TRUE)
+				num_hits <- sum(coloc_results_df$pph4 > pph4_thresh)
+
+				gwas_study_name_vec <- c(gwas_study_name_vec, gwas_study_name)
+				eqtl_study_name_vec <- c(eqtl_study_name_vec, informal_eqtl_study_name)
+				num_hits_vec <- c(num_hits_vec, num_hits)
+				pph4_thresh_vec <- c(pph4_thresh_vec, pph4_thresh)
+			}
+		}
+	}
+
 
 	eqtl_study_name <- "standard_eqtl"
 	informal_eqtl_study_name <- "standard_eqtl"
