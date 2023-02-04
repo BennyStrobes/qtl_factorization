@@ -5,6 +5,7 @@ library(cowplot)
 library(umap)
 library(ggplot2)
 library(RColorBrewer)
+library(dplyr)
 options(bitmapType = 'cairo', device = 'pdf')
 
 
@@ -221,7 +222,7 @@ make_loading_boxplot_plot_by_race <- function(sample_covariate_file, loadings) {
 
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=ancestry)) + geom_boxplot(outlier.size = .1) +
 				gtex_v8_figure_theme() + 
-	        	labs(x="SURGE latent context", y = "Measurement loading", fill="") +
+	        	labs(x="SURGE latent context", y = "Loading", fill="") +
 	        	theme(legend.position="bottom")
 
 	return(boxplot)
@@ -380,13 +381,14 @@ make_loading_boxplot_plot_by_tissue <- function(tissues,tissue_colors, loadings)
 	#print(mean(df_else$loading[df_muscle$latent_factor==1]))
 	#print(sd(df_muscle$loading[df_muscle$latent_factor==1]))
 	#print(sd(df_else$loading[df_muscle$latent_factor==1]))
+	df$tissue <- recode(df$tissue, Adrenal_Gland="Adrenal Gland", Colon_Sigmoid="Colon Sigmoid", Esophagus_Mucosa="Esophagus Mucosa", Muscle_Skeletal="Muscle Skeletal", Pituitary="Pituitary", Skin_Not_Sun_Exposed_Suprapubic="Skin suprapubic", Skin_Sun_Exposed_Lower_leg="Skin lower leg", Small_Intestine_Terminal_Ileum="Small Intestine", Stomach="Stomach", Thyroid="Thyroid")
 
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=tissue)) + geom_boxplot(outlier.size = .001) +
 				gtex_v8_figure_theme() + 
 				scale_fill_manual(values=colors) + 
-	        	labs(x="SURGE latent context", y = "Measurement loading", fill="") +
+	        	labs(x="SURGE latent context", y = "Loading", fill="") +
 	        	theme(legend.position="bottom") +
-	           	guides(fill=guide_legend(nrow=4,byrow=TRUE, override.aes = list(size=.1))) + 
+	           	guides(fill=guide_legend(nrow=2,byrow=TRUE, override.aes = list(size=.1))) + 
 	           	theme(legend.text=element_text(size=9))
 
 	return(boxplot)
@@ -1270,7 +1272,9 @@ make_loading_cell_type_pvalue_plot <- function(loading_vec, loading_number, cova
 	p <- ggplot(df, aes(fill=cell_type, y=counts, x=bin)) + 
     	geom_bar(position="fill", stat="identity") +
     	gtex_v8_figure_theme() +
-    	labs(fill="", y="Cell type prop.", x=paste0("SURGE latent contxt ", loading_number, " bin"))
+    	theme(legend.text=element_text(size=9)) +
+    	theme(legend.key.size = unit(0.13, "cm")) +
+    	labs(fill="", y="Cell type score   ", x=paste0("SURGE latent contxt ", loading_number, " bin"))
     return(p)
 }
 
@@ -1723,12 +1727,44 @@ ct_loading_scatter <- make_loadings_loadings_scatter_colored_by_cell_type_for_sa
 ggsave(ct_loading_scatter, file=output_file, width=7.2, height=5, units="in")
 
 
-
+if (FALSE) {
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "figure2.pdf")
 tissue_legend <- get_legend(boxplot_tissue)
 race_legend <- get_legend(boxplot_race)
 merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race + theme(legend.position="none"), tissue_legend, race_legend, epi_loading_2_scatter, stacked_barplot6, ncol=2, rel_heights=c(1,.5, 1), rel_widths=c(1, .8), labels = c('A', 'B', '', '', 'C', 'D'))
 ggsave(merged, file=output_file, width=12.2, height=7.5, units="in")
+}
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "figure2b.pdf")
+tissue_legend <- get_legend(boxplot_tissue)
+race_legend <- get_legend(boxplot_race)
+top_grid <- plot_grid(boxplot_tissue + theme(legend.position="none"),tissue_legend,NULL, boxplot_race + theme(legend.position="none"), race_legend, ncol=1, rel_heights=c(1.0,.24,.06,.76,.1), labels=c('A','','','B', ''))
+bottom_grid <- plot_grid(plot_grid(NULL,epi_loading_2_scatter + labs(y="Epithelial score   "),ncol=1,rel_heights=c(.06,1)), plot_grid(NULL,stacked_barplot6,ncol=1,rel_heights=c(.06,1)), ncol=2, rel_widths=c(1, 1.1), labels = c('C', 'D'))
+
+merged <- plot_grid(top_grid,NULL,bottom_grid, ncol=1, rel_heights=c(1,.02,.34))
+ggsave(merged, file=output_file, width=7.2, height=6.9, units="in")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

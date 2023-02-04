@@ -447,8 +447,8 @@ make_single_manhatten_plot <- function(df, study_name, coloring) {
              geom_point(aes(x=position_real, y=neg_log_pvalue), size=.1, color=coloring) +
              scale_color_manual(values=c(coloring)) +
              gtex_v8_figure_theme() +
-             theme(axis.text.x=element_text(size=9), axis.title.x=element_text(size=9)) +
-             theme(plot.title = element_text(hjust = 0.5,size=10)) +
+             theme(axis.text.x=element_text(size=10), axis.title.x=element_text(size=11)) +
+             theme(plot.title = element_text(hjust = 0.5,size=11)) +
              labs(x="Position (MB)",y="-log10(pvalue)", title=study_name)
   return(plotter)
 }
@@ -660,12 +660,12 @@ gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
 #expr <- read.table(gene_expr_file, header=FALSE)
 #saveRDS( expr, "expr.rds")
-expr <- readRDS("expr.rds")
+#expr <- readRDS("expr.rds")
 
 
 #expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
 #saveRDS(expr_pcs, "expr_pcs.rds")
-expr_pcs <- readRDS("expr_pcs.rds")
+#expr_pcs <- readRDS("expr_pcs.rds")
 
 
 loadings <- loadings[, ordering]
