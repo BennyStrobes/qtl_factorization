@@ -111,6 +111,8 @@ covariates <- as.matrix(read.table(covariate_file, header=FALSE))
 lfs <- as.matrix(read.table(interaction_factor_file, header=FALSE))
 groups <- read.table(sample_overlap_file, header=FALSE)$V1
 
+print(dim(covariates))
+print(dim(lfs))
 
 num_lfs <- dim(lfs)[2]
 print(num_lfs)

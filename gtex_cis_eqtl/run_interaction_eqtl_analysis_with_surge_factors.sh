@@ -29,6 +29,12 @@ if false; then
 python extract_surge_latent_factor_by_pve.py $surge_results_stem $surge_latent_factor_file $perm_surge_latent_factor_factor_file $surge_results_suffix
 fi
 
+# Important: assuming first couple of columns of qtl_covariate_file are expression PCs
+expression_pc_factor_file=$output_stem"expression_pc_factors.txt"
+qtl_covariate_remove_top_expression_pc_file=$output_stem"cross_tissue_eqtl_covariate_without_top_expression_pcs_input.txt"
+if false; then
+python2 extract_expression_pc_factor_file_with_matched_number_of_components.py $surge_latent_factor_file $qtl_covariate_file $expression_pc_factor_file $qtl_covariate_remove_top_expression_pc_file
+fi
 
 
 # Interaction analysis on real data
@@ -50,6 +56,18 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 done
 fi
 
+# Interaction eqtl analysis on expression pc data
+if false; then
+for job_number in $(seq 0 $(($num_jobs-1))); do 
+	qtl_output_root=$output_stem"perm_False_expression_pc_interaction_eqtl_results_"$job_number"_"$num_jobs"_"
+	sbatch run_latent_factor_interaction_eqtl_analysis_in_parallel.sh $qtl_expression_file $qtl_genotype_file $qtl_test_names_file $qtl_covariate_remove_top_expression_pc_file $expression_pc_factor_file $qtl_sample_overlap_file $qtl_output_root $job_number $num_jobs
+done
+fi
+
+
+
+
+
 if false; then
 qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
@@ -63,10 +81,10 @@ fi
 
 
 
-
+if false; then
 module load r/3.6.3
 Rscript visualize_surge_interaction_eqtls.R $output_stem"perm_"
-
+fi
 
 
 
