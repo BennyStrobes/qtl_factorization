@@ -109,7 +109,7 @@ make_real_vs_perm_gene_qq_plot <- function(real_pvalues, perm_pvalues, latent_fa
 }
 
 
-gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_gene_level_pvalues, num_factors) {
+gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_gene_level_pvalues, num_factors, name1, name2) {
 	num_genes <- length(real_gene_level_pvalues[[1]])
 	null_pvalues = runif(num_genes)
 	real <- c()
@@ -125,7 +125,7 @@ gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_g
 		real <- c(real, sorted_real)
 		null <- c(null, sorted_null)
 		context <- c(context, rep(paste0("context_", lf), num_genes))
-		version <- c(version, rep("real", num_genes))
+		version <- c(version, rep(name1, num_genes))
 
 
 
@@ -135,12 +135,12 @@ gene_qq_plot_colored_by_real_or_perm <- function(real_gene_level_pvalues, perm_g
 		real <- c(real, sorted_real)
 		null <- c(null, sorted_null)
 		context <- c(context, rep(paste0("context_", lf), num_genes))
-		version <- c(version, rep("permutation", num_genes))
+		version <- c(version, rep(name2, num_genes))
 
 
 		ordered_contexts <- c(ordered_contexts, paste0("context_", lf))
 	}
-	version = factor(version, levels=c("real", "permutation"))
+	version = factor(version, levels=c(name1, name2))
 	df <- data.frame(real=real, null=null, version=version)
 	 plotter <- ggplot(df) + 
              geom_point(aes(x=null, y=real, color=version), size=1) +
@@ -207,9 +207,13 @@ output_stem <- args[1]
 num_factors <- get_num_latent_factors(paste0(output_stem, "False_interaction_eqtl_results_pvalues_merged.txt"), paste0(output_stem, "interaction_only_interaction_eqtl_results_pvalues_merged.txt"))
 
 print(paste0("extracted ", num_factors, " latent factor"))
-
 real_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "False_interaction_eqtl_results_latent_factor_"), num_factors)
 perm_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "interaction_only_interaction_eqtl_results_latent_factor_"), num_factors)
+expr_pc_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "False_expression_pc_interaction_eqtl_results_latent_factor_"), num_factors)
+
+
+
+if (FALSE) {
 
 gene_qq_plots <- list()
 union_perm_gene_level_pvalues <- c()
@@ -223,16 +227,19 @@ for (latent_factor in 1:num_factors) {
 	num_egenes_1 <- sum(efdrs < .1)
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_05, " genes at efdr < .05"))
 	print(paste0("Factor ", latent_factor, ": ", num_egenes_1, " genes at efdr < .1"))
-
+}
 }
 
 
 
-
 output_file <- paste0(output_stem, "real_and_perm_vs_null_gene_qq_plot.pdf")
-real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, 8)
+real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, 8, "real", "perm")
 ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
 
+
+output_file <- paste0(output_stem, "real_and_expression_pc_vs_null_gene_qq_plot.pdf")
+real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, expr_pc_gene_level_pvalues_alphabetical_list, 8, "surge", "expression_pc")
+ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
 
 
 output_file <- paste0(output_stem, "real_vs_null_gene_qq_plot.pdf")
@@ -245,6 +252,7 @@ ggsave(perm_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in"
 
 
 
+if (FALSE) {
 output_file <- paste0(output_stem, "real_perm_gene_level_correlation_heatmap.pdf")
 #real_perm_corr_heatmap <- make_real_perm_correlation_matrix_at_gene_level(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, num_factors)
 #ggsave(real_perm_corr_heatmap, file=output_file, width=7.2, height=6, units="in")
@@ -258,7 +266,7 @@ for (latent_factor in 1:num_factors) {
 output_file <- paste0(output_stem, "gene_qq_plot_real_vs_perm_all_factors.pdf")
 merged_qq = plot_grid(plotlist=gene_qq_plots, ncol=3)
 ggsave(merged_qq, file=output_file, width=7.2, height=9.3, units="in")
-
+}
 
 
 

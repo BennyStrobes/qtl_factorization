@@ -19,6 +19,14 @@ run_eqtl_lmm <- function(expr, geno, covariates, groups) {
 
 run_lf_interaction_eqtl_lm <- function(expr, geno, perm_geno, covariates, lfs, num_lf) {
 	fit_full <- lm(expr ~ geno + covariates + lfs + lfs:perm_geno)
+	fit_null <- lm(expr ~ geno + covariates + lfs)
+
+	lrt <- anova(fit_null,fit_full)
+
+	lrt_pvalue = lrt[[6]][2]
+	lrt_fstat = lrt[[5]][2]
+	lrt_df = lrt[[3]][2]
+
 
 	num_cov = dim(covariates)[2]
 
@@ -36,7 +44,7 @@ run_lf_interaction_eqtl_lm <- function(expr, geno, perm_geno, covariates, lfs, n
 	marginal_std_err = coefficient_std_err[2]
 	marginal_pvalue = coefficient_pvalues[2]
 
-	return(list(pvalue=lf_interaction_pvalue, beta=lf_interaction_coefficient, std_err=lf_interaction_std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue))
+	return(list(pvalue=lf_interaction_pvalue, beta=lf_interaction_coefficient, std_err=lf_interaction_std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue, lrt_fstat=lrt_fstat, lrt_df=lrt_df, lrt_pvalue=lrt_pvalue))
 
 }
 
@@ -149,12 +157,14 @@ while(!stop) {
 			{
 				lm_results = run_lf_interaction_eqtl_lm(expr, norm_geno, norm_perm_geno, covariates, lfs, num_lfs)
 				new_line <- paste0(new_line, "\t", lm_results$marginal_beta, "\t", lm_results$marginal_std_err, "\t", lm_results$marginal_pvalue)
+				new_line <- paste0(new_line, "\t", lm_results$lrt_fstat, "\t", lm_results$lrt_df, "\t", lm_results$lrt_pvalue)
 				for (lf_num in 1:num_lfs) {
 					new_line <- paste0(new_line,"\t",lm_results$beta[lf_num], "\t", lm_results$std_err[lf_num], "\t", lm_results$pvalue[lf_num])
 				}
 				cat(paste0(new_line, "\n"))
         	},
         	error = function(e) {
+        		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
         		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
 				for (lf_num in 1:num_lfs) {
 					new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)

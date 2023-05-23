@@ -178,6 +178,45 @@ def make_sure_files_exist(output_root, total_jobs, suffix):
 			booly = False
 	return booly
 
+
+def merge_meta_analyaized_parallelized_results(output_root, merged_file, suffix, total_jobs, num_lf):
+	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
+	if to_run == False:
+		print('Missing required input files. Please re-evaluate :)')
+		return
+	# Open output (merged result) file handle
+	t = open(merged_file, 'w')
+	# Loop through parrallelized jobs
+	for job_number in range(total_jobs):
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + suffix
+		# Open file for one job
+		f = open(file_name)
+		# To identify header
+		head_count = 0
+		# Stream file from one job
+		counter = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			z_scores = []
+			for lf_num in range(num_lf):
+				beta = float(data[(2 + (1+lf_num)*3)])
+				std_err_beta = float(data[(3 + (1+lf_num)*3)])
+				z_scores.append(beta/std_err_beta)
+			z_scores = np.asarray(z_scores)
+			pvalue = 1 - scipy.stats.chi2.cdf(np.sum(np.square(z_scores)), len(z_scores))
+			new_line = data[0] + '\t' + data[1] + '\t' + str(np.sum(np.square(z_scores))) + '\t' + str(len(z_scores)) + '\t' + str(pvalue)
+			t.write(new_line + '\n')
+		f.close()
+
+	t.close()
+
+	return
+
+
+
+
+
 def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 	to_run = make_sure_files_exist(output_root, total_jobs, suffix)
 	if to_run == False:
@@ -414,12 +453,9 @@ def get_number_of_latent_factors(file_name):
 output_root = sys.argv[1]
 total_jobs = int(sys.argv[2])
 
-
+'''
 # Extract number of latent factors
 num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
-
-merged_file = output_root + '_betas_merged.txt'
-#merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
 merged_file = output_root + '_pvalues_merged.txt'
 merge_pvalue_results(output_root, '.txt', total_jobs, num_lf)
@@ -446,4 +482,29 @@ for lf_num in range(num_lf):
 	fdr = .2
 	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+'''
+
+num_lf = 8
+merged_file = output_root + 'meta_analyzed_latent_factors_merged.txt'
+merge_meta_analyaized_parallelized_results(output_root, merged_file, '.txt',total_jobs, num_lf)
+
+output_file = output_root + 'meta_analyzed_latent_factors_ordered_gene_level_stats.txt'
+ordered_gene_level_stats(merged_file, output_file)
+
+output_file = output_root + 'meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt'
+alphabetical_ordered_gene_level_stats(merged_file, output_file)
+
+fdr = .05
+fdr_file = output_root + 'meta_analyzed_latent_factors_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+
+
+
+
+
+
+
+
+
 

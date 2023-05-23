@@ -1,4 +1,4 @@
-d#!/bin/bash -l
+#!/bin/bash -l
 
 #SBATCH
 #SBATCH --time=40:00:00

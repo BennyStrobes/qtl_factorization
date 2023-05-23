@@ -11,6 +11,7 @@ surge_results_stem = sys.argv[1]
 surge_latent_factor_output_file = sys.argv[2]
 perm_surge_latent_factor_factor_file = sys.argv[3]
 surge_results_suffix = sys.argv[4]
+threshold = float(sys.argv[5])
 
 # Real Surge loadings
 surge_U_real_file_name = surge_results_stem + 'False' + surge_results_suffix + 'var_param_1e-3_U_S.txt'
@@ -32,7 +33,9 @@ pve_perm = np.loadtxt(surge_pve_perm_file_name, delimiter='\t')
 
 
 # Number of contexts to include
-num_contexts = np.sum(pve_real >= 2e-5)
+num_contexts = np.sum(pve_real >= threshold)
+print(num_contexts)
+
 
 
 # Factor re-ordering
