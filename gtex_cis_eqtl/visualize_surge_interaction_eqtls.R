@@ -37,6 +37,12 @@ extract_alphabetical_ordered_gene_level_pvalues_across_factors <- function(stem,
 
 }
 
+extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors <- function(file_name) {
+	temp_data <- read.table(file_name, header=TRUE)
+	aaa = -log10(temp_data$pvalue*temp_data$num_snps_in_gene + 1e-300)
+	return(aaa)
+}
+
 
 make_real_perm_correlation_matrix_at_gene_level <- function(real_list, perm_list, num_factors) {
 	corr_mat <- matrix(0, num_factors, num_factors)
@@ -206,11 +212,21 @@ output_stem <- args[1]
 
 num_factors <- get_num_latent_factors(paste0(output_stem, "False_interaction_eqtl_results_pvalues_merged.txt"), paste0(output_stem, "interaction_only_interaction_eqtl_results_pvalues_merged.txt"))
 
-print(paste0("extracted ", num_factors, " latent factor"))
 real_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "False_interaction_eqtl_results_latent_factor_"), num_factors)
 perm_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "interaction_only_interaction_eqtl_results_latent_factor_"), num_factors)
 expr_pc_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_level_pvalues_across_factors(paste0(output_stem, "False_expression_pc_interaction_eqtl_results_latent_factor_"), num_factors)
 
+
+
+real_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "False_5e-4_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+#perm_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "interaction_only_1e-5_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+expr_pc_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "False_expression_pc_5e-4_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+
+output_file <- paste0(output_stem, "real_vs_expression_pc_meta_analysis_gene_qq_plot.pdf")
+ma_qq_plot <- make_real_vs_perm_gene_qq_plot(real_ma_gene_level_pvalues_alphabetical, expr_pc_ma_gene_level_pvalues_alphabetical, "meta_analysis")
+ggsave(ma_qq_plot, file=output_file, width=7.2, height=6, units="in")
+
+print("DONE")
 
 
 if (FALSE) {
@@ -231,7 +247,7 @@ for (latent_factor in 1:num_factors) {
 }
 
 
-
+if (FALSE) {
 output_file <- paste0(output_stem, "real_and_perm_vs_null_gene_qq_plot.pdf")
 real_and_perm_vs_null_gene_qq_plot <- gene_qq_plot_colored_by_real_or_perm(real_gene_level_pvalues_alphabetical_list, perm_gene_level_pvalues_alphabetical_list, 8, "real", "perm")
 ggsave(real_and_perm_vs_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
@@ -249,7 +265,7 @@ ggsave(real_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in"
 output_file <- paste0(output_stem, "perm_vs_null_gene_qq_plot.pdf")
 perm_null_gene_qq_plot <- gene_qq_plot_colored_by_factors(perm_gene_level_pvalues_alphabetical_list, num_factors, "Permuted")
 ggsave(perm_null_gene_qq_plot, file=output_file, width=7.2, height=6, units="in")
-
+}
 
 
 if (FALSE) {

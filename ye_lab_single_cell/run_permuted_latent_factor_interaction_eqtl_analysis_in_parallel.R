@@ -42,11 +42,14 @@ run_lf_interaction_eqtl_lm <- function(expr, geno, perm_geno, covariates, lfs, n
 
 run_lf_interaction_eqtl_lmm <- function(expr, geno, perm_geno, covariates, lfs, groups, num_lf) {
 	fit_full <- lmer(expr ~ geno + covariates + lfs + lfs:perm_geno + (1 | groups), REML=FALSE)
-	#fit_null <- lmer(expr ~ geno + covariates + lfs + (1 | groups), REML=FALSE)
+	fit_null <- lmer(expr ~ geno + covariates + lfs + (1 | groups), REML=FALSE)
 
-	#lrt <- anova(fit_null,fit_full)
+	lrt <- anova(fit_null,fit_full)
 
-	#aggregate_pvalue <- lrt[[8]][2]
+	lrt_pvalue <- lrt[[8]][2]
+	lrt_fstat <- lrt[[6]][2]
+	lrt_df <- lrt[[7]][2]
+
 
 	# extract coefficients
 	coefs <- data.frame(coef(summary(fit_full)))
@@ -64,7 +67,7 @@ run_lf_interaction_eqtl_lmm <- function(expr, geno, perm_geno, covariates, lfs, 
 	marginal_pvalue = coefficient_pvalues[2]
 
 
-	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue))
+	return(list(pvalue=lf_interaction_coefficient_pvalues, beta=betas, std_err=std_err, marginal_beta=marginal_beta, marginal_std_err=marginal_std_err, marginal_pvalue=marginal_pvalue, lrt_fstat=lrt_fstat, lrt_df=lrt_df, lrt_pvalue=lrt_pvalue))
 }
 
 
@@ -144,6 +147,7 @@ perm <- read.table(sample_permutation_file, header=FALSE)$V1 +1
 num_lfs <- dim(lfs)[2]
 
 output_file <- paste0(output_root, "results.txt")
+print(output_file)
 sink(output_file)
 
 # Stream files
@@ -181,12 +185,14 @@ while(!stop) {
 				#lm_results = run_lf_interaction_eqtl_lm(expr, norm_geno, norm_perm_geno, covariates, lfs, num_lfs)
 				lm_results = run_lf_interaction_eqtl_lmm(expr, norm_geno, norm_perm_geno, covariates, lfs, groups, num_lfs)
 				new_line <- paste0(new_line, "\t", lm_results$marginal_beta, "\t", lm_results$marginal_std_err, "\t", lm_results$marginal_pvalue)
+				new_line <- paste0(new_line, "\t", lm_results$lrt_fstat, "\t", lm_results$lrt_df, "\t", lm_results$lrt_pvalue)
 				for (lf_num in 1:num_lfs) {
 					new_line <- paste0(new_line,"\t",lm_results$beta[lf_num], "\t", lm_results$std_err[lf_num], "\t", lm_results$pvalue[lf_num])
 				}
 				cat(paste0(new_line, "\n"))
         	},
         	error = function(e) {
+        		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
         		new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
 				for (lf_num in 1:num_lfs) {
 					new_line <- paste0(new_line, "\t", 0.0 ,"\t", 1.0, "\t", 1.0)
