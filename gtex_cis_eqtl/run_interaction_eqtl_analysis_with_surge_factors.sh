@@ -70,10 +70,10 @@ python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_r
 
 qtl_output_root=$output_stem"perm_interaction_only_"$threshold"_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
-fi
+
 qtl_output_root=$output_stem"perm_False_expression_pc_"$threshold"_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
-
+fi
 
 #######################################
 threshold="5e-4"
@@ -119,6 +119,7 @@ for job_number in $(seq 0 $(($num_jobs-1))); do
 done
 fi
 
+if false; then
 qtl_output_root=$output_stem"perm_False_"$threshold"_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 
@@ -127,6 +128,7 @@ python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_r
 
 qtl_output_root=$output_stem"perm_False_expression_pc_"$threshold"_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+fi
 
 
 
@@ -134,12 +136,9 @@ python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_r
 
 
 
-
-
-if false; then
 module load r/3.6.3
 Rscript visualize_surge_interaction_eqtls.R $output_stem"perm_"
-fi
+
 
 
 

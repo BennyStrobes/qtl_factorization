@@ -20,11 +20,11 @@ eqtl_results_dir=$sim_output_root"surge_results/"
 viz_dir=$sim_output_root"visualize_simulation/"
 
 
+sh run_simulation_experiments.sh $sim_data_dir $eqtl_results_dir
+
+
 
 if false; then
-sh run_simulation_experiments.sh $sim_data_dir $eqtl_results_dir
-fi
-
-
-#module load r/3.6.3
+module load r/3.6.3
 Rscript visualize_simulation.R $eqtl_results_dir $viz_dir
+fi

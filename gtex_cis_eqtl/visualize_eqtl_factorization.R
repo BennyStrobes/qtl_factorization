@@ -770,7 +770,7 @@ make_median_ancestry_scatter_plot <- function(factor_file, tissue_names, ancestr
 }
 
 
-make_cell_type_loading_scatter <- function(loading, cell_type_enrichment, loading_name, cell_type_name, tissues, tissue_colors) {
+make_cell_type_loading_scatter <- function(loading, cell_type_enrichment, loading_name, cell_type_name, tissues, tissue_colors, testing=FALSE) {
 	df <- data.frame(loading=loading, cell_type_enrichment=cell_type_enrichment, tissue=factor(tissues))
 
 	unique_tissues = unique(df$tissue)
@@ -780,6 +780,9 @@ make_cell_type_loading_scatter <- function(loading, cell_type_enrichment, loadin
 		hex = tissue_colors$tissue_color_hex[tissue_colors$tissue_id == tiss]
 		colors <- c(colors, paste0("#",hex))
 
+	}
+	if (testing) {
+		print(cor.test(df$loading, df$cell_type_enrichment, method=c("spearman")))
 	}
 	plotter <- ggplot(df, aes(x=loading, y=cell_type_enrichment, color=tissue)) + 
 	           geom_point() +
@@ -1051,6 +1054,66 @@ explore_relationship_between_technical_covariates_and_eqtl_factors <- function(s
 	#print(summary(covs))
 }
 
+make_pve_barplot_of_surge_no_random_effects_explained_by_surge_random_effecs <- function(loadings1, loadings2, loadings1_name, loadings2_name) {
+	num_dim = dim(loadings1)[2]
+
+	pve_vec <- c()
+	component_vec <- c()
+
+	for (component_iter in 1:num_dim) {
+		lm1 = lm(loadings1[,component_iter]~as.matrix(loadings2))
+  		r_squared = summary(lm1)$adj.r.squared
+  		pve_vec <- c(pve_vec, r_squared)
+  		component_vec <- c(component_vec, component_iter)
+	}
+
+
+	df <- data.frame(r_squared=pve_vec, latent_context=factor(component_vec, levels=1:num_dim))
+
+
+  	# PLOT AWAY
+    line_plot <- ggplot(data=df, aes(x=latent_context, y=r_squared)) +
+                geom_col() + 
+                labs(x = "SURGE latent context (no random effects)", y = "Adjusted R-squared") + 
+                gtex_v8_figure_theme() 
+
+    return(line_plot)
+
+
+}
+
+make_surge_surge_heatmap <- function(loadings1, loadings2, loadings1_name, loadings2_name) {
+	num_dim_x = dim(loadings2)[2]
+	num_dim_y = dim(loadings1)[2]
+
+	corr_matrix = matrix(0, num_dim_x, num_dim_y)
+
+	for (x_index in 1:num_dim_x) {
+		for (y_index in 1:num_dim_y) {
+			corr_matrix[x_index, y_index] <- abs(cor(loadings2[,x_index], loadings1[, y_index]))
+		}
+	}
+	colnames(corr_matrix) = paste0(1:num_dim_y)
+	rownames(corr_matrix) = paste0(1:num_dim_x)
+
+
+	melted_mat <- melt(corr_matrix)
+    colnames(melted_mat) <- c("model1", "model2", "correlation")
+
+
+    melted_mat$model2 <- factor(melted_mat$model2, levels=paste0(1:num_dim_y))
+    melted_mat$model1 <- factor(melted_mat$model1, levels=paste0(1:num_dim_x))
+
+
+    #  PLOT!
+    heatmap <- ggplot(data=melted_mat, aes(x=model1, y=model2)) + geom_tile(aes(fill=correlation)) + 
+		gtex_v8_figure_theme() +
+   		labs(y=loadings1_name, x=loadings2_name, fill="Absolute\nPearson correlation") +
+   		scale_fill_gradient(low="white",high="blue") 
+	return(heatmap)
+
+}
+
 #Make heatmap showing correlation of loadings between models
 make_eqtl_factor_expression_pc_correlation_heatmap <- function(loadings, expression_pc_file, x_axis_label, y_axis_label) {
 
@@ -1107,12 +1170,13 @@ make_pc_variance_explained_real_vs_perm_line_plot <- function(variance_explained
                 ylim(0,max(variance_explained) + .002) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
                 labs(x = "SURGE latent context", y = "PVE",color="") + 
-                gtex_v8_figure_theme() 
+                gtex_v8_figure_theme() +
+                geom_hline(yintercept=0,linetype='dotted')
 
     return(line_plot)
 }
 
-make_pc_variance_explained_line_plot <- function(variance_explained) {
+make_pc_variance_explained_line_plot <- function(variance_explained, y_axis_label="PVE") {
   num_pcs <- length(variance_explained)
   variance_explained <- variance_explained[1:num_pcs]
   df <- data.frame(variance_explained = variance_explained, pc_num = 1:num_pcs)
@@ -1123,8 +1187,9 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
                 geom_point() +
                 ylim(0,max(variance_explained) + .002) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
-                labs(x = "SURGE latent context", y = "PVE") + 
-                gtex_v8_figure_theme() 
+                labs(x = "SURGE latent context", y = y_axis_label) + 
+                gtex_v8_figure_theme() +
+                geom_hline(yintercept=0,linetype='dotted')
 
     return(line_plot)
 }
@@ -1337,30 +1402,64 @@ tissue_10_factor_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "V.txt")
 
 pve_file <- paste0(eqtl_results_dir, tissue_10_model_stem, "factor_pve.txt")
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
-ordering <- order(pve, decreasing=TRUE)
-ordering <- ordering[1:8]
+ordering_full <- order(pve, decreasing=TRUE)
+ordering <- ordering_full[1:8]
+tot_comp <- sum(pve >= 1e-5)
+ordering_tot_comp = ordering_full[1:tot_comp]
+
 
 perm_pve_file <- paste0(eqtl_results_dir, "tissues_subset_10_surge_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_interaction_only_re_False_var_param_1e-3_factor_pve.txt")
 perm_pve <- as.numeric(read.table(perm_pve_file, header=FALSE, sep="\t")$V1)
-perm_ordering <- order(perm_pve, decreasing=TRUE)
-perm_ordering <- perm_ordering[1:8]
-
-
+perm_ordering_raw <- order(perm_pve, decreasing=TRUE)
+perm_ordering_tot_comp = perm_ordering_raw[1:tot_comp]
+perm_ordering <- perm_ordering_raw[1:8]
 
 
 loadings <- read.table(tissue_10_loading_file, header=FALSE)
+loadings_tot_comp = loadings[, ordering_tot_comp]
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
+ordered_pve_tot_comp <- pve[ordering_tot_comp]
 ordered_perm_pve <- perm_pve[perm_ordering]
+ordered_perm_pve_tot_comp <- perm_pve[perm_ordering_tot_comp]
 
 muscle_indices <- as.character(tissue_10_names) == "Muscle_Skeletal"
 not_muscle_indices <- as.character(tissue_10_names) != "Muscle_Skeletal"
 
 
+# Random effect model
+tissue_10_re_model_stem <- paste0(stem, "_surge_results_k_init_20_seed_1_warmup_5_ratio_variance_std_True_permute_False_re_True_var_param_1e-3_")
+tissue_10_re_loading_file <- paste0(eqtl_results_dir, tissue_10_re_model_stem, "U_S.txt")
+tissue_10_re_factor_file <- paste0(eqtl_results_dir, tissue_10_re_model_stem, "V.txt")
+
+pve_re_file <- paste0(eqtl_results_dir, tissue_10_re_model_stem, "factor_pve.txt")
+pve_re <- as.numeric(read.table(pve_re_file, header=FALSE, sep="\t")$V1)
+ordering_re_full <- order(pve_re, decreasing=TRUE)
+tot_comp_re <- sum(pve_re >= 1e-5)
+ordering_re_tot_comp = ordering_re_full[1:tot_comp_re]
+
+loadings_re <- read.table(tissue_10_re_loading_file, header=FALSE)
+loadings_re_tot_comp = loadings_re[, ordering_re_tot_comp]
+
 
 ############################
 # Start making plots!!
 ############################
+
+# Make heatmap comparing SURGE with and without random effects model
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "Surge_heatmap_correlating_factors_with_and_without_random_effects.pdf")
+heatmap <- make_surge_surge_heatmap(loadings_tot_comp, loadings_re_tot_comp, "SURGE latent context (no random effects)", "SURGE latent context (random effects)")
+ggsave(heatmap, file=output_file, width=7.2, height=3.7, units="in")
+
+# Make lineplot explaining each column of 1 with 2
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "Surge_no_random_effects_explained_by_surge_random_effects.pdf")
+barplot <- make_pve_barplot_of_surge_no_random_effects_explained_by_surge_random_effecs(loadings_tot_comp, loadings_re_tot_comp, "SURGE latent context (no random effects)", "SURGE latent context (random effects)")
+ggsave(barplot, file=output_file, width=7.2, height=3.7, units="in")
+
+joint_plot <- plot_grid(heatmap, barplot, ncol=1, labels=c('A', 'B'), rel_heights=c(1, .7))
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "Surge_no_random_effects_vs_random_effects_supp.pdf")
+ggsave(joint_plot, file=output_file, width=7.2, height=7.0, units="in")
+
 
 
 # Load in loading matrices
@@ -1375,6 +1474,21 @@ output_file <- paste0(visualization_dir, tissue_10_model_stem, "factor_distribut
 #hist <- make_factor_distribution_histograms(tissue_10_factor_file)
 #ggsave(hist, file=output_file, width=7.2, height=7.5, units="in")
 
+covariates <- read.table(tissue_10_sample_covariate_file, header=TRUE, sep="\t")
+
+#print(summary(covariates))
+ct_cov = covariates[,11:dim(covariates)[2]]
+for (itera in 1:15) {
+	print(itera)
+	#lmHeight = lm(loadings_tot_comp[,itera]~factor(tissue_10_names))
+	#print(summary(lmHeight))
+	#lmHeight = lm(loadings_tot_comp[,itera]~factor(covariates$race))
+	#print(summary(lmHeight))
+	lmHeight = lm(loadings_tot_comp[,itera]~ct_cov$Adipocytes + ct_cov$Epithelial_cells + ct_cov$Hepatocytes + ct_cov$Keratinocytes + ct_cov$Myocytes + ct_cov$Neurons + ct_cov$Neutrophils)
+	print(summary(lmHeight))
+}
+
+
 
 #######################################
 # PVE plot showing fraction of eqtl variance explained through each factor
@@ -1387,11 +1501,35 @@ output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl
 pve_plot <- make_pc_variance_explained_real_vs_perm_line_plot(ordered_pve, ordered_perm_pve)
 ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
 
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl_variance_explained_real_vs_perm_tot_comp_lineplot.pdf")
+pve_plot <- make_pc_variance_explained_real_vs_perm_line_plot(ordered_pve_tot_comp, ordered_perm_pve_tot_comp)
+ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl_variance_explained_real_vs_perm_all_comp_lineplot.pdf")
+pve_plot1 <- make_pc_variance_explained_real_vs_perm_line_plot(pve[ordering_full], perm_pve[perm_ordering_raw])
+ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
+
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "fraction_of_eqtl_variance_explained_geno_normalized_all_comp_lineplot.pdf")
+pve_plot2 <- make_pc_variance_explained_line_plot(pve[ordering_full]/sum(pve[ordering_full]), y_axis_label="Fraction of SURGE-mediated\nexpression variance")
+ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
+
+joint_pve <- plot_grid(pve_plot1 + labs(y="Fraction of expression variance") + theme(legend.position="top"), pve_plot2, ncol=1, labels=c('A', 'B'))
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "joint_fraction_of_eqtl_variance_explained_all_comp_lineplot.pdf")
+ggsave(joint_pve, file=output_file, width=7.2, height=7.0, units="in")
+
+
+print("DONER")
+
 #####################
 # Make heatmap correlation eqtl factorization loadings with expression pcs
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "expression_pc_eqtl_factorization_loading_correlation_heatmap.pdf")
 heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings, tissue_10_expression_pcs_file, "SURGE latent contexts", "Principal Component Loadings")
 ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
+# Make heatmap correlation eqtl factorization loadings with expression pcs
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "expression_pc_eqtl_factorization_loading_correlation_tot_comp_heatmap.pdf")
+heatmap <- make_eqtl_factor_expression_pc_correlation_heatmap(loadings_tot_comp, tissue_10_expression_pcs_file, "SURGE latent contexts", "Principal Component Loadings")
+ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
+
 
 
 
@@ -1400,25 +1538,42 @@ ggsave(heatmap, file=output_file, width=7.2, height=8.5, units="in")
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "race_colored_loading_boxplot.pdf")
 boxplot_race <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot_race, file=output_file, width=7.2, height=5.5, units="in")
-
+# Make box plot for each Race, showing loading distributions
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "race_colored_loading_tot_comp_boxplot.pdf")
+boxplot_race2 <- make_loading_boxplot_plot_by_race(tissue_10_sample_covariate_file, loadings_tot_comp)
+ggsave(boxplot_race2, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
 # Make box plot for each Cohort, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "cohort_colored_loading_boxplot.pdf")
 boxplot <- make_loading_boxplot_plot_by_cohort(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+# Make box plot for each Cohort, showing loading distributions
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "cohort_colored_loading_tot_comp_boxplot.pdf")
+boxplot2 <- make_loading_boxplot_plot_by_cohort(tissue_10_sample_covariate_file, loadings_tot_comp)
+ggsave(boxplot2, file=output_file, width=7.2, height=5.5, units="in")
+
+
 
 ######################
 # Make box plot for each Sex, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "sex_colored_loading_boxplot.pdf")
 boxplot <- make_loading_boxplot_plot_by_sex(tissue_10_sample_covariate_file, loadings)
 ggsave(boxplot, file=output_file, width=7.2, height=5.5, units="in")
+# Make box plot for each Sex, showing loading distributions
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "sex_colored_loading_tot_comp_boxplot.pdf")
+boxplot2 <- make_loading_boxplot_plot_by_sex(tissue_10_sample_covariate_file, loadings_tot_comp)
+ggsave(boxplot2, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
 # Make box plot for each tissue, showing loading distributions
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "tissue_colored_loading_boxplot.pdf")
 boxplot_tissue <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, loadings)
 ggsave(boxplot_tissue, file=output_file, width=7.2, height=5.5, units="in")
+# Make box plot for each tissue, showing loading distributions
+output_file <- paste0(visualization_dir, tissue_10_model_stem, "tissue_colored_loading_tot_comp_boxplot.pdf")
+boxplot_tissue2 <- make_loading_boxplot_plot_by_tissue(tissue_10_names, tissue_colors, loadings_tot_comp)
+ggsave(boxplot_tissue2, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################
 # Make cowplot merged boxplot
@@ -1427,7 +1582,6 @@ tissue_legend <- get_legend(boxplot_tissue)
 race_legend <- get_legend(boxplot_race)
 merged <- plot_grid(boxplot_tissue + theme(legend.position="none"), boxplot_race + theme(legend.position="none"), tissue_legend, race_legend, ncol=2, rel_heights=c(1,.5), rel_widths=c(1, .8), labels = c('a', 'b', '', ''))
 ggsave(merged, file=output_file, width=13.2, height=5.5, units="in")
-
 
 
 
@@ -1601,7 +1755,7 @@ ggsave(boxplots, file=output_file, width=7.2, height=11.5, units="in")
 
 loading_num <- 2
 output_file <- paste0(visualization_dir, tissue_10_model_stem, "loading_", loading_num, "_Epithelial_cells", "_loadings_scatter.pdf")
-epi_loading_2_scatter <- make_cell_type_loading_scatter(loadings[,loading_num], covariates$Epithelial, paste0("SURGE latent context ", loading_num), "Epithelial", tissue_10_names, tissue_colors) 
+epi_loading_2_scatter <- make_cell_type_loading_scatter(loadings[,loading_num], covariates$Epithelial, paste0("SURGE latent context ", loading_num), "Epithelial", tissue_10_names, tissue_colors, testing=TRUE) 
 ggsave(epi_loading_2_scatter, file=output_file, width=7.2, height=5.5, units="in")
 
 

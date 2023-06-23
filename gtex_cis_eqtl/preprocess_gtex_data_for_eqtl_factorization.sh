@@ -78,6 +78,11 @@ num_genes="2000"
 python2 preprocess_gtex_data_based_on_standard_eqtls_for_eqtl_factorization.py $output_dir $num_genes $qtl_model_version
 fi
 
+#############################################
+# Prepare data for proxy gene interaction analysis
+#############################################
+python2 preprocess_gtex_data_based_on_standard_eqtls_for_proxy_gene_interaction_qtl.py $output_dir $qtl_model_version
+
 
 
 

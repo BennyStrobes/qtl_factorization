@@ -53,7 +53,7 @@ make_loading_boxplot_plot_with_row_for_every_factor_by_categorical_covariate <- 
 
 
 
-make_loading_boxplot_plot_by_categorical_covariate <- function(covariates, loadings, covariate_name) {
+make_loading_boxplot_plot_by_categorical_covariate <- function(covariates, loadings, covariate_name, context_numbers=NULL) {
 	loading_vec <- c()
 	covariate_vec <- c()
 	factor_vec <- c()
@@ -63,12 +63,20 @@ make_loading_boxplot_plot_by_categorical_covariate <- function(covariates, loadi
 	for (factor_number in 1:num_factors) {
 		loading_vec <- c(loading_vec, loadings[,factor_number])
 		covariate_vec <- c(covariate_vec, as.character(covariates))
-		factor_vec <- c(factor_vec, rep(as.character(factor_number), length(covariates)))
+    if (is.null(context_numbers)) {
+		  factor_vec <- c(factor_vec, rep(as.character(factor_number), length(covariates)))
+    } else {
+      factor_vec <- c(factor_vec, rep(as.character(context_numbers[factor_number]), length(covariates)))
+    }
 	}
 
 
-	df <- data.frame(loading=loading_vec, covariate=factor(covariate_vec), latent_factor=factor(factor_vec, levels=as.character(1:num_factors)))
 
+  if (is.null(context_numbers)) {
+  	df <- data.frame(loading=loading_vec, covariate=factor(covariate_vec), latent_factor=factor(factor_vec, levels=as.character(1:num_factors)))
+    } else {
+      df <- data.frame(loading=loading_vec, covariate=factor(covariate_vec), latent_factor=factor(factor_vec, levels=as.character(context_numbers)))
+    }
 
 
 	boxplot <- ggplot(df, aes(x=latent_factor, y=loading, fill=covariate)) + geom_boxplot(outlier.size = .00001) +
@@ -276,7 +284,8 @@ make_factor_distribution_histograms <- function(factors) {
   return(p)
 }
 
-make_pc_variance_explained_line_plot <- function(variance_explained) {
+
+make_pc_variance_explained_line_plot <- function(variance_explained, y_axis_label="PVE") {
   num_pcs <- length(variance_explained)
   variance_explained <- variance_explained[1:num_pcs]
   df <- data.frame(variance_explained = variance_explained, pc_num = 1:num_pcs)
@@ -287,8 +296,9 @@ make_pc_variance_explained_line_plot <- function(variance_explained) {
                 geom_point() +
                 ylim(0,max(variance_explained) + .002) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
-                labs(x = "Latent context", y = "PVE") + 
-                gtex_v8_figure_theme() 
+                labs(x = "SURGE latent context", y = y_axis_label) + 
+                gtex_v8_figure_theme() +
+                geom_hline(yintercept=0,linetype='dotted')
 
     return(line_plot)
 }
@@ -431,10 +441,11 @@ make_pc_variance_explained_real_vs_perm_line_plot <- function(variance_explained
     line_plot <- ggplot(data=df, aes(x=pc_num, y=variance_explained, color=real)) +
                 geom_line() +
                 geom_point() +
-                ylim(0,max(variance_explained) + .002) + 
+                ylim(0,max(variance_explained) + .0012) + 
                 scale_x_continuous(breaks=seq(0,(num_pcs),1)) +
                 labs(x = "SURGE latent context", y = "PVE",color="") + 
-                gtex_v8_figure_theme() 
+                gtex_v8_figure_theme() +
+                geom_hline(yintercept=0,linetype='dotted')
 
     return(line_plot)
 }
@@ -499,14 +510,7 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
     for (study_iter in 1:length(study_names)) {
       gwas_study_name <- study_names[study_iter]
       surge_genes <- c()
-      for (latent_factor_num in 1:2) {
-        eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
-        results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
-        coloc_results_df <- read.table(results_file, header=TRUE)
-        coloc_genes <- as.character(coloc_results_df[coloc_results_df$pph4 > pph4_thresh,]$gene_name)
-        surge_genes <- c(surge_genes, coloc_genes)
-      }
-      for (latent_factor_num in 4:6) {
+      for (latent_factor_num in 1:6) {
         eqtl_study_name <- paste0("surge_latent_factor_", latent_factor_num, "_interaction")
         results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
         coloc_results_df <- read.table(results_file, header=TRUE)
@@ -520,6 +524,30 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
       pph4_thresh_vec <- c(pph4_thresh_vec, pph4_thresh)
     }
   }
+
+  for (pph4_iter in 1:length(pph4_threshs)) {
+    pph4_thresh = pph4_threshs[pph4_iter]
+    for (study_iter in 1:length(study_names)) {
+      gwas_study_name <- study_names[study_iter]
+      surge_genes <- c()
+      for (latent_factor_num in 1:6) {
+        eqtl_study_name <- paste0("expression_pc_", latent_factor_num, "_interaction")
+        results_file <- paste0(coloc_dir, eqtl_study_name, "_", gwas_study_name, "_coloc_test_results.txt")
+        coloc_results_df <- read.table(results_file, header=TRUE)
+        coloc_genes <- as.character(coloc_results_df[coloc_results_df$pph4 > pph4_thresh,]$gene_name)
+        surge_genes <- c(surge_genes, coloc_genes)
+      }
+
+      num_hits <- length(unique(surge_genes))
+      #num_hits <- length((surge_genes))
+      gwas_study_name_vec <- c(gwas_study_name_vec, gwas_study_name)
+      eqtl_study_name_vec <- c(eqtl_study_name_vec, "expression_pc_interaction_eqtl")
+      num_hits_vec <- c(num_hits_vec, num_hits)
+      pph4_thresh_vec <- c(pph4_thresh_vec, pph4_thresh)
+    }
+  }
+
+
 
   eqtl_study_name <- "standard_eqtl"
   informal_eqtl_study_name <- "standard_eqtl"
@@ -543,16 +571,29 @@ extract_num_coloc_hits_standard_vs_surge_df <- function(study_names, coloc_dir) 
 }
 
 make_number_of_colocalizations_bar_plot <- function(df, pph4_threshold) {
-  df$gwas_study <- factor(df$gwas_study, levels=c("ukbb_bmi", "ukbb_eczema", "sle", "ukbb_blood_eosinophil_count", "ukbb_blood_high_light_scatter_reticulotye_count", "ukbb_blood_lymphocyte_count", "ukbb_blood_mean_corpuscular_hemoglobin", "ukbb_blood_monocyte_count", "ukbb_blood_platelet_count", "ukbb_blood_platelet_vol", "ukbb_blood_red_count", "ukbb_blood_white_count"))
-  df$gwas_study = revalue(df$gwas_study, c("sle"="SLE", "ukbb_bmi"="BMI", "ukbb_eczema"="Eczema", "ukbb_blood_eosinophil_count"="Eosinophil count", "ukbb_blood_high_light_scatter_reticulotye_count"="Reticulocyte count", "ukbb_blood_lymphocyte_count"="Lymphocyte count", "ukbb_blood_mean_corpuscular_hemoglobin"="Corp. hemoglobin", "ukbb_blood_monocyte_count"="Monocyte count", "ukbb_blood_platelet_count"="Platelet count", "ukbb_blood_platelet_vol"="Platelet vol", "ukbb_blood_red_count"="Red blood count", "ukbb_blood_white_count"="White blood count"))
-  df$eqtl_study = revalue(df$eqtl_study, c("standard_eqtl"="standard eQTL", "SURGE_interaction_eqtl"="SURGE interaction eQTL"))
+  #df$gwas_study <- factor(df$gwas_study, levels=c("ukbb_bmi", "ukbb_eczema", "sle", "ukbb_blood_eosinophil_count", "ukbb_blood_high_light_scatter_reticulotye_count", "ukbb_blood_lymphocyte_count", "ukbb_blood_mean_corpuscular_hemoglobin", "ukbb_blood_monocyte_count", "ukbb_blood_platelet_count", "ukbb_blood_platelet_vol", "ukbb_blood_red_count", "ukbb_blood_white_count"))
+  #df$gwas_study = revalue(df$gwas_study, c("sle"="SLE", "ukbb_bmi"="BMI", "ukbb_eczema"="Eczema", "ukbb_blood_eosinophil_count"="Eosinophil count", "ukbb_blood_high_light_scatter_reticulotye_count"="Reticulocyte count", "ukbb_blood_lymphocyte_count"="Lymphocyte count", "ukbb_blood_mean_corpuscular_hemoglobin"="Corp. hemoglobin", "ukbb_blood_monocyte_count"="Monocyte count", "ukbb_blood_platelet_count"="Platelet count", "ukbb_blood_platelet_vol"="Platelet vol", "ukbb_blood_red_count"="Red blood count", "ukbb_blood_white_count"="White blood count"))
+ 
+  df = df[as.character(df$gwas_study) != "ukbb_number_children", ]
+
+  df$gwas_study = revalue(df$gwas_study, c("ukbb_blood_mean_corpuscular_hemoglobin"="Corp. hemoglobin", "ukbb_blood_monocyte_count"="Monocyte count","ukbb_blood_platelet_vol"="Platelet volume", "ukbb_blood_high_light_scatter_reticulotye_count"="Reticulocyte count", "ukbb_eczema"="Eczema", "ukbb_cholesterol"="Cholesterol", "ukbb_height"="Height", "ukbb_bone_mineral_density"="BMD", "ukbb_hair_color"="Hair color", "ukbb_FEV1FVCz"="FEV1FVC", "ukbb_balding"="Balding", "ukbb_fvc"="FVC", "ukbb_diastolic_bp"="Diastolic BP", "ukbb_menarche_age"="Menarche age"))
+ 
+  trait_ordering = order(-df[as.character(df$eqtl_study)=="SURGE_interaction_eqtl",]$num_colocalizations)
+  temp_ordered_trait_names = as.character(df[as.character(df$eqtl_study)=="SURGE_interaction_eqtl",]$gwas_study)
+
+  #df$gwas_study = factor(df$gwas_study, levels=c("Corp. hemoglobin", "Monocyte count","Platelet volume", "Reticulocyte count", "Eczema", "Cholesterol", "Height", "BMD", "Hair color", "FEV1FVC", "Balding", "FVC", "Diastolic BP", "Menarche age", "No. children"))
+  df$gwas_study = factor(df$gwas_study, levels=temp_ordered_trait_names[trait_ordering])
+
+  df$eqtl_study = revalue(df$eqtl_study, c("standard_eqtl"="standard","expression_pc_interaction_eqtl"="Expression PC", "SURGE_interaction_eqtl"="SURGE"))
+  df$eqtl_study = factor(df$eqtl_study, levels=c("standard", "Expression PC", "SURGE"))
+
 
   #dodgerblue3
   p <- ggplot(df, aes(fill=eqtl_study, y=num_colocalizations, x=gwas_study)) + 
       geom_bar(position="dodge", stat="identity") +
       gtex_v8_figure_theme() + theme(axis.text.x = element_text(angle = 90,hjust=1, vjust=.5, size=10)) +
       theme(legend.position="bottom") +
-      scale_fill_manual(values=c("Grey48", "dodgerblue3")) +
+      scale_fill_manual(values=c("Grey65", "khaki", "dodgerblue3")) +
       labs(y=paste0("Number of colocalizations\n(PPH4 > ", pph4_threshold, ")"), x="", fill="", title="")
     return(p)
 }
@@ -577,20 +618,21 @@ coloc_dir <- args[10]
 
 
 
-
+print(coloc_dir)
 # Add two coloc plots here for Figure 3
 gene_name <- "BTN3A2"
 test_info_file = paste0(coloc_dir, "surge_latent_factor_4_interaction_sle_coloc_test_info.txt")
 test_info <- read.table(test_info_file, header=TRUE)
-coloc_manhattens_3b <- get_coloc_manhatten_plot(test_info, "BTN3A2", "SURGE latent context 3 interaction eQTL", "Systemic lupus erythematosus")
+coloc_manhattens_3b <- get_coloc_manhatten_plot(test_info, "BTN3A2", "SURGE latent context 4 interaction eQTL", "Systemic lupus erythematosus")
 output_file <- paste0(visualization_dir, "coloc_latent_context_4_", gene_name, "_sle_manhattens_panel_3b.pdf")
 ggsave(coloc_manhattens_3b, file=output_file, width=7.2, height=8.0, units="in")
 
 
 
-gwas_studies_file <- paste0(coloc_dir, "processed_gwas_studies.txt")
+gwas_studies_file <- paste0(coloc_dir, "processed_gwas_studies_independent.txt")
 study_df <- read.table(gwas_studies_file, header=FALSE)
 study_names <- as.character(study_df$V1)
+study_names <- study_names[1:15]
 
 num_coloc_hits_standard_vs_surge_df <- extract_num_coloc_hits_standard_vs_surge_df(study_names, coloc_dir)
 pph4_threshold <- .95
@@ -624,16 +666,18 @@ eqtl_factorization_factor_file <- paste0(eqtl_results_dir, model_stem, "V.txt")
 pve_file <- paste0(eqtl_results_dir, model_stem, "factor_pve.txt")
 
 pve <- as.numeric(read.table(pve_file, header=FALSE, sep="\t")$V1)
+print(eqtl_factorization_loading_file)
+print(pve_file)
 
-ordering <- order(pve, decreasing=TRUE)
-ordering <- ordering[1:6]
-ordering = ordering[c(1,2,4,5,6)]
+ordering_full <- order(pve, decreasing=TRUE)
+ordering <- ordering_full[1:6]
+#ordering = ordering[c(1,2,4,5,6)]
 
 
 perm_pve_file <- paste0(eqtl_results_dir, "eqtl_factorization_standard_eqtl_hvg_6000_10.0_no_cap_15_none_zscore_surge_results_k_10_seed_1_warm_5_rv_std_True_perm_interaction_only_delta_elbo_1e-2_filter_hwe_alt_init_factor_pve.txt")
 perm_pve <- as.numeric(read.table(perm_pve_file, header=FALSE, sep="\t")$V1)
-perm_ordering <- order(perm_pve, decreasing=TRUE)
-perm_ordering <- perm_ordering[1:5]
+perm_ordering_full <- order(perm_pve, decreasing=TRUE)
+perm_ordering <- perm_ordering_full[1:6]
 
 
 
@@ -658,15 +702,16 @@ loadings <- read.table(eqtl_factorization_loading_file, header=FALSE)
 
 gene_names <- read.table(gene_names_file, header=FALSE)$V1
 
-#expr <- read.table(gene_expr_file, header=FALSE)
-#saveRDS( expr, "expr.rds")
+if (FALSE) {
+expr <- read.table(gene_expr_file, header=FALSE)
+saveRDS( expr, "expr.rds")
 #expr <- readRDS("expr.rds")
 
 
-#expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
-#saveRDS(expr_pcs, "expr_pcs.rds")
+expr_pcs <- read.table(gene_expr_pc_file, header=FALSE)
+saveRDS(expr_pcs, "expr_pcs.rds")
 #expr_pcs <- readRDS("expr_pcs.rds")
-
+}
 
 loadings <- loadings[, ordering]
 ordered_pve <- pve[ordering]
@@ -676,6 +721,22 @@ covariates$ct_by_status = factor(paste0(covariates$ct_cov_mode, "_", covariates$
 covariates$cg_by_status = factor(paste0(covariates$cg_cov_mode, "_", covariates$SLE_status))
 covariates$ct_by_pop = factor(paste0(covariates$ct_cov_mode, "_", covariates$pop_cov))
 covariates$cg_by_pop = factor(paste0(covariates$cg_cov_mode, "_", covariates$pop_cov))
+
+n_comp <- length(ordering)
+for (comp_iter in 1:n_comp) {
+  print(comp_iter)
+  aa = lm(loadings[,comp_iter] ~ covariates$cg_cov_mode)
+  print(summary(aa))
+}
+
+NK_indices = covariates$cg_cov_mode == "NK"
+NK_bright_indices = covariates$ct_cov_mode == "NK_bright"
+NK_dim_indices = covariates$ct_cov_mode == "NK_dim"
+
+comp_iter=2
+print(wilcox.test(loadings[, comp_iter][NK_indices], loadings[, comp_iter][!NK_indices]))
+print(wilcox.test(loadings[, comp_iter][NK_bright_indices], loadings[, comp_iter][NK_dim_indices]))
+
 
 
 trait_arr <- unique(as.character(component_gridspace_sldsc_results$trait_name))
@@ -690,31 +751,30 @@ for (trait_iter in 1:length(trait_arr)) {
 
   component_num <- 1
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  #continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset)
   continous_sldsc_enrichmennt_plot1 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
   component_num <- 2
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
   continous_sldsc_enrichmennt_plot2 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
-  #component_num <- 3
-  #indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  #continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
+  component_num <- 3
+  indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
+  continous_sldsc_enrichmennt_plot3 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,component_num])
 
   component_num <- 4
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot4 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
+  continous_sldsc_enrichmennt_plot4 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,(component_num)])
 
   component_num <- 5
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot5 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
+  continous_sldsc_enrichmennt_plot5 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,(component_num)])
 
   component_num <- 6
   indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-  continous_sldsc_enrichmennt_plot6 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)])
+  continous_sldsc_enrichmennt_plot6 <- sldsc_enrichment_se_plot_over_continuous_domain(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,(component_num)])
 
 
-  continous_sldsc_enrichmennt_plot_joint <- plot_grid(continous_sldsc_enrichmennt_plot1,continous_sldsc_enrichmennt_plot2, continous_sldsc_enrichmennt_plot4, continous_sldsc_enrichmennt_plot5, continous_sldsc_enrichmennt_plot6, ncol=2)
+  continous_sldsc_enrichmennt_plot_joint <- plot_grid(continous_sldsc_enrichmennt_plot1,continous_sldsc_enrichmennt_plot2,continous_sldsc_enrichmennt_plot3, continous_sldsc_enrichmennt_plot4, continous_sldsc_enrichmennt_plot5, continous_sldsc_enrichmennt_plot6, ncol=2)
 
   ggsave(continous_sldsc_enrichmennt_plot_joint, file=output_file, width=7.2, height=8.0, units="in")
 
@@ -734,7 +794,7 @@ trait_name="Celiac"
 component_num <- 4
 static_eqtl_trait_subset <- static_eqtl_sldsc_results[as.character(static_eqtl_sldsc_results$trait_name) == trait_name,]
 indices <- (component_gridspace_sldsc_results$trait_name == trait_name) & (component_gridspace_sldsc_results$component_num == component_num)
-sldsc_enrichmennt_plot_panel_3e <- sldsc_enrichment_se_plot_over_continuous_domain_spiffy(component_gridspace_sldsc_results[indices,], trait_name, component_num-1, static_eqtl_trait_subset, loadings[,(component_num-1)], "Celiac\nheritability enrichment")
+sldsc_enrichmennt_plot_panel_3e <- sldsc_enrichment_se_plot_over_continuous_domain_spiffy(component_gridspace_sldsc_results[indices,], trait_name, component_num, static_eqtl_trait_subset, loadings[,(component_num-1)], "Celiac\nheritability enrichment")
 output_file <- paste0(visualization_dir, "sldsc_enrichment_panel_3e.pdf")
 ggsave(sldsc_enrichmennt_plot_panel_3e, file=output_file, width=7.2, height=5.5, units="in")
 
@@ -743,13 +803,29 @@ ggsave(sldsc_enrichmennt_plot_panel_3e, file=output_file, width=7.2, height=5.5,
 # PVE plot showing fraction of eqtl variance explained through each factor
 #######################################
 output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_lineplot.pdf")
-pve_plot <- make_pc_variance_explained_line_plot(ordered_pve[1:5])
+pve_plot <- make_pc_variance_explained_line_plot(ordered_pve)
 ggsave(pve_plot, file=output_file, width=7.2, height=5.5, units="in")
-
 
 output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_real_vs_perm_lineplot.pdf")
 pve_plot <- make_pc_variance_explained_real_vs_perm_line_plot(ordered_pve, ordered_perm_pve)
 ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
+
+
+output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_real_vs_perm_all_comp_lineplot.pdf")
+pve_plot1 <- make_pc_variance_explained_real_vs_perm_line_plot(pve[ordering_full], perm_pve[perm_ordering_full])
+ggsave(pve_plot1, file=output_file, width=7.2, height=4.0, units="in")
+
+
+output_file <- paste0(visualization_dir, "fraction_of_eqtl_variance_explained_geno_normalized_all_comp_lineplot.pdf")
+pve_plot2 <- make_pc_variance_explained_line_plot(pve[ordering_full]/sum(pve[ordering_full]), y_axis_label="Fraction of SURGE-mediated\nexpression variance")
+ggsave(pve_plot, file=output_file, width=7.2, height=4.0, units="in")
+
+joint_pve <- plot_grid(pve_plot1 + labs(y="Fraction of expression variance") + theme(legend.position="top"), pve_plot2, ncol=1, labels=c('A', 'B'))
+output_file <- paste0(visualization_dir, "joint_fraction_of_eqtl_variance_explained_all_comp_lineplot.pdf")
+ggsave(joint_pve, file=output_file, width=7.2, height=7.0, units="in")
+
+print("DOINE")
+
 
 
 loading_num <- 1
@@ -793,6 +869,14 @@ output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, 
 histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
 ggsave(histy, file=output_file, width=7.2, height=4, units="in")
 
+loading_num <- 6
+cell_type <- "monocyte"
+cell_type_indices = as.character(covariates$ct_cov_mode) == cell_type
+loading_vec <- loadings[,loading_num]
+output_file <- paste0(visualization_dir, "histogram_of_loadings_", loading_num, "_for_", cell_type, "_stratefied_by_sle_status.pdf")
+histy <- make_histogram_of_loadings_for_cell_type_stratefied_by_sle_status(loading_vec[cell_type_indices], covariates$SLE_status[cell_type_indices], cell_type, loading_num)
+ggsave(histy, file=output_file, width=7.2, height=4, units="in")
+
 
 
 
@@ -820,9 +904,9 @@ output_file <- paste0(visualization_dir, "loading_boxplot_colored_by_cell_type.p
 ct_boxplot <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, loadings, "Cell type")
 ggsave(ct_boxplot, file=output_file, width=7.2, height=5.5, units="in")
 
-ct_loadings <- loadings[,1:3]
+ct_loadings <- loadings[,c(1,2,4)]
 output_file <- paste0(visualization_dir, "loading_cell_type_boxplot_colored_by_cell_type_panel_3a.pdf")
-boxplot_3a <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, ct_loadings, "Cell Type")
+boxplot_3a <- make_loading_boxplot_plot_by_categorical_covariate(covariates$cg_cov_mode, ct_loadings, "Cell Type", context_numbers=c(1,2,4))
 ggsave(boxplot_3a, file=output_file, width=7.2, height=5.5, units="in")
 
 ######################################
@@ -957,9 +1041,9 @@ ggsave(boxplot, file=output_file, width=10.2, height=20.5, units="in")
 
 
 print('UMAP START')
-#umap_loadings = umap(loadings)$layout
-#saveRDS( umap_loadings, "umap_loadings.rds")
-umap_loadings <- readRDS("umap_loadings.rds")
+umap_loadings = umap(loadings)$layout
+saveRDS( umap_loadings, "umap_loadings.rds")
+#umap_loadings <- readRDS("umap_loadings.rds")
 print('UMAP DONE')
 
 
@@ -1122,12 +1206,10 @@ output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_
 umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
 ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
-#lf_num <- 6
-#output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
-#umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
-#ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
-
-
+lf_num <- 6
+output_file <- paste0(visualization_dir, "umap_loading_scatter_colored_by_ef_lf_", lf_num, ".pdf")
+umap_scatter <- make_umap_loading_scatter_plot_colored_by_real_valued_variable(sigmoid(loadings[,lf_num])-.5, umap_loadings, paste0("SURGE Latent context ", lf_num))
+ggsave(umap_scatter, file=output_file, width=7.2, height=6.0, units="in")
 
 ######################################
 # Visualize UMAP scatter plot based on expression pcs

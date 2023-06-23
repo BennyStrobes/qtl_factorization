@@ -20,6 +20,10 @@ processed_data_dir=$root_dir"processed_data/"
 eqtl_results_dir=$root_dir"eqtl_results/"
 # Directory containing interaction eqtl results
 interaction_eqtl_dir=$root_dir"interaction_eqtls/"
+# Directory containing proxy gene interaction eqtl results
+proxy_gene_input_data_dir=$root_dir"proxy_gene_input_data/"
+# Directory containing proxy gene interaction eqtl results
+proxy_gene_interaction_eqtl_results_dir=$root_dir"proxy_gene_interaction_eqtl/"
 # Directory containing visualizations
 visualization_expression_dir=$root_dir"visualize_expression/"
 # Directory containing visualizations of standard eqtl approachees
@@ -41,7 +45,7 @@ gtex_individual_information_file="/scratch16/abattle4/lab_data/GTEx_v8/sample_an
 gtex_sample_information_file="/scratch16/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl/input_data/GTEx_Analysis_v8_Annotations_SampleAttributesDS.txt"
 gtex_xcell_enrichment_file="/scratch16/abattle4/bstrober/qtl_factorization/gtex_cis_eqtl/input_data/GTEx_Analysis_v8_xCell_scores_7_celltypes.txt"
 
-
+proxy_gene_jar_file="/scratch16/abattle4/bstrober/tools/eqtl_interaction_analyser/eQTLInteractionAnalyser-1.2-SNAPSHOT-jar-with-dependencies.jar"
 
 
 
@@ -55,14 +59,22 @@ output_eqtl_visualization_dir=$visualize_standard_eqtl_dir"tissues_subset_10_"
 qtl_model_version="lm"
 num_qtl_jobs="50"
 if false; then
-sbatch preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir $qtl_model_version $num_qtl_jobs
+sh preprocess_gtex_data_for_eqtl_factorization.sh $tissues_file $gtex_expression_dir $gtex_tpm_dir $gtex_covariate_dir $gtex_genotype_dir $gtex_egene_dir $gtex_individual_information_file $gtex_sample_information_file $gtex_eqtl_dir $gtex_xcell_enrichment_file $output_dir $output_visualization_dir $output_eqtl_visualization_dir $qtl_model_version $num_qtl_jobs
 fi
 
 
 
+#############################################
+## Run proxy gene interaction analysis
+#############################################
+input_data_stem="tissues_subset_10_"
 
-
-
+expression_training_file=$processed_data_dir$input_data_stem"proxy_gene_factorization_standard_eqtl_lm_input_expression.txt"
+genotype_training_file=$processed_data_dir$input_data_stem"proxy_gene_factorization_standard_eqtl_lm_input_genotype.txt"
+covariate_training_file=$processed_data_dir$input_data_stem"proxy_gene_factorization_lm_covariate_input.txt"
+if false; then
+sh run_proxy_gene_interaction_eqtl_analysis.sh $expression_training_file $genotype_training_file $covariate_training_file $proxy_gene_input_data_dir $proxy_gene_interaction_eqtl_results_dir $proxy_gene_jar_file
+fi
 
 
 
@@ -224,10 +236,9 @@ fi
 #############################################
 ## Visualize results
 #############################################
-if false; then
 module load r/3.6.3
 Rscript visualize_eqtl_factorization.R $processed_data_dir $eqtl_results_dir $visualize_eqtl_factorization_results_dir $gtex_tissue_colors_file
-fi
+
 
 
 

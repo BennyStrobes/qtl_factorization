@@ -91,6 +91,23 @@ efdr_calculation <- function(real_log10_pvalues, perm_log10_pvalues) {
 	return(eFDRs)
 }
 
+make_real_vs_perm_gene_qq_plot_ma <- function(real_pvalues, perm_pvalues, latent_factor) {
+	efdrs = efdr_calculation(real_pvalues, perm_pvalues)
+	num_egenes_05 <- sum(efdrs < .05)
+	num_egenes_2 <- sum(efdrs < .2)
+
+	df <- data.frame(real=sort(real_pvalues), perm=sort(perm_pvalues))
+
+	 plotter <- ggplot(df) + 
+             geom_point(aes(x=perm, y=real), size=.1) +
+             geom_abline()+
+             gtex_v8_figure_theme() + 
+             labs(x="Expresssion PC interaction eQTL", y = "SURGE interaction eQTL") + 
+             theme(legend.text = element_text(size=8), legend.title = element_text(size=8)) 
+  return(plotter)
+
+}
+
 make_real_vs_perm_gene_qq_plot <- function(real_pvalues, perm_pvalues, latent_factor) {
 	efdrs = efdr_calculation(real_pvalues, perm_pvalues)
 	num_egenes_05 <- sum(efdrs < .05)
@@ -201,6 +218,53 @@ get_num_latent_factors <- function(real_pvalue_file, perm_pvalue_file) {
 	return(num_lf)
 }
 
+extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors <- function(file_name) {
+	temp_data <- read.table(file_name, header=TRUE)
+	aaa = -log10(temp_data$pvalue*temp_data$num_snps_in_gene + 1e-300)
+	return(aaa)
+}
+
+aggregate_efdr_calculation <- function(real_log10_pvalues, real_factor_names, perm_log10_pvalues, num_factors) {
+	print("START")
+	counts = numeric(num_factors)
+	#sorted_real_old = sort(real_log10_pvalues)
+	ordering = order(real_log10_pvalues)
+	sorted_real = real_log10_pvalues[ordering]
+	ordered_factor_names = real_factor_names[ordering]
+
+	M1 = length(real_log10_pvalues)
+	M2 = length(perm_log10_pvalues)
+
+	eFDRs <- c()
+	prev_min = 10000
+	for (index in 1:length(sorted_real)) {
+		real_value = sorted_real[index]
+		frac_real = sum(sorted_real >= real_value)/M1
+		frac_perm = sum(perm_log10_pvalues >= real_value)/M2
+
+		curr_efdr = frac_perm/frac_real
+		if (curr_efdr > prev_min) {
+			curr_efdr = prev_min
+		}
+		prev_min = curr_efdr
+		eFDRs <- c(eFDRs, curr_efdr)
+	}	
+	print(sorted_real)
+	efdr_thresh=.06
+	print(sort(eFDRs)[1:20])
+	valid_indices = eFDRs <= efdr_thresh
+	valid_factors = ordered_factor_names[valid_indices]
+	print(summary(factor(valid_factors)))
+	efdr_thresh=.1
+	valid_indices = eFDRs <= efdr_thresh
+	valid_factors = ordered_factor_names[valid_indices]
+	print(summary(factor(valid_factors)))
+
+
+}
+
+
+
 output_stem <- args[1]
 
 
@@ -213,12 +277,37 @@ perm_gene_level_pvalues_alphabetical_list <- extract_alphabetical_ordered_gene_l
 
 
 
+real_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "False_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+#perm_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "interaction_only_1e-5_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+expr_pc_ma_gene_level_pvalues_alphabetical = extract_alphabetical_ordered_gene_level_pvalues_for_meta_analysis_across_factors(paste0(output_stem, "False_expression_pc_interaction_eqtl_results_meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt"))
+output_file <- paste0(output_stem, "real_vs_expression_pc_meta_analysis_gene_qq_plot.pdf")
+ma_qq_plot <- make_real_vs_perm_gene_qq_plot_ma(real_ma_gene_level_pvalues_alphabetical, expr_pc_ma_gene_level_pvalues_alphabetical, "meta_analysis")
+ggsave(ma_qq_plot, file=output_file, width=7.2, height=6, units="in")
+print("DONE")
+
+print(t.test(real_ma_gene_level_pvalues_alphabetical,expr_pc_ma_gene_level_pvalues_alphabetical, paired=TRUE))
+
+
 
 gene_qq_plots <- list()
 union_perm_gene_level_pvalues <- c()
 for (latent_factor in 1:num_factors) {
 	union_perm_gene_level_pvalues <- c(union_perm_gene_level_pvalues, perm_gene_level_pvalues_alphabetical_list[[latent_factor]])
 }
+
+
+union_real_gene_level_pvalues <- c()
+union_real_gene_level_factor_names <- c()
+for (latent_factor in 1:num_factors) {
+	union_real_gene_level_pvalues <- c(union_real_gene_level_pvalues, real_gene_level_pvalues_alphabetical_list[[latent_factor]])
+	union_real_gene_level_factor_names <- c(union_real_gene_level_factor_names, rep(latent_factor, length(real_gene_level_pvalues_alphabetical_list[[latent_factor]])))
+}
+
+aggregate_efdr_calculation(union_real_gene_level_pvalues, union_real_gene_level_factor_names, union_perm_gene_level_pvalues, num_factors)
+
+
+
+
 
 for (latent_factor in 1:num_factors) {
 	efdrs = efdr_calculation(real_gene_level_pvalues_alphabetical_list[[latent_factor]], union_perm_gene_level_pvalues)

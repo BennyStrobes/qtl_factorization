@@ -72,12 +72,74 @@ make_num_contexts_boxplot <- function(df) {
 	return(plotter)
 }
 
+make_run_time_eqtl_lmm_analysis_boxplot <- function(eqtl_results_dir) {
+
+	eqtl_ss_vec <- c()
+	run_time_vec <- c()
+	sample_vec <- c()
+	for (itera in 1:1) {
+		tmp_df <- read.table(paste0(eqtl_results_dir, "eqtl_lmm_run_time_", itera, ".txt"), header=TRUE)
+		#print(tmp_df)
+		tmp_df = tmp_df[2:dim(tmp_df)[1],]
+
+		eqtl_ss_vec <- c(eqtl_ss_vec, tmp_df$sample_size)
+		run_time_vec <- c(run_time_vec, tmp_df$run_time)
+	}
+
+	df <- data.frame(eqtl_ss=factor(eqtl_ss_vec), run_time=run_time_vec)
+	pp <- ggplot(df, aes(x=eqtl_ss, y=run_time)) + 
+ 		 geom_beeswarm(color='blue', size=.5, cex=.54) + 
+ 		 figure_theme() +
+ 		 labs(x="eQTL sample size", y="Run time (seconds)", title="LME4 Interaction eQTL Runtime")
+
+ 	return(pp)
+}
+
+make_run_time_analysis_boxplot <- function(eqtl_results_dir) {
+	eqtl_ss_vec <- c()
+	run_time_vec <- c()
+	sample_vec <- c()
+	for (itera in 1:10) {
+		tmp_df <- read.table(paste0(eqtl_results_dir, "run_time_analysis_", itera, ".txt"), header=TRUE)
+		tmp_df = tmp_df[2:dim(tmp_df)[1],]
+
+		eqtl_ss_vec <- c(eqtl_ss_vec, tmp_df$eqtl_sample_size)
+		run_time_vec <- c(run_time_vec, tmp_df$run_time/(60.0*60.0))
+		sample_vec <- c(sample_vec, tmp_df$sample)
+	}
+
+	df <- data.frame(eqtl_ss=factor(eqtl_ss_vec), run_time=run_time_vec)
+	pp <- ggplot(df, aes(x=eqtl_ss, y=run_time)) + 
+ 		 geom_beeswarm(color='blue', size=1.0) + 
+ 		 figure_theme() +
+ 		 labs(x="eQTL sample size", y="Run time (hours)", title="SURGE optimization runtime")
+
+ 	return(pp)	
+}
+
 
 eqtl_results_dir=args[1]
 viz_dir=args[2]
 
 
+################################################
+# Make run time analysis boxplot
+################################################
+output_file <- paste0(viz_dir, "surge_runtime_boxplot.pdf")
+boxplot <- make_run_time_analysis_boxplot(eqtl_results_dir)
+ggsave(boxplot, file=output_file, width=7.2, height=4.0, units="in")
 
+output_file <- paste0(viz_dir, "eqtl_lmm_runtime_boxplot.pdf")
+boxplot2 <- make_run_time_eqtl_lmm_analysis_boxplot(eqtl_results_dir)
+ggsave(boxplot2, file=output_file, width=7.2, height=4.0, units="in")
+
+# make joint runtime plot
+joint_plot <- plot_grid(boxplot, boxplot2, ncol=1)
+output_file <- paste0(viz_dir, "joint_runtime.pdf")
+ggsave(joint_plot, file=output_file, width=7.2, height=5.5, units="in")
+
+
+if (FALSE) {
 ################################################
 # Assess ability to identify correct number of simulated factors
 ################################################
@@ -224,7 +286,7 @@ fig1a <- ggdraw() +
 				draw_plot(context_legend,.185,-.29,1,1) 
 ggsave(plot_grid(fig1a, labels = c("A")), file=output_file, width=7.2, height=2.2, units="in")
 
-
+}
 
 
 

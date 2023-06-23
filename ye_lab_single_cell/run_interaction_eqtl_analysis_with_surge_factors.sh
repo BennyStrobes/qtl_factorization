@@ -36,6 +36,7 @@ python extract_surge_latent_factor_by_pve.py $surge_results_stem $surge_latent_f
 fi
 
 
+
 # Important: assuming first couple of columns of qtl_covariate_file are expression PCs
 expression_pc_factor_file=$output_stem"expression_pc_factors.txt"
 qtl_covariate_remove_top_expression_pc_file=$output_stem"all_covariate_without_top_expression_pcs_input.txt"
@@ -74,20 +75,26 @@ done
 fi
 
 
-if false; then
 qtl_output_root=$output_stem"perm_False_interaction_eqtl_results_"
+if false; then
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+fi
 
 
+qtl_output_root=$output_stem"perm_False_expression_pc_interaction_eqtl_results_"
+if false; then
+python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
+fi
+
+
+if false; then
 qtl_output_root=$output_stem"perm_interaction_only_interaction_eqtl_results_"
 python2 merge_parallelized_latent_factor_interaction_eqtl_calls.py $qtl_output_root $num_jobs
 fi
 
-
-if false; then
 module load r/3.6.3
 Rscript visualize_surge_interaction_eqtls.R $output_stem"perm_"
-fi
+
 
 if false; then
 python2 surge_interaction_eqtl_debugger.py $output_stem"perm_"

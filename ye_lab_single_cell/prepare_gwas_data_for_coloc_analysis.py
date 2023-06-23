@@ -86,6 +86,104 @@ t_meta = open(processed_gwas_studies_file,'w')
 ################
 # UKBB Studies
 ################
+# Height
+input_study_file = coloc_input_dir + 'body_HEIGHTz.sumstats.gz'
+study_name = 'ukbb_height'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'blood_MEAN_PLATELET_VOL.sumstats.gz'
+study_name = 'ukbb_blood_platelet_vol'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'bmd_HEEL_TSCOREz.sumstats.gz'
+study_name = 'ukbb_bone_mineral_density'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'blood_MEAN_CORPUSCULAR_HEMOGLOBIN.sumstats.gz'
+study_name = 'ukbb_blood_mean_corpuscular_hemoglobin'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'blood_MONOCYTE_COUNT.sumstats.gz'
+study_name = 'ukbb_blood_monocyte_count'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'blood_HIGH_LIGHT_SCATTER_RETICULOCYTE_COUNT.sumstats.gz'
+study_name = 'ukbb_blood_high_light_scatter_reticulotye_count'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'pigment_HAIR.sumstats.gz'
+study_name = 'ukbb_hair_color'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'lung_FEV1FVCzSMOKE.sumstats.gz'
+study_name = 'ukbb_FEV1FVCz'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'body_BALDING1.sumstats.gz'
+study_name = 'ukbb_balding'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'disease_HI_CHOL_SELF_REP.sumstats.gz'
+study_name = 'ukbb_cholesterol'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'bp_DIASTOLICadjMEDz.sumstats.gz'
+study_name = 'ukbb_diastolic_bp'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'lung_FVCzSMOKE.sumstats.gz'
+study_name = 'ukbb_fvc'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'disease_ALLERGY_ECZEMA_DIAGNOSED.sumstats.gz'
+study_name = 'ukbb_eczema'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'repro_MENARCHE_AGE.sumstats.gz'
+study_name = 'ukbb_menarche_age'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'repro_NumberChildrenEverBorn_Pooled.sumstats.gz'
+study_name = 'ukbb_number_children'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_ukbb_study(input_study_file, output_study_file_root)
+
+input_study_file = coloc_input_dir + 'bentham_2015_26502338_sle_efo0002690_1_gwas.sumstats.tsv.gz'
+study_name = 'sle'
+output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
+t_meta.write(study_name + '\t' + output_study_file_root + '\n')
+reprint_bentham_2015_sle_study(input_study_file, output_study_file_root)
+
+'''
 # blood monocyte count
 input_study_file = coloc_input_dir + 'blood_MONOCYTE_COUNT.sumstats.gz'
 study_name = 'ukbb_blood_monocyte_count'
@@ -162,6 +260,7 @@ study_name = 'sle'
 output_study_file_root = coloc_dir + study_name + '_coloc_sumstats_'
 t_meta.write(study_name + '\t' + output_study_file_root + '\n')
 reprint_bentham_2015_sle_study(input_study_file, output_study_file_root)
+'''
 
 
 t_meta.close()

@@ -31,7 +31,8 @@ def extract_significant_genes(sig_eqtl_file, chrom_num):
 	f.close()
 	return gene_mapping
 
-def map_genes_to_all_variants(all_eqtl_file, chrom_num, gene_mapping, eqtl_data_version):
+def map_genes_to_all_variants(all_eqtl_file, chrom_num, eqtl_data_version):
+	gene_mapping = {}
 	f = open(all_eqtl_file)
 	chrom_string = str(chrom_num) + ':'
 	variant_to_gwas = {}
@@ -44,8 +45,10 @@ def map_genes_to_all_variants(all_eqtl_file, chrom_num, gene_mapping, eqtl_data_
 			print('assumption erorro')
 			pdb.set_trace()
 		gene_name = data[1]
+		#if gene_name not in gene_mapping:
+			#continue
 		if gene_name not in gene_mapping:
-			continue
+			gene_mapping[gene_name] = []
 		variant_id = data[0]
 		variant_info = variant_id.split(':')
 		variant_id_alt = variant_info[0] + ':' + variant_info[1] + ':' + variant_info[3] + ':' + variant_info[2]
@@ -155,8 +158,9 @@ t.write('gene_name\tchrom_num\teqtl_data_file\tgwas_data_file\n')
 
 for chrom_num in range(1,23):
 	print(chrom_num)
-	gene_mapping = extract_significant_genes(sig_eqtl_file, chrom_num)
-	gene_mapping, variant_to_gwas = map_genes_to_all_variants(all_eqtl_file, chrom_num, gene_mapping, eqtl_data_version)
+	#gene_mapping = extract_significant_genes(sig_eqtl_file, chrom_num)
+	#gene_mapping, variant_to_gwas = map_genes_to_all_variants(all_eqtl_file, chrom_num, gene_mapping, eqtl_data_version)
+	gene_mapping, variant_to_gwas = map_genes_to_all_variants(all_eqtl_file, chrom_num, eqtl_data_version)
 	variant_to_gwas = map_variants_to_gwas_summary_stats(gwas_study_file_root + str(chrom_num) + '.txt', variant_to_gwas)
 
 	for gene_name in gene_mapping.keys():

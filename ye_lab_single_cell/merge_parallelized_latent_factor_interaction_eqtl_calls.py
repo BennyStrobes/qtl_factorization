@@ -80,9 +80,18 @@ def ordered_gene_level_stats(variant_gene_pairs_eqtl_results_file, multple_testi
 		else:
 			old_t_value = genes[gene_id][2]
 			old_count = genes[gene_id][3]
+			old_pvalue = genes[gene_id][1]
 			if abs_t_value >= old_t_value:
+				# New is more more significant
+				if pvalue > old_pvalue:
+					print('assumption eroror')
+					pdb.set_trace()
 				genes[gene_id] = (variant_id, pvalue, abs_t_value, old_count+1, line)
 			else:
+				# New is less significant
+				if pvalue < old_pvalue:
+					print('assumption eroror')
+					pdb.set_trace()
 				genes[gene_id] = (genes[gene_id][0], genes[gene_id][1], genes[gene_id][2], old_count+1, genes[gene_id][4])
 	f.close()
 	# Loop through genes and do BF correction
@@ -200,15 +209,15 @@ def merge_parallelized_results(output_root, suffix, total_jobs, lf_num):
 		for line in f:
 			line = line.rstrip()
 			data = line.split('\t')
-			if data[(2 + (1+lf_num)*3)] == 'NA':
+			if data[(2 + (2+lf_num)*3)] == 'NA':
 				print('na error')
-				data[(2 + (1+lf_num)*3)] = '1e-20'
-				data[(3 + (1+lf_num)*3)] = '1'
-				data[(4 + (1+lf_num)*3)] = '1'
+				data[(2 + (2+lf_num)*3)] = '1e-20'
+				data[(3 + (2+lf_num)*3)] = '1'
+				data[(4 + (2+lf_num)*3)] = '1'
 			all_genes[data[1]] = 1
-			beta = float(data[(2 + (1+lf_num)*3)])
-			std_err_beta = float(data[(3 + (1+lf_num)*3)])
-			old_pvalue = float(data[(4 + (1+lf_num)*3)])
+			beta = float(data[(2 + (2+lf_num)*3)])
+			std_err_beta = float(data[(3 + (2+lf_num)*3)])
+			old_pvalue = float(data[(4 + (2+lf_num)*3)])
 			if old_pvalue < 1e-10:
 				new_pvalue = scipy.stats.norm.cdf(-np.abs( beta/std_err_beta))*2
 				new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(new_pvalue)
@@ -260,7 +269,7 @@ def merge_pvalue_results(output_root, suffix, total_jobs, num_lf):
 			betas = []
 			betas.append(data[4])
 			for lf_num in range(num_lf):
-				beta = (data[(7 + lf_num*3)])
+				beta = (data[(10 + lf_num*3)])
 				betas.append(beta)
 			betas = np.asarray(betas)
 			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
@@ -299,7 +308,7 @@ def merge_betas_results(output_root, suffix, total_jobs, num_lf):
 			betas = []
 			betas.append(data[2])
 			for lf_num in range(num_lf):
-				beta = (data[(5 + lf_num*3)])
+				beta = (data[(8 + lf_num*3)])
 				betas.append(beta)
 			betas = np.asarray(betas)
 			new_line = data[0] + '\t' + data[1] + '\t' + '\t'.join(betas)
@@ -414,13 +423,65 @@ def get_number_of_latent_factors(file_name):
 	f.close()
 	return num_lf
 
+def merge_parallelized_results_agg(output_file, output_root, total_jobs, lf_num):
+	to_run = make_sure_files_exist(output_root, total_jobs, '.txt')
+	if to_run == False:
+		print('Missing required input files. Please re-evaluate :)')
+		return
+	# Open output (merged result) file handle
+	t = open(output_file, 'w')
+	# Loop through parrallelized jobs
+	for job_number in range(total_jobs):
+		file_name = output_root + str(job_number) + '_' + str(total_jobs) + '_results' + '.txt'
+		# Open file for one job
+		f = open(file_name)
+		# To identify header
+		head_count = 0
+		# Stream file from one job
+		counter = 0
+		for line in f:
+			line = line.rstrip()
+			data = line.split('\t')
+			if data[(2 + (2+lf_num)*3)] == 'NA':
+				print('na error')
+				data[(2 + (2+lf_num)*3)] = '1e-20'
+				data[(3 + (2+lf_num)*3)] = '1'
+				data[(4 + (2+lf_num)*3)] = '1'
+			beta = float(data[(2 + (2+lf_num)*3)])
+			std_err_beta = float(data[(3 + (2+lf_num)*3)])
+			old_pvalue = float(data[(4 + (2+lf_num)*3)])
+			new_line = data[0] + '\t' + data[1] + '\t' + str(beta) + '\t' + str(std_err_beta) + '\t' + str(old_pvalue)
+			new_data = new_line.split('\t')
+			counter = counter +1
+			#if len(data) < (lf_num*3):
+				#print('miss')
+				#continue
+			if new_data[2] == 'NA':
+				continue
+			# HEADER
+			#if head_count == 0:
+			#	head_count = head_count + 1
+				# Print header if this the first job
+			#	if job_number == 0:
+			#		t.write(line + '\n')
+			#	continue
+			# Standard line
+			t.write(new_line + '\n')
+		f.close()
+		# Delete file from single job
+		#os.system ('rm ' + file_name)
+	t.close()
+	return
+
+
+
 output_root = sys.argv[1]
 total_jobs = int(sys.argv[2])
 
 
 # Extract number of latent factors
-num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 1
-
+num_lf = get_number_of_latent_factors(output_root + '0_' + str(total_jobs) + '_results.txt') - 2
+'''
 merged_file = output_root + '_betas_merged.txt'
 merge_betas_results(output_root, '.txt', total_jobs, num_lf)
 
@@ -449,4 +510,20 @@ for lf_num in range(num_lf):
 	fdr = .2
 	fdr_file = output_root + 'latent_factor_' + str(lf_num+1) + '_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
 	bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+'''
+
+merged_file = output_root + 'meta_analyzed_latent_factors_merged.txt'
+merge_parallelized_results_agg(merged_file, output_root, total_jobs, -1)
+
+output_file = output_root + 'meta_analyzed_latent_factors_ordered_gene_level_stats.txt'
+ordered_gene_level_stats(merged_file, output_file)
+
+output_file = output_root + 'meta_analyzed_latent_factors_alphabetical_ordered_gene_level_stats.txt'
+alphabetical_ordered_gene_level_stats(merged_file, output_file)
+
+fdr = .05
+fdr_file = output_root + 'meta_analyzed_latent_factors_genome_wide_signficant_bf_fdr_' + str(fdr) + '.txt'
+bf_fdr_multiple_testing_correction(merged_file, fdr_file, fdr)
+
+
 
